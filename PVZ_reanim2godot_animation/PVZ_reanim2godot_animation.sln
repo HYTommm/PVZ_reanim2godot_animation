@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35327.3
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PVZ_reanim2godot_animation", "PVZ_reanim2godot_animation\PVZ_reanim2godot_animation.vcxproj", "{451B01B4-C8C8-4331-BA65-D1652BBE0879}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{451B01B4-C8C8-4331-BA65-D1652BBE0879}.Debug|x64.ActiveCfg = Debug|x64
+		{451B01B4-C8C8-4331-BA65-D1652BBE0879}.Debug|x64.Build.0 = Debug|x64
+		{451B01B4-C8C8-4331-BA65-D1652BBE0879}.Debug|x86.ActiveCfg = Debug|Win32
+		{451B01B4-C8C8-4331-BA65-D1652BBE0879}.Debug|x86.Build.0 = Debug|Win32
+		{451B01B4-C8C8-4331-BA65-D1652BBE0879}.Release|x64.ActiveCfg = Release|x64
+		{451B01B4-C8C8-4331-BA65-D1652BBE0879}.Release|x64.Build.0 = Release|x64
+		{451B01B4-C8C8-4331-BA65-D1652BBE0879}.Release|x86.ActiveCfg = Release|Win32
+		{451B01B4-C8C8-4331-BA65-D1652BBE0879}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A81C5D39-E26C-4EB2-8881-70C3A05DE51A}
+	EndGlobalSection
+EndGlobal
