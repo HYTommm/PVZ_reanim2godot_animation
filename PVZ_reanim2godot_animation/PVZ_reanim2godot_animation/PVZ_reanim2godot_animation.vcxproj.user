@@ -4,4 +4,16 @@
     <LocalDebuggerCommandArguments>C:\Users\HYTomZ\Pictures\pvz素材\MainGame\Zombie\Zombie_walk.reanim C:\Users\HYTomZ\Pictures\pvz素材\MainGame\Zombie\Zombie_walk.jiema</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
+    <LocalDebuggerCommandArguments>C:\Users\HYTomZ\Pictures\pvz素材\MainGame\Zombie\Zombie_walk.reanim C:\Users\HYTomZ\Pictures\pvz素材\MainGame\Zombie\Zombie_walk.jiema</LocalDebuggerCommandArguments>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LocalDebuggerCommandArguments>C:\Users\HYTomZ\Pictures\pvz素材\MainGame\Plants\Peashooter\PeaShooterSingle_head_idle.reanim C:\Users\HYTomZ\Pictures\pvz素材\MainGame\Plants\Peashooter\PeaShooterSingle_head_idle.jiema</LocalDebuggerCommandArguments>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LocalDebuggerCommandArguments>C:\Users\HYTomZ\Pictures\pvz素材\MainGame\Plants\Peashooter\PeaShooterSingle_head_idle.reanim C:\Users\HYTomZ\Pictures\pvz素材\MainGame\Plants\Peashooter\PeaShooterSingle_head_idle.jiema</LocalDebuggerCommandArguments>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
 </Project>

@@ -1,0 +1,10 @@
+﻿  main.c
+C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\PVZ_reanim2godot_animation\main.c(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\PVZ_reanim2godot_animation\main.c(448,18): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\PVZ_reanim2godot_animation\main.c(457,17): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+  正在生成代码
+  1 of 15 functions ( 6.7%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    1 functions had inline decision re-evaluated but remain unchanged
+  已完成代码的生成
+  PVZ_reanim2godot_animation.vcxproj -> C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\x64\Release\PVZ_reanim2godot_animation.exe

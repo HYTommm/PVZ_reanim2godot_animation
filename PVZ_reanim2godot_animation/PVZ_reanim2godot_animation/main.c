@@ -31,6 +31,7 @@ int tracks_skew_key_times = 0;
 bool flag_x = false;
 bool flag_sx = false;
 bool flag_kx = false;
+bool flag_ky = false;
 
 typedef struct Key
 {
@@ -90,6 +91,9 @@ void InitTracks(Tracks* track)
 
 	//Init interp
 	track->interp = 1;
+
+	//Init loop_wrap
+	track->loop_wrap = true;
 
 	//Init key
 	for (int i = 0; i < TIME_LENTH; i++)
@@ -320,6 +324,7 @@ void text(char* old_content, FILE* output, PVZTracks* pvz_tracks)
 			flag_x = false;
 			flag_sx = false;
 			flag_kx = false;
+			flag_ky = false;
 			time_num++;
 		}
 		if (!strcmp(tap_name, dictionary[4]/*f*/))
@@ -413,8 +418,10 @@ void text(char* old_content, FILE* output, PVZTracks* pvz_tracks)
 		}
 
 		
-		if (!strcmp(tap_name, dictionary[11]/*ky*/))
+		if (!strcmp(tap_name, dictionary[11]/*ky*/) || flag_kx)
 		{
+			
+			
 			if (!tracks_rot_key_times)
 			{
 				sprintf_s(pvz_tracks->tracks_rot.key.values[tracks_rot_key_times], NAME_LENTH, "%10.6Lf", 0.0/180 * PI);
@@ -425,8 +432,34 @@ void text(char* old_content, FILE* output, PVZTracks* pvz_tracks)
 			{
 				tracks_skew_key_times++;
 			}
+			
 			double temp = atof(new_content) / 180 * PI 
 				- atof(pvz_tracks->tracks_rot.key.values[tracks_rot_key_times-1]);
+			if (flag_kx)
+			{
+				flag_kx = false;
+				float last_skew, last_rot;
+				if (tracks_skew_key_times == 1)
+				{
+					last_skew = 0;
+				}
+				else
+				{
+					last_skew = atof(pvz_tracks->tracks_skew.key.values[tracks_skew_key_times - 2]);
+					
+				}
+				if (tracks_rot_key_times == 1)
+				{
+					last_rot = 0;
+				}
+				else
+				{
+					last_rot = atof(pvz_tracks->tracks_rot.key.values[tracks_rot_key_times - 2]);
+				}
+				temp = last_skew 
+					+ last_rot
+					- atof(pvz_tracks->tracks_rot.key.values[tracks_rot_key_times - 1]);
+			}
 			sprintf_s(pvz_tracks->tracks_skew.key.values[tracks_skew_key_times-1], NAME_LENTH, "%10.7Lf", temp);
 			pvz_tracks->tracks_skew.key.times[tracks_skew_key_times - 1] = (float)(1.0 / FPS * time_num);
 			

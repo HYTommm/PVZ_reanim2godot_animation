@@ -1,0 +1,3 @@
+﻿  main.c
+C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\PVZ_reanim2godot_animation\main.c(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+ARM\Release\main.obj : fatal error LNK1112: 模块计算机类型“x86”与目标计算机类型“ARM”冲突
