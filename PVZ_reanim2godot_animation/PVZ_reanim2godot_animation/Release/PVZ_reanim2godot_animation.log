@@ -1,5 +1,10 @@
-﻿  正在生成代码
-  Previous IPDB and IOBJ mismatch, fall back to full compilation.
-  All 15 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+﻿  main.c
+C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\PVZ_reanim2godot_animation\main.c(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\PVZ_reanim2godot_animation\main.c(498,18): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\PVZ_reanim2godot_animation\main.c(507,17): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\PVZ_reanim2godot_animation\main.c(536,36): warning C4013: “tolower”未定义；假设外部返回 int
+  正在生成代码
+  Previous IPDB was built with incompatible compiler, fall back to full compilation.
+  All 21 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
   已完成代码的生成
   PVZ_reanim2godot_animation.vcxproj -> C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\Release\PVZ_reanim2godot_animation_x86.exe
