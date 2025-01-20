@@ -26,3 +26,9 @@ C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\x64\Release\PVZ_reanim2g
 正确例2：
 
 C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\x64\Release\PVZ_reanim2godot_animation.exe C:\Users\HYTomZ\Pictures\pvz素材\MainGame\Zombie\Zombie_walk.reanim C:\Users\HYTomZ\Pictures\pvz素材\MainGame\Zombie\Zombie_walk.jiema
+
+
+## QQ群
+群名：（F2R2GA交流群）
+
+群号：1018028780
