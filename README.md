@@ -29,6 +29,6 @@ C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\x64\Release\PVZ_reanim2g
 
 
 ## QQ群
-群名：（F2R2GA交流群）
+群名：Godot交流群
 
 群号：1018028780
