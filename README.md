@@ -7,7 +7,7 @@
 
 2.输入程序名（带路径）
 
-3.输入参数：空格 原文件 空格 目标文件 空格 素材路径（可选）
+3.输入参数：空格 原文件 空格 目标文件 空格 素材路径 模式
 
 ## 注意
 
@@ -15,17 +15,17 @@
 
 2.素材路径是godot项目内的相对路径，不是绝对路径
 
-3.当填进素材路径时，本程序生成场景免拼文件，可直接复制进新场景内，注意新场景内只保留第一行文字；当不填入素材路径时，本程序生成动画文件，可直接复制进新动画文件内
+3.当模式为tscn时，本程序生成场景免拼文件，可直接复制进新场景内，注意新场景内只保留第一行文字；当模式为anim_tres时，本程序生成动画文件，可直接复制进新动画文件内
 
 ## 使用例
 
 正确例1：
 
-C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\x64\Release\PVZ_reanim2godot_animation.exe C:\Users\HYTomZ\Pictures\pvz素材\MainGame\Zombie\Zombie_walk.reanim C:\Users\HYTomZ\Pictures\pvz素材\MainGame\Zombie\Zombie_walk.jiema res://art/zombies
+C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\x64\Release\PVZ_reanim2godot_animation.exe C:\Users\HYTomZ\Pictures\pvz素材\MainGame\Zombie\Zombie_walk.reanim C:\Users\HYTomZ\Pictures\pvz素材\MainGame\Zombie\Zombie_walk.jiema res://art/zombies tscn
 
 正确例2：
 
-C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\x64\Release\PVZ_reanim2godot_animation.exe C:\Users\HYTomZ\Pictures\pvz素材\MainGame\Zombie\Zombie_walk.reanim C:\Users\HYTomZ\Pictures\pvz素材\MainGame\Zombie\Zombie_walk.jiema
+C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\x64\Release\PVZ_reanim2godot_animation.exe C:\Users\HYTomZ\Pictures\pvz素材\MainGame\Zombie\Zombie_walk.reanim C:\Users\HYTomZ\Pictures\pvz素材\MainGame\Zombie\Zombie_walk.jiema res://art/zombies anim_tres
 
 
 ## QQ群
