@@ -30,12 +30,15 @@ int tracks_rot_key_times = 0;
 int tracks_scale_key_times = 0;
 int tracks_skew_key_times = 0;
 int tracks_texture_key_times = 0;
-int ARG_NUM;
+
+
 
 char filename_fuck[MAX_TEXTURE_NUM][NAME_LENTH];
 int filename_fuck_times = 0;
 char name[MAX_TRACKS_NUM][NAME_LENTH];
+char fileName[NAME_LENTH];
 
+char output_type[NAME_LENTH];
 
 bool flag_x = false;
 bool flag_sx = false;
@@ -525,7 +528,7 @@ void text(char* old_content, FILE* output, PVZTracks* pvz_tracks)
 		}
 		
 
-        if (!strcmp(tap_name, dictionary[12]/*i*/) && ARG_NUM == 4)
+        if (!strcmp(tap_name, dictionary[12]/*i*/))
         {
             // 提取 IMAGE_REANIM_XXX 中的 XXX 并将除首字母外的其他字符转为小写字母
             if (strncmp(new_content, "IMAGE_REANIM_", 13) == 0) {
@@ -572,9 +575,40 @@ void ext_resource(FILE* output, const char* path)
 	fflush(output);
 }
 
+void getFileName(const char* filePath)
+{
+	// 使用strrchr()函数查找最后一个目录分隔符
+	const char* fileName_linux = strrchr(filePath, '/');
+	const char* fileName_windows = strrchr(filePath, '\\');
+	const char* filename = fileName_linux > fileName_windows? fileName_linux : fileName_windows;
+
+	// 如果找到了分隔符，则文件名在分隔符之后
+	if (filename)
+	{
+		filename++;  // 跳过分隔符
+	}
+	else
+	{
+		// 如果未找到分隔符，则整个路径就是文件名
+		filename = filePath;
+	}
+	for (int i = 0; i < NAME_LENTH; i++)
+	{
+		fileName[i] = filename[i] == '.'? '\0' : filename[i];
+	}
+}
+
 void set_anim(FILE* output)
 {
-	fprintf_s(output, "[sub_resource type=\"Animation\" id=\"Animation_fuck\"]\n");
+	if (strcmp(output_type, "anim_tres") == 0)
+	{
+		fprintf_s(output, "[resource]\nresource_name = \"%s\"\n", fileName);
+
+	}
+	else // strcmp(output_type, "tres") == 0
+	{
+		fprintf_s(output, "[sub_resource type=\"Animation\" id=\"Animation_fuck\"]\n");
+	}
 	fprintf_s(output, "length = %.6Lf\n", (float)(time_num - 1) * (1.0 / FPS));
 	fprintf_s(output, "step = %.6Lf\n", 1.0 / FPS);
 	fflush(output);
@@ -621,12 +655,20 @@ FILE* fp_forth_output;
 int main(int argc, char* argv[])
 {
 	// 检查命令行参数数量是否为3
-	if (argc != 3 && argc != 4)
+	if (argc != 5)
 	{
-		fprintf(stderr, "Usage: %s <input_file> <output_file> [path]\n", argv[0]);
+		fprintf(stderr, "Usage: %s <input_file> <output_file> <resource_path> <\"tscn\" || \"anim_tres\">\n", argv[0]);
 		return 1;
 	}
-	ARG_NUM = argc;
+
+	sprintf_s(output_type, NAME_LENTH, "%s", argv[4]);
+	if (strcmp(output_type, "tscn") && strcmp(output_type, "anim_tres"))
+	{
+		fprintf(stderr, "Usage: %s <input_file> <output_file> <resource_path> <\"tscn\" || \"anim_tres\">\n", argv[0]);
+		return 1;
+	}
+
+	getFileName(argv[1]);
 
 	// 打开输入文件
 	errno_t err = fopen_s(&fp_input, argv[1], "r");
@@ -706,15 +748,15 @@ int main(int argc, char* argv[])
 	ext_resource(fp_first_output, argv[3]);
 	set_anim(fp_second_output);
 	add_node(fp_forth_output, tracks_num);
-	if (argc == 3)
+	if (strcmp(output_type, "anim_tres") == 0)
 	{
-	
-		FILE* input_files[1] = { fp_third_output };
+		printf("output_type = anim_tres\n");
+		FILE* input_files[3] = { fp_first_output, fp_second_output, fp_third_output };
 		// 重置输出文件指针到文件开头
 		fseek(fp_output, 0, SEEK_SET);
-		merge_files(fp_output, input_files, 1);
+		merge_files(fp_output, input_files, 3);
 	}
-	else
+	else if (strcmp(output_type, "tscn") == 0)
 	{
 		FILE* input_files[4] = { fp_first_output, fp_second_output, fp_third_output, fp_forth_output };
 		// 重置输出文件指针到文件开头
@@ -730,8 +772,22 @@ int main(int argc, char* argv[])
     fclose(fp_input);
     fclose(fp_output);
     fclose(fp_first_output);
+    fclose(fp_second_output);
     fclose(fp_third_output);
     fclose(fp_forth_output);
 
+	// 删除中间文件
+
+	remove(str_first_output);
+	
+	remove(str_second_output);
+	
+	remove(str_third_output);
+	
+	remove(str_forth_output);
+	
+
+	// 释放内存
+	free(filetext);
     return 0;
 }
