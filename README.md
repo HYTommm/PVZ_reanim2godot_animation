@@ -33,3 +33,23 @@ C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\x64\Release\PVZ_reanim2g
 群名：Godot交流群
 
 群号：1018028780
+
+
+## R2Ga_PVZ 插件
+
+1. 下载本项目后解压，将 `addons` 目录下的 `R2Ga_PVZ` 文件夹复制到你的 Godot 项目中的 `addons` 文件夹下  
+   > ⚠️ 如果项目中没有 `addons` 文件夹，请手动创建一个。
+
+2. 在 Godot 的 **项目设置 → 插件** 中启用 `R2Ga_PVZ` 插件。
+
+3. 启用插件后，在底部面板中点击 `R2Ga_PVZ` 标签，打开插件界面。
+
+4. 插件界面中依次选择以下路径：
+
+   - **PVZ 原始动画文件**（单个文件）
+   - **动画存放文件夹**（目标路径）
+   - **素材存放文件夹**（含图像资源）
+
+5. 点击【运行】按钮后，插件将自动以 `auto` 模式执行转换。
+
+---
