@@ -1,4 +1,5 @@
-﻿#include <stdbool.h>
+﻿#include <Windows.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,10 +7,11 @@
 #include <math.h>
 //#include <windows.h>
 
-//#include "convert.h"
-#include "PvzReanim.h"
+#include "convert.h"
+#include "StartParam.h"
 #include "FileIO.h"
 #include "main.h"
+//#include <malloc.h>
 
 
 //转换器
@@ -21,23 +23,27 @@ bool is_track_anim = false;
 bool is_start_frame_time_select = false;
 bool is_blend_mode_enabled = false;
 
-char input_file[NAME_LENTH];
-char input_filePath[PATH_LENTH];
-char output_file[NAME_LENTH];
-char output_type[NAME_LENTH];
+//char input_file[NAME_LENTH];
+//char input_filePath[PATH_LENTH];
+//char output_file[NAME_LENTH];
+//char output_type[NAME_LENTH];
 
-void IsBlendModeEnabled(char* file_text, bool* is_enabled)
+/// <summary>
+/// 通过文件内容判断是否应启用混合模式
+/// </summary>
+/// <param name="file_text">文件内容字符串</param>
+/// <param name="start_param">启动参数</param>
+void IsBlendModeEnabled(char* file_text, R2GAStartParam* start_param)
 {
-	// 注释：判断是否启用了混合模式
 	// 遍历file_text，查找"<bm>"关键字，如果找到，则设置is_enabled为true
 	char* p = strstr(file_text, "<bm>");
-	if (p)
+	if (p != NULL && start_param->blendModeTrackEnabledSpecified && start_param->blendModeTrackEnabled)
 	{
-		*is_enabled = true;
+		start_param->blendModeTrackEnabled = true;
 	}
 	else
 	{
-		*is_enabled = false;
+		start_param->blendModeTrackEnabled = false;
 	}
 }
 
@@ -87,23 +93,51 @@ void SetAnimKeyTimes(PVZAnimation* pvz_animation, int num)
 	pvz_animation->current_tracks_blendmode_key_times = num;
 
 }
-void SetTrack(PVZAnimation* pvz_animation, char* new_content)
+void SetTrack(PVZAnimation* pvz_animation, char* new_content, R2GAStartParam* start_param)
 {
+	static int track_num = 0;
 	pvz_animation->current_frame_time_num = 0;
-	pvz_animation->tracks->tracks_vis->num = pvz_animation->current_tracks_num *       (7+(is_blend_mode_enabled ? 1 : 0)) + 0;
-	pvz_animation->tracks->tracks_pos->num = pvz_animation->current_tracks_num *       (7+(is_blend_mode_enabled ? 1 : 0)) + 1;
-	pvz_animation->tracks->tracks_rot->num = pvz_animation->current_tracks_num *       (7+(is_blend_mode_enabled ? 1 : 0)) + 2;
-	pvz_animation->tracks->tracks_scale->num = pvz_animation->current_tracks_num *     (7+(is_blend_mode_enabled ? 1 : 0)) + 3;
-	pvz_animation->tracks->tracks_skew->num = pvz_animation->current_tracks_num *      (7+(is_blend_mode_enabled ? 1 : 0)) + 4;
-	pvz_animation->tracks->tracks_texture->num = pvz_animation->current_tracks_num *   (7+(is_blend_mode_enabled ? 1 : 0)) + 5;
-	pvz_animation->tracks->tracks_alpha->num = pvz_animation->current_tracks_num *     (7+(is_blend_mode_enabled ? 1 : 0)) + 6;
+	//pvz_animation->tracks->tracks_vis->num = pvz_animation->current_tracks_num *       (7+(is_blend_mode_enabled ? 1 : 0)) + 0;
+	//pvz_animation->tracks->tracks_pos->num = pvz_animation->current_tracks_num *       (7+(is_blend_mode_enabled ? 1 : 0)) + 1;
+	//pvz_animation->tracks->tracks_rot->num = pvz_animation->current_tracks_num *       (7+(is_blend_mode_enabled ? 1 : 0)) + 2;
+	//pvz_animation->tracks->tracks_scale->num = pvz_animation->current_tracks_num *     (7+(is_blend_mode_enabled ? 1 : 0)) + 3;
+	//pvz_animation->tracks->tracks_skew->num = pvz_animation->current_tracks_num *      (7+(is_blend_mode_enabled ? 1 : 0)) + 4;
+	//pvz_animation->tracks->tracks_texture->num = pvz_animation->current_tracks_num *   (7+(is_blend_mode_enabled ? 1 : 0)) + 5;
+	//pvz_animation->tracks->tracks_alpha->num = pvz_animation->current_tracks_num *     (7+(is_blend_mode_enabled ? 1 : 0)) + 6;
 
-	//blendmode->num
-	if (is_blend_mode_enabled)
-		pvz_animation->tracks->tracks_blendmode->num = pvz_animation->current_tracks_num * (7 + 1) + 7;
+	////blendmode->num
+	//if (is_blend_mode_enabled)
+	//	pvz_animation->tracks->tracks_blendmode->num = pvz_animation->current_tracks_num * (7 + 1) + 7;
+
+	if (start_param->visibleTrackEnabled)
+	{
+		pvz_animation->tracks->tracks_vis->num = track_num;
+		track_num++;
+	}
+	pvz_animation->tracks->tracks_pos->num = track_num;
+	track_num++;
+	pvz_animation->tracks->tracks_rot->num = track_num;
+	track_num++;
+	pvz_animation->tracks->tracks_scale->num = track_num;
+	track_num++;
+	pvz_animation->tracks->tracks_skew->num = track_num;
+	track_num++;
+	if (start_param->textureTrackEnabled)
+	{
+		pvz_animation->tracks->tracks_texture->num = track_num;
+		track_num++;
+	}
+	if (start_param->alphaTrackEnabled)
+	{
+		pvz_animation->tracks->tracks_alpha->num = track_num;
+		track_num++;
+	}
+	if (start_param->blendModeTrackEnabled)
+	{
+		pvz_animation->tracks->tracks_blendmode->num = track_num;
+		track_num++;
+	}
 	SetAnimKeyTimes(pvz_animation, 0);
-
-
 }
 void SetTrackName(PVZAnimation* pvz_animation[], int anim_num, char* new_content)
 {
@@ -242,7 +276,7 @@ void PreSetTrackTAlpha(PVZAnimation* pvz_animation)
 	pvz_animation->tracks->tracks_alpha->key.times[pvz_animation->current_tracks_alpha_key_times - 1] = (float)(1.0 / FPS * pvz_animation->current_frame_time_num);
 }
 
-void SetTrackT(PVZAnimation* pvz_animation, char* new_content)
+void SetTrackT(PVZAnimation* pvz_animation, char* new_content, R2GAStartParam* start_param)
 {
 
 	PreSetTrackTVis(pvz_animation);
@@ -259,7 +293,7 @@ void SetTrackT(PVZAnimation* pvz_animation, char* new_content)
 
 	PreSetTrackTAlpha(pvz_animation);
 
-	text(new_content, &pvz_animation);
+	text(new_content, &pvz_animation, start_param);
 
 	pvz_animation->flag_x = false;
 	pvz_animation->flag_sx = false;
@@ -534,7 +568,15 @@ void SetInitValue(PVZAnimation* pvz_animation[], int anim_index)
 }
 
 
-
+/// <summary>
+///		<para>查找经过偏移后的字符串中第一个Tag的内容及所包含的文本</para>
+///		<para>或者说，查找下一个Tag及其内容，因为offset在函数内会自动更新</para>
+/// </summary>
+/// <param name="input">用于查找的tag的字符串</param>
+/// <param name="offset">偏移量的指针</param>
+/// <param name="tap_name">tag的名字，这里应传入被修改的字符串</param>
+/// <param name="content">tag的内容，这里应传入被修改的字符串</param>
+/// <returns></returns>
 int tap(char* input, int* offset, char* tap_name, char* content)
 {
 	char temp;
@@ -579,8 +621,12 @@ int tap(char* input, int* offset, char* tap_name, char* content)
 	}
 	return 1;
 }
-
-void SeekAnim(char* old_content, PVZAnimation* pvz_animations[])
+/// <summary>
+/// 对PVZ动画文件进行预处理，提取出动画信息
+/// </summary>
+/// <param name="old_content">递归时传入的字符串，用于读取上一层内容，当第一次调用时传入完整文件内容</param>
+/// <param name="pvz_animations"></param>
+void SeekAnim(char* old_content, PVZAnimation* pvz_animations[], R2GAStartParam* start_param)
 {
 	static bool is_track_anim_finished = false;
 	static int anim_index = 0;
@@ -599,7 +645,7 @@ void SeekAnim(char* old_content, PVZAnimation* pvz_animations[])
 			current_frame_time_num = 0;
 			is_track_anim = false;
 			is_start_frame_time_select = false;
-			SeekAnim(new_content, pvz_animations);
+			SeekAnim(new_content, pvz_animations, start_param);
 			if (is_track_anim && pvz_animations[anim_index]->end_frame_time < pvz_animations[anim_index]->start_frame_time)
 			{
 				pvz_animations[anim_index]->end_frame_time = current_frame_time_num - 1;
@@ -634,7 +680,10 @@ void SeekAnim(char* old_content, PVZAnimation* pvz_animations[])
 				}
 				SetAnimName(pvz_animations[anim_index], temp_name);
 				char res_name[NAME_LENTH];
-				FileGetFileName(input_file, res_name);
+				
+				//FileGetFileNameWithoutExt(input_file, res_name);
+				strncpy(res_name, start_param->inputFileName, NAME_LENTH - 1);
+				res_name[NAME_LENTH - 1] = '\0';
 				strcat_s(res_name, NAME_LENTH, "_");
 				strcat_s(res_name, NAME_LENTH, temp_name);
 				SetAnimResName(pvz_animations[anim_index], res_name);
@@ -653,7 +702,7 @@ void SeekAnim(char* old_content, PVZAnimation* pvz_animations[])
 			{
 				SetAnimStartFrameTime(pvz_animations[anim_index], current_frame_time_num);
 			}
-			SeekAnim(new_content, pvz_animations);
+			SeekAnim(new_content, pvz_animations, start_param);
 			current_frame_time_num++;
 			continue;
 		}
@@ -674,10 +723,16 @@ void SeekAnim(char* old_content, PVZAnimation* pvz_animations[])
 
 	}
 
+	free(new_content);
 }
 
 
-void text(char* old_content, PVZAnimation* pvz_animations[])
+/// <summary>
+/// 读取文件内容，并解析出动画数据
+/// </summary>
+/// <param name="old_content">递归时传入的字符串，用于读取上一层内容，当第一次调用时传入完整文件内容</param>
+/// <param name="pvz_animations"></param>
+void text(char* old_content, PVZAnimation* pvz_animations[], R2GAStartParam* start_param)
 {
 	int anim_index = 0;
 	int offset = 0;
@@ -707,9 +762,9 @@ void text(char* old_content, PVZAnimation* pvz_animations[])
 			current_frame_time_num = 0;
 			for (anim_index = 0; anim_index <= anim_nums; anim_index++)
 			{
-				SetTrack(pvz_animations[anim_index], new_content);
+				SetTrack(pvz_animations[anim_index], new_content, start_param);
 			}
-			text(new_content, pvz_animations);
+			text(new_content, pvz_animations, start_param);
 			for (anim_index = 0; anim_index <= anim_nums; anim_index++)
 			{
 				// 如果当前帧时间大于结束帧时间，则跳过
@@ -728,7 +783,7 @@ void text(char* old_content, PVZAnimation* pvz_animations[])
 					pvz_animations[anim_index]->tracks->tracks_vis->key.times[pvz_animations[anim_index]->current_tracks_vis_key_times] = (float)(1.0 / FPS * (pvz_animations[anim_index]->current_frame_time_num - 1));
 					pvz_animations[anim_index]->current_tracks_vis_key_times++;
 				}
-				FileWriteTracks(pvz_animations[anim_index], is_blend_mode_enabled);
+				FileWriteTracks(pvz_animations[anim_index], start_param);
 				pvz_animations[anim_index]->current_tracks_num++;
 			}
 			continue;
@@ -757,7 +812,7 @@ void text(char* old_content, PVZAnimation* pvz_animations[])
 					SetInitValue(pvz_animations, anim_index);
 					//pvz_animations[anim_index];
 				}
-				SetTrackT(pvz_animations[anim_index], new_content);
+				SetTrackT(pvz_animations[anim_index], new_content, start_param);
 
 			}
 			current_frame_time_num++;
@@ -834,43 +889,122 @@ void text(char* old_content, PVZAnimation* pvz_animations[])
 
 FILE* fp_input;
 // 分配50MB的内存用于读取文件内容
-char* filetext;
 
 
-void print_help(char* exe_name)
+
+static void print_help(char* exe_name)
 {
-	printf_s("PVZ_reanim2godot_animation v%s\n", VERSION);
-	printf_s("Usage: %s <input_file> <anim_godot_path> <resource_godot_path> <\"%s\" || \"%s\" || \"%s\">\n", exe_name, MODE_TSCN_BY_ANIM_STR, MODE_ANIM_TRES_STR, MODE_AUTO_STR);
+	// 颜色定义
+
+
+	printf(COL_TITLE "欢迎使用PVZ_reanim2godot_animation(R2GA) v%s" COL_RESET "\n", VERSION);
+	printf(COL_CMD "用法: " COL_RESET "%s " COL_OPT "<输入文件> <动画路径> <资源路径>" COL_RESET " [选项]\n\n", exe_name);
+
+	printf(COL_HEADER "必需参数:" COL_RESET "\n");
+	printf("  " COL_OPT "<输入文件 input_file>" COL_RESET "                " "输入文件路径 (" COL_VAL ".reanim" COL_RESET "格式)\n");
+	printf("  " COL_OPT "<动画路径 anim_godot_path>" COL_RESET "           " "Godot动画资源输出路径 (如: " COL_VAL "res://anim/abc/" COL_RESET ")\n");
+	printf("  " COL_OPT "<资源路径 res_godot_path>" COL_RESET "            " "Godot资源文件路径 (如: " COL_VAL "res://art/abc/" COL_RESET ")\n\n");
+
+	printf(COL_HEADER "可选选项:" COL_RESET "\n");
+	printf("  " COL_OPT "-of, --output-file" COL_RESET " " COL_VAL "<输出文件>" COL_RESET "        " "输出文件路径 (默认: 与输入文件同名)\n");
+	printf("  " COL_OPT "-om, --output-mode" COL_RESET " " COL_VAL "<输出模式>" COL_RESET "        " "设置输出模式 (可选: " COL_VAL "auto, tscn_by_anim, anim_tres" COL_RESET ", 默认: " COL_VAL "auto" COL_RESET ")\n");
+	printf("  " COL_OPT "-cf, --config-file" COL_RESET " " COL_VAL "<配置文件>" COL_RESET "        " "指定配置文件路径\n");
+	printf("  " COL_OPT "-bm, --blendmode" COL_RESET "                     " "开启混合模式 (默认关闭)\n");
+	printf("  " COL_OPT "-nbm, --no-blendmode" COL_RESET "                 " "强制关闭混合模式\n");
+	printf("  " COL_OPT "-im, --interpolation-mode" COL_RESET " " COL_VAL "<插值模式>" COL_RESET " " "设置插值模式 (可选: " COL_VAL "nearest, linear, cubic" COL_RESET ", 默认: " COL_VAL "linear" COL_RESET ")\n");
+	printf("  " COL_OPT "-h, --help" COL_RESET "                           " "显示此帮助信息\n\n");
+
+	printf(COL_HEADER "输出模式:" COL_RESET "\n");
+	printf("  " COL_VAL "auto" COL_RESET "                                 " "输出一个tscn文件和多个tres文件，并自动关联（推荐）（默认）\n");
+	printf("  " COL_VAL "tscn_by_anim" COL_RESET "                         " "输出一个tscn文件，包含所有动画资源\n");
+	printf("  " COL_VAL "anim_tres" COL_RESET "                            " "输出多个tres文件，每个tres文件包含一个动画资源\n\n");
+
+	printf(COL_HEADER "插值模式:" COL_RESET "\n");
+	printf("  " COL_VAL "nearest" COL_RESET "                              " "最近邻插值\n");
+	printf("  " COL_VAL "linear" COL_RESET "                               " "线性插值\n");
+	printf("  " COL_VAL "cubic" COL_RESET "                                " "三次方插值" COL_RESET "\n");
+
 }
 
+static void PrintErrorMsg(char* error_msg)
+{
+	printf(COL_ERR "错误: %s\n" COL_RESET, error_msg);
+}
+
+static void PrintParamError(void)
+{
+	PrintErrorMsg("参数错误！请检查参数！使用 -h 或 --help 查看帮助信息。");
+}
+
+// 启用控制台虚拟终端, 使输出颜色更加丰富
+static void enable_vt_mode() {
+	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	if (hOut == INVALID_HANDLE_VALUE) return;
+
+	DWORD dwMode = 0;
+	if (!GetConsoleMode(hOut, &dwMode)) return;
+
+	dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+	SetConsoleMode(hOut, dwMode);
+}
+
+R2GAStartParam startParam;
 int main(int argc, char* argv[])
 {
+	enable_vt_mode();
+	StartParamInit(&startParam);
+	Result a = StartParamSetFromArgs(&startParam, argc, argv);
+	printf("debug: %d\n", a);
+	if (a == Result_Failed)
+	{
+		PrintParamError();
+		
+		return 1;
+	}
+	else if (startParam.help)
+	{
+		print_help(argv[0]);
+		return 0;
+	}
+	
 
+	if (startParam.configFileWholePath[0] != '\0')
+	{
+		if (StartParamSetFromConfig(&startParam, startParam.configFileWholePath) == Result_Failed)
+		{
+			PrintParamError();
+			return ErrorCode_CannotParseConfigFile;
+		}
 
+	}
 	// 检查命令行参数数量是否为5
-	if (argc != 5)
+	/*if (argc != 5)
 	{
 		print_help(argv[0]);
 		return 1;
-	}
+	}*/
 	// 判断输出模式
-	sprintf_s(output_type, NAME_LENTH, "%s", argv[4]);
+	/*sprintf_s(output_type, NAME_LENTH, "%s", argv[4]);
 	if (strcmp(output_type, MODE_TSCN_BY_ANIM_STR) && strcmp(output_type, MODE_ANIM_TRES_STR) && strcmp(output_type, MODE_AUTO_STR))
 	{
 		print_help(argv[0]);
 		return 2;
-	}
+	}*/
 	
 	// 打开输入文件
-	sprintf_s(input_file, NAME_LENTH, "%s", argv[1]);
-	FileGetFilePath(input_file, input_filePath);
-	errno_t err = fopen_s(&fp_input, argv[1], "r");
-	if (err != 0 || fp_input == NULL)
-	{
-		printf(argv[1]);
-		fprintf(stderr, "fp_input = NULL\n");
-		return 3;
-	}
+	//sprintf_s(input_file, NAME_LENTH, "%s", argv[1]);
+	//FileGetFilePath(input_file, input_filePath);
+	//
+	//errno_t err = fopen_s(&fp_input, argv[1], "r");
+	//if (err != 0 || fp_input == NULL)
+	//{
+	//	printf(argv[1]);
+	//	fprintf(stderr, "fp_input = NULL\n");
+	//	return 3;
+	//}
+	
+	FileOpen(&fp_input, startParam.inputFileWholePath, "r", ErrorCode_CannotOpenInputFile);
+
 	// 初始化pvz_animations指针数组
 	PVZAnimation* pvz_animations[MAX_ANIM_NUM];
 	for (int i = 0; i < MAX_ANIM_NUM; i++)
@@ -878,28 +1012,31 @@ int main(int argc, char* argv[])
 		pvz_animations[i] = (PVZAnimation*)malloc(sizeof(PVZAnimation));
 		if (i == 0)
 		{
-			InitPVZAnimation(pvz_animations[i], "all");
-			sprintf_s(pvz_animations[i]->output_file_extension, 50, "tscn");
+			InitPVZAnimation(pvz_animations[i], "all", &startParam);
+			sprintf_s(pvz_animations[i]->output_file_extension, EXT_LENTH, "tscn");
 		}
 		else
 		{
-			InitPVZAnimation(pvz_animations[i], "null");
-			sprintf_s(pvz_animations[i]->output_file_extension, 50, "tres");
+			InitPVZAnimation(pvz_animations[i], "null", &startParam);
+			sprintf_s(pvz_animations[i]->output_file_extension, EXT_LENTH, "tres");
 		}
 		
 	}
 	
-	FileGetFileName(argv[1], pvz_animations[0]->ResName);
+	//FileGetFileNameWithoutExt(argv[1], pvz_animations[0]->ResName);
+	strncpy(pvz_animations[0]->ResName, startParam.inputFileName, NAME_LENTH);
 	
 	pvz_animations[0]->start_frame_time = 0;
 	pvz_animations[0]->end_frame_time = MAX_TIMES_NUM - 1;
 
 	// 分配50MB的内存用于读取文件内容
-	filetext = (char*)calloc(50 * 1024 * 1024, sizeof(char));
+	// 应该没有超过50MB的reanim文件吧（笑）
+	// TODO: 这里应该改成动态分配内存
+	char* filetext = (char*)calloc((size_t)(50 * 1024) * 1024, sizeof(char));
 	// 读取输入文件内容
 	FileRead(fp_input, filetext);
 
-	SeekAnim(filetext, pvz_animations);
+	SeekAnim(filetext, pvz_animations, &startParam);
 	printf_s("debug: 共有%d个动画\n\n", anim_nums);
 	for (int i = 0; i <= anim_nums; i++)
 	{
@@ -910,27 +1047,23 @@ int main(int argc, char* argv[])
 	
 	for (int i = 0; i <= anim_nums; i++)
 	{
-		OpenOutputFiles(pvz_animations[i], input_filePath, pvz_animations[i]->ResName);
+		OpenOutputFiles(pvz_animations[i], startParam.inputFilePath, pvz_animations[i]->ResName);
 	}
-	IsBlendModeEnabled(filetext, &is_blend_mode_enabled);
+	IsBlendModeEnabled(filetext, &startParam);
 	//anim_nums = 0;
 	
 
-	
-
 	// 处理文件内容并写入输出文件
-	text(filetext, pvz_animations);
-
-	
-	
+	text(filetext, pvz_animations, &startParam);
 
 	for (int i = 0; i <= anim_nums; i++)
 	{
 		fprintf_s(pvz_animations[i]->fp_third_output_track, "\n");
 
-		FileExtResource(pvz_animations, i, anim_nums, argv[2], argv[3], is_blend_mode_enabled, (strcmp(output_type, MODE_TSCN_BY_ANIM_STR) != 0));
+		//FileExtResource(pvz_animations, i, anim_nums, argv[2], argv[3], is_blend_mode_enabled, (strcmp(output_type, MODE_TSCN_BY_ANIM_STR) != 0));
+		FileExtResource(pvz_animations, i, anim_nums, &startParam, startParam.outputMode != OutputMode_TscnByAnim);
 		FileSetAnim(pvz_animations[i]->fp_second_output_anim, pvz_animations[i]->output_file_extension, pvz_animations[i]->ResName, pvz_animations[i]->current_frame_time_num);
-		FileAddNode(pvz_animations[i]->fp_forth_output_node, pvz_animations[i]->current_tracks_num, anim_nums, pvz_animations[i]->track_name, pvz_animations, (strcmp(output_type, MODE_TSCN_BY_ANIM_STR) != 0));
+		FileAddNode(pvz_animations[i]->fp_forth_output_node, pvz_animations[i]->current_tracks_num, anim_nums, pvz_animations[i]->track_name, pvz_animations, startParam.outputMode != OutputMode_TscnByAnim);
 
 		// 重置输出文件指针到文件开头
 		fseek(pvz_animations[i]->fp_output, 0, SEEK_SET);
@@ -957,11 +1090,11 @@ int main(int argc, char* argv[])
 	
 	bool is_first_remove_output_files = false;
 	bool is_secondandmore_remove_output_files = false;
-	if (strcmp(output_type, MODE_TSCN_BY_ANIM_STR) == 0)
+	if (startParam.outputMode == OutputMode_TscnByAnim)
 	{
 		is_secondandmore_remove_output_files = true;
 	}
-	if (strcmp(output_type, MODE_ANIM_TRES_STR) == 0)
+	if (startParam.outputMode == OutputMode_AnimTres)
 	{
 		is_first_remove_output_files = true;
 	}

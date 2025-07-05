@@ -1,16 +1,9 @@
 ﻿#pragma once
 #include <stdbool.h>
+#include "PvzReanim.h"
 
 
-#define VERSION "3.1_dev"
 
-#define NAME_LENTH 300
-#define PATH_LENTH 500
-#define MAX_TIMES_NUM 4096
-#define MAX_TEXTURE_NUM 1000
-#define MAX_TRACKS_NUM 1000
-#define MAX_ANIM_NUM 50
-#define PI 3.1415926
 
 int FPS;
 
@@ -18,7 +11,7 @@ typedef struct Key
 {
 	float times[MAX_TIMES_NUM];
 	float transitions[MAX_TIMES_NUM];
-	int update;
+	UpdateMode update;
 	char values[MAX_TIMES_NUM][NAME_LENTH];
 }Key;
 
@@ -74,30 +67,48 @@ typedef struct PVZAnimation
 	bool flag_ky;
 	bool flag_ky2;
 	bool tap_is_t;
-	//输出后缀
-	char output_file_extension[50];
-	// 创建5个输出文件名
+	/// <summary>输出后缀</summary>
+	char output_file_extension[EXT_LENTH];
+
+	/// <summary>输出文件名</summary>
 	char str_output[NAME_LENTH];
+
+	/// <summary>第一个输出文件名（导入）</summary>
 	char str_first_output_ext[NAME_LENTH];
+
+	/// <summary>第二个输出文件名（动画）</summary>
 	char str_second_output_anim[NAME_LENTH];
+
+	/// <summary>第三个输出文件名（轨道）</summary>
 	char str_third_output_track[NAME_LENTH];
+
+	/// <summary>第四个输出文件名（节点）</summary>
 	char str_forth_output_node[NAME_LENTH];
-	// 创建5个输出文件指针
+
+	/// <summary>输出文件指针</summary>
 	FILE* fp_output;
+
+	/// <summary>第一个输出文件指针（导入）</summary>
 	FILE* fp_first_output_ext;
+
+	/// <summary>第二个输出文件指针（动画）</summary>
 	FILE* fp_second_output_anim;
+
+	/// <summary>第三个输出文件指针（轨道）</summary>
 	FILE* fp_third_output_track;
+
+	/// <summary>第四个输出文件指针（节点）</summary>
 	FILE* fp_forth_output_node;
-	//
+	
 	char filename_fuck[MAX_TEXTURE_NUM][NAME_LENTH];
 	int  filename_fuck_times;
 	char track_name[MAX_TRACKS_NUM][NAME_LENTH];
 	char ResName[NAME_LENTH];
 }PVZAnimation;
 
-void InitTracks(Tracks* track);
-void InitPVZTracks(PVZTracks* pvz_track);
-void InitPVZAnimation(PVZAnimation* pvz_animation, const char* name);
+void InitTracks(Tracks* track, R2GAStartParam* start_param);
+void InitPVZTracks(PVZTracks* pvz_track, R2GAStartParam* start_param);
+void InitPVZAnimation(PVZAnimation* pvz_animation, const char* name, R2GAStartParam* start_param);
 void OpenOutputFiles(PVZAnimation* pvz_animation, const char* output_file_path,const char* output_file);
 void FreePVZAnimation(PVZAnimation* pvz_animation, bool is_remove_output_files);
 

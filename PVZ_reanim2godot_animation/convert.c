@@ -8,7 +8,7 @@
 #include "convert.h"
 #include "PvzReanim.h"
 
-void InitTracks(Tracks* track)
+void InitTracks(Tracks* track, R2GAStartParam* start_param)
 {
 
 	//Init num
@@ -34,7 +34,7 @@ void InitTracks(Tracks* track)
 	}
 
 	//Init interp
-	track->interp = INTERPOLATION_MODE;
+	track->interp = start_param->interpolationMode;
 
 	//Init loop_wrap
 	track->loop_wrap = true;
@@ -49,10 +49,10 @@ void InitTracks(Tracks* track)
 			track->key.values[i][j] = '\0';
 		}
 	}
-	track->key.update = UPDATE_MODE;
+	track->key.update = start_param->updateMode;
 }
 
-void InitPVZTracks(PVZTracks* pvz_track)
+void InitPVZTracks(PVZTracks* pvz_track, R2GAStartParam* start_param)
 {
 	//Init anim_name
 	for (int i = 0; i < NAME_LENTH; i++)
@@ -70,18 +70,18 @@ void InitPVZTracks(PVZTracks* pvz_track)
 	if ((pvz_track->tracks_texture = (Tracks*)malloc(sizeof(Tracks))) == NULL) return;
 	if ((pvz_track->tracks_alpha = (Tracks*)malloc(sizeof(Tracks))) == NULL) return;
 	if ((pvz_track->tracks_blendmode = (Tracks*)malloc(sizeof(Tracks))) == NULL) return;
-	InitTracks(pvz_track->tracks_vis);
+	InitTracks(pvz_track->tracks_vis, start_param);
 	pvz_track->tracks_vis->key.update = UPDATE_MODE_CONTINUOUS;
-	InitTracks(pvz_track->tracks_pos);
-	InitTracks(pvz_track->tracks_rot);
-	InitTracks(pvz_track->tracks_scale);
-	InitTracks(pvz_track->tracks_skew);
-	InitTracks(pvz_track->tracks_texture);
-	InitTracks(pvz_track->tracks_alpha);
-	InitTracks(pvz_track->tracks_blendmode);
+	InitTracks(pvz_track->tracks_pos, start_param);
+	InitTracks(pvz_track->tracks_rot, start_param);
+	InitTracks(pvz_track->tracks_scale, start_param);
+	InitTracks(pvz_track->tracks_skew, start_param);
+	InitTracks(pvz_track->tracks_texture, start_param);
+	InitTracks(pvz_track->tracks_alpha, start_param);
+	InitTracks(pvz_track->tracks_blendmode, start_param);
 }
 
-void InitPVZAnimation(PVZAnimation* pvz_animation, const char* name)
+void InitPVZAnimation(PVZAnimation* pvz_animation, const char* name, R2GAStartParam* start_param)
 {
 	//Init anim_name
 	sprintf_s(pvz_animation->anim_name, NAME_LENTH, "%s", name);
@@ -92,7 +92,7 @@ void InitPVZAnimation(PVZAnimation* pvz_animation, const char* name)
 	pvz_animation->all_tracks_num = 0;
 	//Init tracks
 	if ((pvz_animation->tracks = (PVZTracks*)malloc(sizeof(PVZTracks))) == NULL) return;
-		InitPVZTracks(pvz_animation->tracks);
+		InitPVZTracks(pvz_animation->tracks, start_param);
 	// EN:Init now_time_num, now_tracks_num, now_tracks_vis_key_times, now_tracks_pos_key_times, now_tracks_rot_key_times, now_tracks_scale_key_times, now_tracks_skew_key_times, now_tracks_texture_key_times
 	pvz_animation->current_frame_time_num = 0;
 	pvz_animation->current_tracks_num = 0;
@@ -119,7 +119,7 @@ void InitPVZAnimation(PVZAnimation* pvz_animation, const char* name)
 	pvz_animation->fp_third_output_track = NULL;
 	pvz_animation->fp_forth_output_node = NULL;
 
-	sprintf_s(pvz_animation->output_file_extension, MAX_ANIM_NUM, "tscn");
+	sprintf_s(pvz_animation->output_file_extension, EXT_LENTH, "tscn");
 
 	pvz_animation->filename_fuck_times = 0;
 
@@ -139,15 +139,15 @@ void OpenOutputFiles(PVZAnimation* pvz_animation,const char* output_file_path,co
 	sprintf_s(pvz_animation->str_forth_output_node, NAME_LENTH, "%s%s_forth_node.jiema", output_file_path, output_file_name);
 
 	// 打开输出文件
-	FileOpen(&(pvz_animation->fp_output), pvz_animation->str_output, "w", 3);
+	FileOpen(&(pvz_animation->fp_output), pvz_animation->str_output, "w", ErrorCode_CannotOpenOutputFile);
 	// 打开ext输出文件
-	FileOpen(&(pvz_animation->fp_first_output_ext), pvz_animation->str_first_output_ext, "w+", 4);
+	FileOpen(&(pvz_animation->fp_first_output_ext), pvz_animation->str_first_output_ext, "w+", ErrorCode_CannotOpenExtOutputFile);
 	// 打开anim输出文件
-	FileOpen(&(pvz_animation->fp_second_output_anim), pvz_animation->str_second_output_anim, "w+", 5);
+	FileOpen(&(pvz_animation->fp_second_output_anim), pvz_animation->str_second_output_anim, "w+", ErrorCode_CannotOpenAnimOutputFile);
 	// 打开track输出文件
-	FileOpen(&(pvz_animation->fp_third_output_track), pvz_animation->str_third_output_track, "w+", 6);
+	FileOpen(&(pvz_animation->fp_third_output_track), pvz_animation->str_third_output_track, "w+", ErrorCode_CannotOpenTrackOutputFile);
 	// 打开node输出文件
-	FileOpen(&(pvz_animation->fp_forth_output_node), pvz_animation->str_forth_output_node, "w+", 7);
+	FileOpen(&(pvz_animation->fp_forth_output_node), pvz_animation->str_forth_output_node, "w+", ErrorCode_CannotOpenNodeOutputFile);
 }
 
 // 释放PVZAnimation

@@ -85,6 +85,19 @@
                 display: block;
             }
 
+            .content-section ul {
+                list-style-position: outside;
+                margin-left: 1.4em; /* 恢复为原来的距离 */
+                padding-left: 0;
+                padding-right: 0;
+            }
+
+                .content-section ul li {
+                    margin-left: 0;
+                    padding-left: 0em; /* 缩小小圆点与文本距离 */
+                    padding-right: 0;
+                    text-indent: 0;
+                }
         header {
             background-color: #4a6b22;
             color: white;
@@ -93,12 +106,23 @@
             margin-bottom: 30px;
             text-align: center;
         }
-
         h1 {
             margin: 0;
             font-size: 2.5em;
         }
 
+        .content-section ol {
+            list-style-position: inside;
+            margin-left: 0;
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+            .content-section ol li {
+                margin-left: 0;
+                padding-left: 0.3em; /* 可根据需要微调 */
+                padding-right: 0;
+            }
         h2 {
             color: #4a6b22;
             border-bottom: 2px solid #8bc34a;
@@ -117,6 +141,16 @@
             margin: 20px 0;
             border-radius: 0 5px 5px 0;
         }
+            .feature-box ul {
+                list-style-position: outside;
+                margin-left: 1.4em; /* 恢复为原来的距离 */
+                padding-left: 0;
+            }
+            .feature-box ul li {
+                padding-left: 0; /* 缩小小圆点与文本距离 */
+                text-indent: 0;
+            }
+
 
         .warning-box {
             background-color: #fff8e1;
@@ -230,17 +264,19 @@
             max-width: 100%;
             height: auto;
         }
-        
+
         /* 响应式设计 */
         @media (max-width: 768px) {
             body {
                 flex-direction: column;
             }
+
             nav {
                 width: 100%;
                 height: auto;
                 position: relative;
             }
+
             main {
                 padding: 15px;
             }
@@ -398,26 +434,26 @@
             <p>以下是一个动画转换后不同模式输出的文件结构示例：</p>
             <div class="code-block">
                 <code>
-                    # auto模式输入                 <br>
+                    # auto模式输入                                 <br>
                     &emsp;&emsp;        reanim/                    <br>
                     &emsp;&emsp;        └ zombie.reanim           <br>
-                    # auto模式输出                 <br>
+                    # auto模式输出                                 <br>
                     &emsp;&emsp;        animations/                <br>
                     &emsp;&emsp;        ├── zombie_walk.tres    <br>
                     &emsp;&emsp;        ├── zombie_idle.tres    <br>
                     &emsp;&emsp;        └── zombie.tscn         <br>
                     <br>
-                    # tscn_by_anim模式输入         <br>
+                    # tscn_by_anim模式输入                         <br>
                     &emsp;&emsp;        reanim/                    <br>
                     &emsp;&emsp;        └ zombie.reanim           <br>
-                    # tscn_by_anim模式输出         <br>
+                    # tscn_by_anim模式输出                         <br>
                     &emsp;&emsp;        animations/                <br>
                     &emsp;&emsp;        └── zombie.tscn         <br>
                     <br>
-                    # anim_tres模式输入            <br>
+                    # anim_tres模式输入                            <br>
                     &emsp;&emsp;        reanim/                    <br>
                     &emsp;&emsp;        └ zombie_walk.reanim      <br>
-                    # anim_tres模式输出            <br>
+                    # anim_tres模式输出                            <br>
                     &emsp;&emsp;        animations/                <br>
                     &emsp;&emsp;        └── zombie_walk.tres    <br>
                 </code>

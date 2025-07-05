@@ -2,7 +2,7 @@
 
 int tap(char* input, int* offset, char* tap_name, char* content);
 
-void text(char* old_content, PVZAnimation* pvz_animation[]);
+void text(char* old_content, PVZAnimation* pvz_animation[], R2GAStartParam* start_param);
 void arrayprintf_s(char* str, int num, char* array);
 
 void SetAnimName(PVZAnimation* pvz_animation, char* new_content);
@@ -19,7 +19,7 @@ void PreSetTrackTVis(PVZAnimation* pvz_animation);
 
 void SetTrackName(PVZAnimation* pvz_animation[], int anim_num, char* new_content);
 
-void SetTrack(PVZAnimation* pvz_animation, char* new_content);
+void SetTrack(PVZAnimation* pvz_animation, char* new_content, R2GAStartParam* start_param);
 
 void SetAnimKeyTimes(PVZAnimation* pvz_animation, int num);
 
@@ -35,7 +35,7 @@ void PreSetTrackTAlpha(PVZAnimation* pvz_animation);
 
 void PreSetTrackTTexture(PVZAnimation* pvz_animation);
 
-void SetTrackT(PVZAnimation* pvz_animation, char* new_content);
+void SetTrackT(PVZAnimation* pvz_animation, char* new_content, R2GAStartParam* start_param);
 
 void SetF(PVZAnimation* pvz_animation, char* new_content);
 
