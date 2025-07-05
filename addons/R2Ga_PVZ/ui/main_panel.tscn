@@ -1,0 +1,170 @@
+[gd_scene load_steps=4 format=3 uid="uid://bf6l3c7007wrf"]
+
+[ext_resource type="Script" uid="uid://wer0bo0v0mvd" path="res://addons/R2Ga_PVZ/ui/main_panel.gd" id="1_w5nb0"]
+[ext_resource type="StyleBox" uid="uid://bhbqbh8iaph0s" path="res://addons/R2Ga_PVZ/ui/new_style_box_flat.tres" id="2_5a7i0"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_30bg7"]
+bg_color = Color(0.145098, 0.145098, 0.145098, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.101961, 0.101961, 0.101961, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[node name="MainPanel" type="PanelContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 244.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_w5nb0")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="PluginIntroductionPanel2" type="PanelContainer" parent="HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(740, 0)
+layout_mode = 2
+
+[node name="ScrollContainer2" type="ScrollContainer" parent="HBoxContainer/PluginIntroductionPanel2"]
+layout_mode = 2
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2"]
+custom_minimum_size = Vector2(725, 0)
+layout_mode = 2
+
+[node name="PanelContainer" type="PanelContainer" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2"]
+layout_mode = 2
+theme_override_styles/panel = ExtResource("2_5a7i0")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/PanelContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/PanelContainer/VBoxContainer"]
+layout_mode = 2
+text = "PVZ原始动画文件路径"
+
+[node name="file_path_box" type="HBoxContainer" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/PanelContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="file_path_option" type="OptionButton" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/PanelContainer/VBoxContainer/file_path_box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(540, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 6.0
+clip_text = true
+
+[node name="file_select_button" type="Button" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/PanelContainer/VBoxContainer/file_path_box"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "选择PVZ原始动画文件"
+
+[node name="PanelContainer2" type="PanelContainer" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2"]
+layout_mode = 2
+theme_override_styles/panel = ExtResource("2_5a7i0")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/PanelContainer2"]
+layout_mode = 2
+
+[node name="Label2" type="Label" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/PanelContainer2/VBoxContainer"]
+layout_mode = 2
+text = "动画存放路径"
+
+[node name="anim_path_box" type="HBoxContainer" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/PanelContainer2/VBoxContainer"]
+layout_mode = 2
+
+[node name="anim_path_option" type="OptionButton" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/PanelContainer2/VBoxContainer/anim_path_box"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 6.0
+clip_text = true
+
+[node name="anim_select_button" type="Button" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/PanelContainer2/VBoxContainer/anim_path_box"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "选择动画文件夹"
+
+[node name="PanelContainer3" type="PanelContainer" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2"]
+layout_mode = 2
+theme_override_styles/panel = ExtResource("2_5a7i0")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/PanelContainer3"]
+layout_mode = 2
+
+[node name="Label3" type="Label" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/PanelContainer3/VBoxContainer"]
+layout_mode = 2
+text = "素材文件夹路径"
+
+[node name="asset_path_box" type="HBoxContainer" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/PanelContainer3/VBoxContainer"]
+layout_mode = 2
+
+[node name="asset_path_option" type="OptionButton" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/PanelContainer3/VBoxContainer/asset_path_box"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 6.0
+clip_text = true
+
+[node name="asset_select_button" type="Button" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/PanelContainer3/VBoxContainer/asset_path_box"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "选择素材文件夹"
+
+[node name="run_button" type="Button" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "运行"
+
+[node name="PluginIntroductionPanel" type="PanelContainer" parent="HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_30bg7")
+
+[node name="ScrollContainer" type="ScrollContainer" parent="HBoxContainer/PluginIntroductionPanel"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/PluginIntroductionPanel/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TitleLabel" type="Label" parent="HBoxContainer/PluginIntroductionPanel/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+text = "R2Ga_PVZ"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label" type="Label" parent="HBoxContainer/PluginIntroductionPanel/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+text = "开发者：HYTomZ、hsk-dream"
+vertical_alignment = 1
+
+[node name="Label5" type="Label" parent="HBoxContainer/PluginIntroductionPanel/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+text = "版本：v1.0.0"
+vertical_alignment = 1
+
+[node name="Label4" type="Label" parent="HBoxContainer/PluginIntroductionPanel/ScrollContainer/VBoxContainer"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+text = "插件简介：
+1、使用G2Ra对PVZ原始动画文件转换为Godot游戏引擎所支持的动画格式。
+2、实现了原始动画路径、动画存放路径、素材文件夹路径的选择和自动保存
+3、动画转换完成后，自动刷新资源目录
+4、生成文件存放在原始动画文件目录下
+5、UI设计参考Todo Controller
+TODO:
+1、修改生成文件到动画存放路径"
+vertical_alignment = 1
+autowrap_mode = 3
