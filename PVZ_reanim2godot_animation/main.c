@@ -108,12 +108,25 @@ void SetTrack(PVZAnimation* pvz_animation, char* new_content)
 void SetTrackName(PVZAnimation* pvz_animation[], int anim_num, char* new_content)
 {
 	sprintf_s(pvz_animation[anim_num]->tracks->name, NAME_LENTH, new_content);
-	// 注释：使用2进制位操作符来大写第一个字母
-	pvz_animation[anim_num]->tracks->name[0] &= 0b1011111;
+	// 如果第一个字符为字母
+	if (pvz_animation[anim_num]->tracks->name[0] >= 'a' && pvz_animation[anim_num]->tracks->name[0] <= 'z')
+	{
+		// 注释：使用2进制位操作符来大写第一个字母
+		pvz_animation[anim_num]->tracks->name[0] &= 0b1011111;
+	}
+	
 	for (int i = 0; i < NAME_LENTH; i++)
 	{
 		if (pvz_animation[anim_num]->tracks->name[i] == '.')
 			pvz_animation[anim_num]->tracks->name[i] = '_';
+		if (pvz_animation[anim_num]->tracks->name[i] == ':')
+			pvz_animation[anim_num]->tracks->name[i] = 'T';
+		if (pvz_animation[anim_num]->tracks->name[i] == '@')
+			pvz_animation[anim_num]->tracks->name[i] = 'A';
+		if (pvz_animation[anim_num]->tracks->name[i] == '\"')
+			pvz_animation[anim_num]->tracks->name[i] = 'Q';
+		if (pvz_animation[anim_num]->tracks->name[i] == '%')
+			pvz_animation[anim_num]->tracks->name[i] = 'P';
 	}
 	int track_str_end_num = 0;
 	char temp_name[NAME_LENTH];
@@ -168,7 +181,7 @@ void PreSetTrackTPos(PVZAnimation* pvz_animation)
 	{
 		sprintf_s(pvz_animation->tracks->tracks_pos->key.values[pvz_animation->current_tracks_pos_key_times], NAME_LENTH, pvz_animation->tracks->tracks_pos->key.values[pvz_animation->current_tracks_pos_key_times - 1]);
 	}
-	else if (strcmp(pvz_animation->output_file_extension, "tscn") == 0)
+	else if (strcmp(pvz_animation->output_file_extension, "tscn") == 0 || strcmp(pvz_animation->output_file_extension, "all.tres") == 0)
 	{
 		sprintf_s(pvz_animation->tracks->tracks_pos->key.values[pvz_animation->current_tracks_pos_key_times], NAME_LENTH, "Vector2(%7.2f, %7.2f)", 0.0, 0.0);
 	}
@@ -182,7 +195,7 @@ void PreSetTrackTScale(PVZAnimation* pvz_animation)
 	{
 		sprintf_s(pvz_animation->tracks->tracks_scale->key.values[pvz_animation->current_tracks_scale_key_times], NAME_LENTH, pvz_animation->tracks->tracks_scale->key.values[pvz_animation->current_tracks_scale_key_times - 1]);
 	}
-	else if (strcmp(pvz_animation->output_file_extension, "tscn") == 0)
+	else if (strcmp(pvz_animation->output_file_extension, "tscn") == 0 || strcmp(pvz_animation->output_file_extension, "all.tres") == 0)
 	{
 		sprintf_s(pvz_animation->tracks->tracks_scale->key.values[pvz_animation->current_tracks_scale_key_times], NAME_LENTH, "Vector2(1.000, 1.000)");
 		pvz_animation->flag_sx = true;
@@ -197,7 +210,7 @@ void PreSetTrackTRot(PVZAnimation* pvz_animation)
 		sprintf_s(pvz_animation->tracks->tracks_rot->key.values[pvz_animation->current_tracks_rot_key_times], NAME_LENTH, pvz_animation->tracks->tracks_rot->key.values[pvz_animation->current_tracks_rot_key_times - 1]);
 
 	}
-	else if (strcmp(pvz_animation->output_file_extension, "tscn") == 0)
+	else if (strcmp(pvz_animation->output_file_extension, "tscn") == 0 || strcmp(pvz_animation->output_file_extension, "all.tres") == 0)
 	{
 		sprintf_s(pvz_animation->tracks->tracks_rot->key.values[pvz_animation->current_tracks_rot_key_times], NAME_LENTH, "%10.6Lf", 0.0 / 180 * PI);
 		pvz_animation->flag_kx = true;
@@ -211,7 +224,7 @@ void PreSetTrackTSkew(PVZAnimation* pvz_animation)
 	{
 		sprintf_s(pvz_animation->tracks->tracks_skew->key.values[pvz_animation->current_tracks_skew_key_times], NAME_LENTH, pvz_animation->tracks->tracks_skew->key.values[pvz_animation->current_tracks_skew_key_times - 1]);
 	}
-	else if (strcmp(pvz_animation->output_file_extension, "tscn") == 0)
+	else if (strcmp(pvz_animation->output_file_extension, "tscn") == 0 || strcmp(pvz_animation->output_file_extension, "all.tres") == 0)
 	{
 		sprintf_s(pvz_animation->tracks->tracks_skew->key.values[pvz_animation->current_tracks_skew_key_times], NAME_LENTH, "%10.7Lf", 0.0 / 180 * PI);
 	}
@@ -234,7 +247,7 @@ void PreSetTrackTAlpha(PVZAnimation* pvz_animation)
 	{
 		sprintf_s(pvz_animation->tracks->tracks_alpha->key.values[pvz_animation->current_tracks_alpha_key_times], NAME_LENTH, pvz_animation->tracks->tracks_alpha->key.values[pvz_animation->current_tracks_alpha_key_times - 1]);
 	}
-	else if (strcmp(pvz_animation->output_file_extension, "tscn") == 0)
+	else if (strcmp(pvz_animation->output_file_extension, "tscn") == 0 || strcmp(pvz_animation->output_file_extension, "all.tres") == 0)
 	{
 		sprintf_s(pvz_animation->tracks->tracks_alpha->key.values[pvz_animation->current_tracks_alpha_key_times], NAME_LENTH, "Color(1, 1, 1, %2.5Lf)", 1.0);
 	}
@@ -879,7 +892,10 @@ int main(int argc, char* argv[])
 		if (i == 0)
 		{
 			InitPVZAnimation(pvz_animations[i], "all");
-			sprintf_s(pvz_animations[i]->output_file_extension, 50, "tscn");
+			if (strcmp(output_type, MODE_ANIM_TRES_STR) == 0)
+			{
+				sprintf_s(pvz_animations[i]->output_file_extension, 50, "all.tres");
+			}
 		}
 		else
 		{
@@ -934,7 +950,7 @@ int main(int argc, char* argv[])
 
 		// 重置输出文件指针到文件开头
 		fseek(pvz_animations[i]->fp_output, 0, SEEK_SET);
-		if (strcmp(pvz_animations[i]->output_file_extension, "tres") == 0)
+		if (strcmp(pvz_animations[i]->output_file_extension, "tres") == 0 || strcmp(pvz_animations[i]->output_file_extension, "all.tres") == 0)
 		{
 			FILE* input_files[3] = { pvz_animations[i]->fp_first_output_ext, 
 									 pvz_animations[i]->fp_second_output_anim, 
@@ -971,7 +987,7 @@ int main(int argc, char* argv[])
 
 	for (int i = 0; i < MAX_ANIM_NUM; i++)
 	{
-		FreePVZAnimation(pvz_animations[i], (i? is_secondandmore_remove_output_files : is_first_remove_output_files));
+		FreePVZAnimation(pvz_animations[i], (i? is_secondandmore_remove_output_files : false));
 	}
 
 	// 释放内存

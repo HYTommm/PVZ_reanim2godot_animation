@@ -2,7 +2,7 @@
 #include <stdbool.h>
 
 
-#define VERSION "3.1_dev"
+#define VERSION "3.3_dev"
 
 #define NAME_LENTH 300
 #define PATH_LENTH 500

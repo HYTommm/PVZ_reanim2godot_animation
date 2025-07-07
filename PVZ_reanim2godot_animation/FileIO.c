@@ -93,7 +93,7 @@ void FileMergeFiles(FILE* output_file, const char* output_type, FILE* input_file
 	{
 		fprintf_s(output_file, "[gd_scene load_steps=114 format=4 uid=\"fuck_uid_114514_1919810\"]\n\n");
 	}
-	else if (strcmp(output_type, "tres") == 0)
+	else if (strcmp(output_type, "tres") == 0 || strcmp(output_type, "all.tres") == 0)
 	{
 		fprintf_s(output_file, "[gd_resource type=\"Animation\" format=3 uid=\"fuck_uid_1919810_114514\"]\n\n");
 	}
