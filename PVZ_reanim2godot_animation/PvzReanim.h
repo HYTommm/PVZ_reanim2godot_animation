@@ -1,13 +1,17 @@
-#pragma once
+﻿#pragma once
 #include <stdbool.h>
+
+#define FROM(base) base
+#define CLASS typedef struct
+#define VTABLE typedef struct
 
 #define VERSION "4.0_dev_1"
 
 #define MAX_PARAMS 100       // 最大参数数量
 #define MAX_TOKENS 50        // 单个命令最大token数
-#define NAME_LENTH 256       // 名称最大长度
-#define PATH_LENTH 512       // 路径最大长度
-#define EXT_LENTH 10         // 扩展名最大长度
+#define NAME_LENGTH 256       // 名称最大长度
+#define PATH_LENGTH 512       // 路径最大长度
+#define EXT_LENGTH 10         // 扩展名最大长度
 #define MAX_TIMES_NUM 4096   // 最大时间数量
 #define MAX_TEXTURE_NUM 1000 // 最大贴图数量
 #define MAX_TRACKS_NUM 1000  // 最大轨道数量
@@ -28,7 +32,7 @@
 #define MODE_TSCN_BY_ANIM_STR_CAMEL "TscnByAnim"
 #define MODE_ANIM_TRES_STR "anim_tres"
 #define MODE_ANIM_TRES_STR_CAMEL "AnimTres"
-#define MODE_AUTO_STR "auto" 
+#define MODE_AUTO_STR "auto"
 #define MODE_AUTO_STR_CAMEL "Auto"
 
 #define UPDATE_MODE_CONTINUOUS_STR "continuous" // 连续
@@ -43,7 +47,7 @@
 /// 错误码
 /// </summary>
 typedef enum ErrorCode
-{	
+{
     /// <summary>
     /// 成功
     /// </summary>
@@ -114,6 +118,12 @@ typedef enum InterpolationMode
     INTERPOLATION_MODE_CUBIC    // 三次方
 }InterpolationMode;
 
+typedef enum BlendMode
+{
+    BLEND_MODE_NORMAL,
+    BLEND_MODE_ADD
+}BlendMode;
+
 //#define UPDATE_MODE UPDATE_MODE_CONTINUOUS
 //#define INTERPOLATION_MODE INTERPOLATION_MODE_LINEAR
 
@@ -155,7 +165,8 @@ static const char* dictionary[] =
 /// <summary>
 /// R2GA启动参数
 /// </summary>
-typedef struct R2GAStartParam {
+typedef struct R2GAStartParam
+{
     /// <summary>
     /// 是否显示帮助信息
     /// </summary>
@@ -168,15 +179,15 @@ typedef struct R2GAStartParam {
     /// <summary>
     /// 完整的输入文件路径（包含文件名）
     /// </summary>
-    char inputFileWholePath[PATH_LENTH];
+    char inputFileWholePath[PATH_LENGTH];
     /// <summary>
     /// 输入文件路径（不包含文件名）
     /// </summary>
-    char inputFilePath[PATH_LENTH];
+    char inputFilePath[PATH_LENGTH];
     /// <summary>
     /// 输入文件名（不包含扩展名）
     /// </summary>
-    char inputFileName[NAME_LENTH];
+    char inputFileName[NAME_LENGTH];
 
     /// <summary>
     /// 输出文件是否被指定
@@ -185,15 +196,15 @@ typedef struct R2GAStartParam {
     /// <summary>
     /// 完整的输出文件路径（包含文件名）
     /// </summary>
-    char outputFileWholePath[PATH_LENTH];
+    char outputFileWholePath[PATH_LENGTH];
     /// <summary>
     /// 输出文件路径（不包含文件名）
     /// </summary>
-    char outputFilePath[PATH_LENTH];
+    char outputFilePath[PATH_LENGTH];
     /// <summary>
     /// 输出文件名（不包含扩展名）
     /// </summary>
-    char outputFileName[NAME_LENTH];
+    char outputFileName[NAME_LENGTH];
 
     /// <summary>
     /// Godot动画存放路径是否被指定
@@ -202,7 +213,7 @@ typedef struct R2GAStartParam {
     /// <summary>
     /// Godot动画存放路径
     /// </summary>
-    char animOutputGodotPath[PATH_LENTH];
+    char animOutputGodotPath[PATH_LENGTH];
 
     /// <summary>
     /// Godot资源存放路径是否被指定
@@ -211,7 +222,7 @@ typedef struct R2GAStartParam {
     /// <summary>
     /// Godot资源存放路径
     /// </summary>
-    char resourceGodotPath[PATH_LENTH];
+    char resourceGodotPath[PATH_LENGTH];
 
     /// <summary>
     /// 输出模式是否被指定
@@ -245,7 +256,7 @@ typedef struct R2GAStartParam {
     /// <summary>
     /// 配置文件路径
     /// </summary>
-    char configFileWholePath[PATH_LENTH];
+    char configFileWholePath[PATH_LENGTH];
 
     /// <summary>
     /// 是否启用混合模式是否被指定
@@ -287,7 +298,7 @@ typedef struct R2GAStartParam {
     /// <summary>
     /// 根节点类型
     /// </summary>
-    char rootnodeType[NAME_LENTH];
+    char rootnodeType[NAME_LENGTH];
     /// <summary>
     /// 动画名称是否被指定
     /// </summary>
@@ -295,7 +306,7 @@ typedef struct R2GAStartParam {
     /// <summary>
     /// 动画名称
     /// </summary>
-    char animName[NAME_LENTH];
+    char animName[NAME_LENGTH];
 
     /// <summary>
     /// 动画白名单是否被指定
@@ -304,7 +315,7 @@ typedef struct R2GAStartParam {
     /// <summary>
     /// 动画白名单(二维数组)
     /// </summary>
-    char animWhitelist[MAX_ANIM_NUM][NAME_LENTH];
+    char animWhitelist[MAX_ANIM_NUM][NAME_LENGTH];
     /// <summary>
     /// 动画白名单数量
     /// </summary>
@@ -316,24 +327,24 @@ typedef struct R2GAStartParam {
     /// <summary>
     /// 动画黑名单(二维数组)
     /// </summary>
-    char animBlacklist[MAX_ANIM_NUM][NAME_LENTH];
+    char animBlacklist[MAX_ANIM_NUM][NAME_LENGTH];
     /// <summary>
     /// 动画黑名单数量
     /// </summary>
     int animBlacklistNum;
 } R2GAStartParam;
 
-
 /// <summary>
 /// 配置参数
 /// </summary>
-typedef struct R2GAConfigParam {
+typedef struct R2GAConfigParam
+{
     /// <summary>
     /// 等号前的第一部分
     /// </summary>
-    char key[NAME_LENTH];
+    char key[NAME_LENGTH];
     /// <summary>
     /// 等号后面的部分
     /// </summary>
-    char value[NAME_LENTH];
+    char value[NAME_LENGTH];
 } R2GAConfigParam;

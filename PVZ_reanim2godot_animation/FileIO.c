@@ -11,145 +11,156 @@
 
 void FileOpen(FILE** fp, const char* filename, const char* mode, int exit_code)
 {
-	//printf("filename = %s mode = %s\n", filename, mode);
-	errno_t err = fopen_s(fp, filename, mode);
-	if (err != 0 || *fp == NULL)
-	{
-		fprintf(stderr, "%s = NULL return code = %d\n", filename, exit_code);
-		exit(exit_code);
-	}
+    //printf("filename = %s mode = %s\n", filename, mode);
+    errno_t err = fopen_s(fp, filename, mode);
+    if (err != 0 || *fp == NULL)
+    {
+        fprintf(stderr, "%s = NULL return code = %d\n", filename, exit_code);
+        exit(exit_code);
+    }
 }
 void FileClose(FILE* fp)
 {
-	if (fp!= NULL)
-		fclose(fp);
+    if (fp != NULL)
+        fclose(fp);
 }
 
-void FileRead(FILE* input, char* filetext)
+void FileRead(FILE* input, char* file_buffer)
 {
-	for (int i = 0; (filetext[i] = fgetc(input)) != EOF; i++);
+    for (int i = 0; (file_buffer[i] = fgetc(input)) != EOF; i++);
 }
 
-void _FileWritePvzTrack(FILE* output, Tracks* track, int times)
-{
-	fprintf(output, "tracks/%d/type = \"%s\"\n", track->num, track->type);
-	fprintf(output, "tracks/%d/imported = %s\n", track->num, track->imported ? "true" : "false");
-	fprintf(output, "tracks/%d/enabled = %s\n", track->num, track->enabled ? "true" : "false");
-	fprintf(output, "tracks/%d/path = NodePath(\"%s\")\n", track->num, track->path);
-	fprintf(output, "tracks/%d/interp = %d\n", track->num, track->interp);
-	fprintf(output, "tracks/%d/loop_wrap = %s\n", track->num, track->loop_wrap ? "true" : "false");
-	fprintf(output, "tracks/%d/keys = {\n", track->num);
-	fprintf(output, "\"times\": PackedFloat32Array(");
-	for (int i = 0; i < times; i++)
-	{
-		fprintf(output, "%f", track->key.times[i]);
-		if (i != times - 1)
-		{
-			fprintf(output, ", ");
-		}
-	}
-	fprintf(output, "),\n");
-	fprintf(output, "\"transitions\": PackedFloat32Array(");
-	for (int i = 0; i < times; i++)
-	{
-		fprintf(output, "%f", track->key.transitions[i]);
-		if (i != times - 1)
-		{
-			fprintf(output, ", ");
-		}
-	}
-	fprintf(output, "),\n");
-	fprintf(output, "\"update\": %d,\n", track->key.update);
-	fprintf(output, "\"values\": [");
-	for (int i = 0; i < times; i++)
-	{
-		fprintf(output, "%s", track->key.values[i]);
-		if (i != times - 1)
-		{
-			fprintf(output, ", ");
-		}
-	}
-	fprintf(output, "]\n");
-	fprintf(output, "}\n");
-}
+//void _FileWritePvzTrack(FILE* output, Track* track, int times)
+//{
+//    fprintf(output, "tracks/%d/type = \"%s\"\n", track->num, track->type);
+//    fprintf(output, "tracks/%d/imported = %s\n", track->num, track->imported ? "true" : "false");
+//    fprintf(output, "tracks/%d/enabled = %s\n", track->num, track->enabled ? "true" : "false");
+//    fprintf(output, "tracks/%d/path = NodePath(\"%s\")\n", track->num, track->path);
+//    fprintf(output, "tracks/%d/interp = %d\n", track->num, track->interp);
+//    fprintf(output, "tracks/%d/loop_wrap = %s\n", track->num, track->loop_wrap ? "true" : "false");
+//    fprintf(output, "tracks/%d/keys = {\n", track->num);
+//    fprintf(output, "\"times\": PackedFloat32Array(");
+//    for (int i = 0; i < times; i++)
+//    {
+//        fprintf(output, "%f", track->key.times[i]);
+//        if (i != times - 1)
+//        {
+//            fprintf(output, ", ");
+//        }
+//    }
+//    fprintf(output, "),\n");
+//    fprintf(output, "\"transitions\": PackedFloat32Array(");
+//    for (int i = 0; i < times; i++)
+//    {
+//        fprintf(output, "%f", track->key.transitions[i]);
+//        if (i != times - 1)
+//        {
+//            fprintf(output, ", ");
+//        }
+//    }
+//    fprintf(output, "),\n");
+//    fprintf(output, "\"update\": %d,\n", track->key.update);
+//    fprintf(output, "\"values\": [");
+//    for (int i = 0; i < times; i++)
+//    {
+//        fprintf(output, "%s", track->key.values[i]);
+//        if (i != times - 1)
+//        {
+//            fprintf(output, ", ");
+//        }
+//    }
+//    fprintf(output, "]\n");
+//    fprintf(output, "}\n");
+//}
 
-void FileWriteTracks(PVZAnimation* anim, R2GAStartParam* start_param)
+void FileWriteTracks(const PvzAnimation* anim, const R2GAStartParam* start_param)
 {
-	FILE* output = anim->fp_third_output_track;
-	//assert(start_param != NULL);
-	if (start_param->visibleTrackEnabled)
-		_FileWritePvzTrack(output, anim->tracks->tracks_vis, anim->current_tracks_vis_key_times);
-	_FileWritePvzTrack(output, anim->tracks->tracks_pos, anim->current_tracks_pos_key_times);
-	_FileWritePvzTrack(output, anim->tracks->tracks_rot, anim->current_tracks_rot_key_times);
-	_FileWritePvzTrack(output, anim->tracks->tracks_scale, anim->current_tracks_scale_key_times);
-	_FileWritePvzTrack(output, anim->tracks->tracks_skew, anim->current_tracks_skew_key_times);
-	if (start_param->textureTrackEnabled)
-		_FileWritePvzTrack(output, anim->tracks->tracks_texture, anim->current_tracks_texture_key_times);
-	if (start_param->alphaTrackEnabled)
-		_FileWritePvzTrack(output, anim->tracks->tracks_alpha, anim->current_tracks_alpha_key_times);
-	if (start_param->blendModeTrackEnabled)
-		_FileWritePvzTrack(output, anim->tracks->tracks_blendmode, anim->current_tracks_blendmode_key_times);
-	fflush(output);
+    FILE* output = anim->ofp_third_track;
+    //assert(start_param != NULL);
+    //if (start_param->visibleTrackEnabled)
+    //    _FileWritePvzTrack(output, anim->tracks->vis, anim->current_tracks_vis_key_times);
+    //_FileWritePvzTrack(output, anim->tracks->pos, anim->current_tracks_pos_key_times);
+    //_FileWritePvzTrack(output, anim->tracks->rot, anim->current_tracks_rot_key_times);
+    //_FileWritePvzTrack(output, anim->tracks->scale, anim->current_tracks_scale_key_times);
+    //_FileWritePvzTrack(output, anim->tracks->skew, anim->current_tracks_skew_key_times);
+    //if (start_param->textureTrackEnabled)
+    //    _FileWritePvzTrack(output, anim->tracks->texture, anim->current_tracks_texture_key_times);
+    //if (start_param->alphaTrackEnabled)
+    //    _FileWritePvzTrack(output, anim->tracks->alpha, anim->current_tracks_alpha_key_times);
+    //if (start_param->blendModeTrackEnabled)
+    //    _FileWritePvzTrack(output, anim->tracks->blend_mode, anim->current_tracks_blendmode_key_times);
+
+    const PvzTracks* tracks = anim->tracks;
+    if (start_param->visibleTrackEnabled)    tracks->vis->vptr->PrintToFile(tracks->vis, output);
+    tracks->pos->vptr->PrintToFile(tracks->pos, output);
+    tracks->rot->vptr->PrintToFile(tracks->rot, output);
+    tracks->scale->vptr->PrintToFile(tracks->scale, output);
+    tracks->skew->vptr->PrintToFile(tracks->skew, output);
+    if (start_param->textureTrackEnabled)    tracks->texture->vptr->PrintToFile(tracks->texture, output);
+    if (start_param->alphaTrackEnabled)      tracks->alpha->vptr->PrintToFile(tracks->alpha, output);
+
+    fflush(output);
 }
 
 void FileMergeFiles(FILE* output_file, const char* output_type, FILE* input_files[], int num_files)
 {
-	fprintf_s(output_file, "; Generated by PVZ_reanim2godot_animation v%s\n\n", VERSION);
-	if (strcmp(output_type, "tscn") == 0)
-	{
-		fprintf_s(output_file, "[gd_scene load_steps=114 format=4 uid=\"fuck_uid_114514_1919810\"]\n\n");
-	}
-	else if (strcmp(output_type, "tres") == 0)
-	{
-		fprintf_s(output_file, "[gd_resource type=\"Animation\" format=3 uid=\"fuck_uid_1919810_114514\"]\n\n");
-	}
-	else
-	{
-		fprintf(stderr, "Unknown output type %s\n", output_type);
-		fprintf(stderr, "如果你遇到了这个错误，请立刻联系开发者并提供错误信息！错误代码：0x004f\n");
-	}
-	for (int i = 0; i < num_files; i++) {
-		FILE* input_file = input_files[i];
-		if (input_file == NULL) {
-			fprintf(stderr, "Input file %d is NULL\n", i);
-			continue;
-		}
-		// 重置输入文件指针到文件开头
-		fseek(input_file, 0, SEEK_SET);
+    fprintf_s(output_file, "; Generated by PVZ_reanim2godot_animation v%s\n\n", VERSION);
+    if (strcmp(output_type, "tscn") == 0)
+    {
+        fprintf_s(output_file, "[gd_scene load_steps=114 format=4 uid=\"fuck_uid_114514_1919810\"]\n\n");
+    }
+    else if (strcmp(output_type, "tres") == 0)
+    {
+        fprintf_s(output_file, "[gd_resource type=\"Animation\" format=3 uid=\"fuck_uid_1919810_114514\"]\n\n");
+    }
+    else
+    {
+        fprintf(stderr, "Unknown output type %s\n", output_type);
+        fprintf(stderr, "如果你遇到了这个错误，请立刻联系开发者并提供错误信息！错误代码：0x004f\n");
+    }
+    for (int i = 0; i < num_files; i++)
+    {
+        FILE* input_file = input_files[i];
+        if (input_file == NULL)
+        {
+            fprintf(stderr, "Input file %d is NULL\n", i);
+            continue;
+        }
+        // 重置输入文件指针到文件开头
+        fseek(input_file, 0, SEEK_SET);
 
-		int ch;
-		while ((ch = fgetc(input_file)) != EOF)
-		{
-			fputc(ch, output_file);
-		}
-	}
+        int ch;
+        while ((ch = fgetc(input_file)) != EOF)
+        {
+            fputc(ch, output_file);
+        }
+    }
 }
-
 
 /// <summary>
 /// 从文件路径(含文件名)得到文件名(不含扩展名)
 /// </summary>
 void FileGetFileNameWithoutExt(const char* fileWholePath, char* fileName)
 {
-	// 使用strrchr()函数查找最后一个目录分隔符
-	const char* fileName_linux = strrchr(fileWholePath, '/');
-	const char* fileName_windows = strrchr(fileWholePath, '\\');
-	const char* filename = fileName_linux > fileName_windows ? fileName_linux : fileName_windows;
+    // 使用strrchr()函数查找最后一个目录分隔符
+    const char* fileName_linux = strrchr(fileWholePath, '/');
+    const char* fileName_windows = strrchr(fileWholePath, '\\');
+    const char* filename = fileName_linux > fileName_windows ? fileName_linux : fileName_windows;
 
-	// 如果找到了分隔符，则文件名在分隔符之后
-	if (filename)
-	{
-		filename++;  // 跳过分隔符
-	}
-	else
-	{
-		// 如果未找到分隔符，则整个路径就是文件名
-		filename = fileWholePath;
-	}
-	for (int i = 0; i < NAME_LENTH; i++)
-	{
-		fileName[i] = filename[i] == '.' ? '\0' : filename[i];
-	}
+    // 如果找到了分隔符，则文件名在分隔符之后
+    if (filename)
+    {
+        filename++;  // 跳过分隔符
+    }
+    else
+    {
+        // 如果未找到分隔符，则整个路径就是文件名
+        filename = fileWholePath;
+    }
+    for (int i = 0; i < NAME_LENGTH; i++)
+    {
+        fileName[i] = filename[i] == '.' ? '\0' : filename[i];
+    }
 }
 
 /// <summary>
@@ -159,79 +170,83 @@ void FileGetFileNameWithoutExt(const char* fileWholePath, char* fileName)
 /// <param name="filePath"></param>
 void FileGetFilePath(const char* fileWholePath, char* filePath)
 {
-	// 使用strrchr()函数查找最后一个目录分隔符
-	const char* filePath_linux = strrchr(fileWholePath, '/');
-	const char* filePath_windows = strrchr(fileWholePath, '\\');
-	const char* filepath = filePath_linux > filePath_windows ? filePath_linux : filePath_windows;
+    // 使用strrchr()函数查找最后一个目录分隔符
+    const char* filePath_linux = strrchr(fileWholePath, '/');
+    const char* filePath_windows = strrchr(fileWholePath, '\\');
+    const char* filepath = filePath_linux > filePath_windows ? filePath_linux : filePath_windows;
 
-	// 如果找到了分隔符，则文件路径在分隔符之前
-	if (filepath)
-	{
-		for (int i = 0; i <= filepath - fileWholePath; i++)
-		{
-			filePath[i] = fileWholePath[i];
-		}
-		filePath[filepath - fileWholePath + 1] = '\0';
-	}
-	else
-	{
-		// 如果未找到分隔符，则整个路径就是文件路径
-		strcpy_s(filePath, NAME_LENTH, ".");
-	}
+    // 如果找到了分隔符，则文件路径在分隔符之前
+    if (filepath)
+    {
+        for (int i = 0; i <= filepath - fileWholePath; i++)
+        {
+            filePath[i] = fileWholePath[i];
+        }
+        filePath[filepath - fileWholePath + 1] = '\0';
+    }
+    else
+    {
+        // 如果未找到分隔符，则整个路径就是文件路径
+        strcpy_s(filePath, NAME_LENGTH, ".");
+    }
 }
 
-
-void FileExtResource(PVZAnimation* pvz_anim[], const int anim_index, const int anim_num, const R2GAStartParam* const start_param, const bool is_ext_anim_enabled)
+void FileExtResource(PvzAnimation* pvz_anim[], const int anim_index, const int anim_num, const R2GAStartParam* const start_param, const bool is_ext_anim_enabled)
 {
-	// 写入资源引用部分
-	// 加入文件头--工具的版本号
-	fprintf_s(pvz_anim[anim_index]->fp_first_output_ext, "; Generated by PVZ_reanim2godot_animation v%s\n\n", VERSION);
-	if (start_param->blendModeTrackEnabled)
-	{
-		fprintf_s(pvz_anim[anim_index]->fp_first_output_ext, "[ext_resource type=\"Shader\" path=\"res://normal.gdshader\" id=\"normal_shader\"]\n");
-		fprintf_s(pvz_anim[anim_index]->fp_first_output_ext, "[ext_resource type=\"Shader\" path=\"res://add.gdshader\" id=\"add_shader\"]\n");
-	}
-	for (int i = 0; i < pvz_anim[anim_index]->filename_fuck_times; i++)
-	{
-		fprintf_s(pvz_anim[anim_index]->fp_first_output_ext, "[ext_resource type=\"Texture2D\" path=\"%s%s\" id=\"%d_fuck\"]\n", start_param->resourceGodotPath, pvz_anim[anim_index]->filename_fuck[i], i);
-	}
-	fprintf_s(pvz_anim[anim_index]->fp_first_output_ext, "\n");
-	if (strcmp(pvz_anim[anim_index]->output_file_extension, "tscn"/*MODE_TSCN_STR*/) == 0 && is_ext_anim_enabled)
-	{
-		for (int i = 1; i <= anim_num; i++)
-		{
-			if (i == anim_index)
-			{
-				continue;
-			}
-			fprintf_s(pvz_anim[anim_index]->fp_first_output_ext, "[ext_resource type=\"Animation\" path=\"%s%s.tres\" id=\"%d_anim\"]\n", start_param->animOutputGodotPath, pvz_anim[i]->ResName, i);
-		}
-		fprintf_s(pvz_anim[anim_index]->fp_first_output_ext, "\n");
-	}
-	
-	if (start_param->blendModeTrackEnabled)
-	{
-		fprintf_s(pvz_anim[anim_index]->fp_first_output_ext, "[sub_resource type=\"ShaderMaterial\" id=\"ShaderMaterial_normal\"]\nshader = ExtResource(\"normal_shader\")\n\n");
-		fprintf_s(pvz_anim[anim_index]->fp_first_output_ext, "[sub_resource type=\"ShaderMaterial\" id=\"ShaderMaterial_add\"]\nshader = ExtResource(\"add_shader\")\n\n");
-	}
-	fflush(pvz_anim[anim_index]->fp_first_output_ext);
+    // 写入资源引用部分
+    // 加入文件头--工具的版本号
+    fprintf_s(pvz_anim[anim_index]->ofp_first_ext, "; Generated by PVZ_reanim2godot_animation v%s\n\n", VERSION);
+    if (start_param->blendModeTrackEnabled)
+    {
+        fprintf_s(pvz_anim[anim_index]->ofp_first_ext, "[ext_resource type=\"Shader\" path=\"res://normal.gdshader\" id=\"normal_shader\"]\n");
+        fprintf_s(pvz_anim[anim_index]->ofp_first_ext, "[ext_resource type=\"Shader\" path=\"res://add.gdshader\" id=\"add_shader\"]\n");
+    }
+    for (int i = 0; i < pvz_anim[anim_index]->texture_filename_times; i++)
+    {
+        fprintf_s(pvz_anim[anim_index]->ofp_first_ext, "[ext_resource type=\"Texture2D\" path=\"%s%s\" id=\"%d_fuck\"]\n", start_param->resourceGodotPath, pvz_anim[anim_index]->texture_filename[i], i);
+    }
+    fprintf_s(pvz_anim[anim_index]->ofp_first_ext, "\n");
+    if (strcmp(pvz_anim[anim_index]->output_file_extension, "tscn"/*MODE_TSCN_STR*/) == 0 && is_ext_anim_enabled)
+    {
+        for (int i = 1; i <= anim_num; i++)
+        {
+            if (i == anim_index)
+            {
+                continue;
+            }
+            fprintf_s(pvz_anim[anim_index]->ofp_first_ext, "[ext_resource type=\"Animation\" path=\"%s%s.tres\" id=\"%d_anim\"]\n", start_param->animOutputGodotPath, pvz_anim[i]->res_file_name, i);
+        }
+        fprintf_s(pvz_anim[anim_index]->ofp_first_ext, "\n");
+    }
+
+    if (start_param->blendModeTrackEnabled)
+    {
+        fprintf_s(pvz_anim[anim_index]->ofp_first_ext,
+            "[sub_resource type=\"ShaderMaterial\" id=\"ShaderMaterial_normal\"]\n"
+            "shader = ExtResource(\"normal_shader\")\n"
+            "\n");
+        fprintf_s(pvz_anim[anim_index]->ofp_first_ext,
+            "[sub_resource type=\"ShaderMaterial\" id=\"ShaderMaterial_add\"]\n"
+            "shader = ExtResource(\"add_shader\")\n"
+            "\n");
+    }
+    fflush(pvz_anim[anim_index]->ofp_first_ext);
 }
 
 void FileSetAnim(FILE* output, const char* output_type, const char* ResName, int time_num)
 {
-	fprintf_s(output, "; Generated by PVZ_reanim2godot_animation v%s\n\n", VERSION);
-	if (strcmp(output_type, "tres"/*MODE_ANIM_TRES_STR*/) == 0)
-	{
-		fprintf_s(output, "[resource]\nresource_name = \"%s\"\n", ResName);
-
-	}
-	else // strcmp(output_type, tscn MODE_TSCN_BY_ANIM_STR) == 0
-	{
-		fprintf_s(output, "[sub_resource type=\"Animation\" id=\"Animation_fuck\"]\n");
-	}
-	fprintf_s(output, "length = %.6Lf\n", (float)(time_num - 1) * (1.0 / FPS));
-	fprintf_s(output, "step = %.6Lf\n", 1.0 / FPS);
-	fflush(output);
+    fprintf_s(output, "; Generated by PVZ_reanim2godot_animation v%s\n\n", VERSION);
+    if (strcmp(output_type, "tres"/*MODE_ANIM_TRES_STR*/) == 0)
+    {
+        fprintf_s(output, "[resource]\nresource_name = \"%s\"\n", ResName);
+    }
+    else // strcmp(output_type, tscn MODE_TSCN_BY_ANIM_STR) == 0
+    {
+        fprintf_s(output, "[sub_resource type=\"Animation\" id=\"Animation_fuck\"]\n");
+    }
+    fprintf_s(output, "length = %.6Lf\n", (float)(time_num - 1) * (1.0 / FPS));
+    fprintf_s(output, "step = %.6Lf\n", 1.0 / FPS);
+    fflush(output);
 }
 /// <summary>
 /// 生成场景内节点部分
@@ -242,27 +257,27 @@ void FileSetAnim(FILE* output, const char* output_type, const char* ResName, int
 /// <param name="node_name"></param>
 /// <param name="pvz_anim"></param>
 /// <param name="is_ext_anim_enabled"></param>
-void FileAddNode(FILE* output, const int tracks_num, const int anim_num, const char node_name[MAX_TEXTURE_NUM][NAME_LENTH], PVZAnimation* pvz_anim[], const bool is_ext_anim_enabled)
+void FileAddNode(FILE* output, const int tracks_num, const int anim_num, const char node_name[MAX_TEXTURE_NUM][NAME_LENGTH], PvzAnimation* pvz_anim[], const bool is_ext_anim_enabled)
 {
-	fprintf_s(output, "; Generated by PVZ_reanim2godot_animation v%s\n\n", VERSION);
-	fprintf_s(output, "[sub_resource type=\"AnimationLibrary\" id=\"AnimationLibrary_fuck\"]\n_data = {\n\"ALL_ANIMS\": SubResource(\"Animation_fuck\")\n}\n\n");
-	for (int i = 1; i <= anim_num && is_ext_anim_enabled; i++)
-	{
-		fprintf_s(output, "[sub_resource type=\"AnimationLibrary\" id=\"AnimationLibrary_%s\"]\n", pvz_anim[i]->ResName);
-		fprintf_s(output, "_data = {\n");
-		fprintf_s(output, "&\"%s\": ExtResource(\"%d_anim\")\n", pvz_anim[i]->ResName, i);
-		fprintf_s(output, "}\n");
-	}
-	fprintf_s(output, "[node name=\"Node2D\" type=\"Node2D\"]\n\n");
-	for (int i = 0; i < tracks_num; i++)
-	{
-		fprintf_s(output, "[node name=\"%s\" type=\"Sprite2D\" parent=\".\"]\n", node_name[i]);
-		fprintf_s(output, "centered = false\n\n");
-	}
-	fprintf_s(output, "[node name=\"AnimLib\" type=\"AnimationPlayer\" parent=\".\"]\nlibraries = {\n\"\": SubResource(\"AnimationLibrary_fuck\")\n}\n\n");
-	for (int i = 1; i <= anim_num && is_ext_anim_enabled; i++)
-	{
-		fprintf_s(output, "[node name=\"Anim_%s\" type=\"AnimationPlayer\" parent=\".\"]\nlibraries = {\n\"\": SubResource(\"AnimationLibrary_%s\")\n}\n\n", pvz_anim[i]->ResName, pvz_anim[i]->ResName);
-	}
-	fflush(output);
+    fprintf_s(output, "; Generated by PVZ_reanim2godot_animation v%s\n\n", VERSION);
+    fprintf_s(output, "[sub_resource type=\"AnimationLibrary\" id=\"AnimationLibrary_fuck\"]\n_data = {\n\"ALL_ANIMS\": SubResource(\"Animation_fuck\")\n}\n\n");
+    for (int i = 1; i <= anim_num && is_ext_anim_enabled; i++)
+    {
+        fprintf_s(output, "[sub_resource type=\"AnimationLibrary\" id=\"AnimationLibrary_%s\"]\n", pvz_anim[i]->res_file_name);
+        fprintf_s(output, "_data = {\n");
+        fprintf_s(output, "&\"%s\": ExtResource(\"%d_anim\")\n", pvz_anim[i]->res_file_name, i);
+        fprintf_s(output, "}\n");
+    }
+    fprintf_s(output, "[node name=\"Node2D\" type=\"Node2D\"]\n\n");
+    for (int i = 0; i < tracks_num; i++)
+    {
+        fprintf_s(output, "[node name=\"%s\" type=\"Sprite2D\" parent=\".\"]\n", node_name[i]);
+        fprintf_s(output, "centered = false\n\n");
+    }
+    fprintf_s(output, "[node name=\"AnimLib\" type=\"AnimationPlayer\" parent=\".\"]\nlibraries = {\n\"\": SubResource(\"AnimationLibrary_fuck\")\n}\n\n");
+    for (int i = 1; i <= anim_num && is_ext_anim_enabled; i++)
+    {
+        fprintf_s(output, "[node name=\"Anim_%s\" type=\"AnimationPlayer\" parent=\".\"]\nlibraries = {\n\"\": SubResource(\"AnimationLibrary_%s\")\n}\n\n", pvz_anim[i]->res_file_name, pvz_anim[i]->res_file_name);
+    }
+    fflush(output);
 }

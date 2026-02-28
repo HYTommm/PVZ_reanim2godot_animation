@@ -30,6 +30,21 @@
     <ClInclude Include="StartParam.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="data.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="keys.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="tracks.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="PvzAnimation.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ResourceFile.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="convert.c">
@@ -42,6 +57,18 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="StartParam.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="keys.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="tracks.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="PvzAnimation.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="ResourceFile.c">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
