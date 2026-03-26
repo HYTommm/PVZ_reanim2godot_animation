@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <stdbool.h>
+#include "Tomy/include/data_type/vector.h"
 
 #define FROM(base) base
 #define CLASS typedef struct
@@ -123,6 +124,8 @@ typedef enum BlendMode
     BLEND_MODE_NORMAL,
     BLEND_MODE_ADD
 }BlendMode;
+
+VECTOR_IMPL(BlendMode);
 
 //#define UPDATE_MODE UPDATE_MODE_CONTINUOUS
 //#define INTERPOLATION_MODE INTERPOLATION_MODE_LINEAR

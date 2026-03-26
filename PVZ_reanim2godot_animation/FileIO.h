@@ -7,6 +7,8 @@
 void FileOpen(FILE** fp, const char* filename, const char* mode, int exit_code);
 void FileClose(FILE* fp);
 void FileRead(FILE* input, char* file_buffer);
+size_t FileGetSize(FILE* file);
+
 //void _FileWritePvzTrack(FILE* output, Track* track, int times);
 //void FileWriteTracks(const PvzAnimation* anim, const R2GAStartParam* start_param);
 //void FileMergeFiles(FILE* output_file, const char* output_type, FILE* input_files[], int num_files);
@@ -33,6 +35,6 @@ void FileGetFileNameWithoutExt(const char* fileWholePath, char* fileName);
 /// <summary> 从文件路径(含文件名)得到文件路径(不含文件名) </summary>
 /// <param name="fileWholePath"> 完整的文件路径 </param>
 /// <param name="filePath"> 返回的文件路径 </param>
-//void FileGetFilePath(const char* fileWholePath, char* filePath);
+void FileGetFilePath(const char* fileWholePath, char* filePath);
 //void FileSetAnim(FILE* output, const char* output_type, const char* ResName, int time_num);
 //void FileAddNode(FILE* output, const int tracks_num, const int anim_num, const char node_name[MAX_TEXTURE_NUM][NAME_LENGTH], PvzAnimation* pvz_anim[], const bool is_ext_anim_enabled);

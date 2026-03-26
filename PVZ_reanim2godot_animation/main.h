@@ -21,7 +21,7 @@ void SetTrackName(PvzAnimation* anim[], int anim_num, const char* new_content);
 
 void SetTrack(PvzAnimation* pvz_animation, char* new_content, const R2GAStartParam* start_param);
 
-void SetAnimKeyTimes(const PvzAnimation* anim, int num);
+void SetAnimKeyTimes(const PvzTracks* tracks, int num);
 
 void PreSetTrackTPos(const PvzAnimation* anim);
 

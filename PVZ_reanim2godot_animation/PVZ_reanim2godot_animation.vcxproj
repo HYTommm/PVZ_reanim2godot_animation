@@ -36,6 +36,15 @@
     <ClInclude Include="PvzReanim.h" />
     <ClInclude Include="ResourceFile.h" />
     <ClInclude Include="StartParam.h" />
+    <ClInclude Include="Tomy\include\class\class_macro.h" />
+    <ClInclude Include="Tomy\include\class\object_class.h" />
+    <ClInclude Include="Tomy\include\data_type\data_type.h" />
+    <ClInclude Include="Tomy\include\data_type\vector.h" />
+    <ClInclude Include="Tomy\include\error.h" />
+    <ClInclude Include="Tomy\include\macro.h" />
+    <ClInclude Include="Tomy\include\print.h" />
+    <ClInclude Include="Tomy\include\tomy.h" />
+    <ClInclude Include="Tomy\include\ustring.h" />
     <ClInclude Include="tracks.h" />
   </ItemGroup>
   <ItemGroup>
@@ -46,10 +55,12 @@
     <ClCompile Include="PvzAnimation.c" />
     <ClCompile Include="ResourceFile.c" />
     <ClCompile Include="StartParam.c" />
+    <ClCompile Include="Tomy\src\ustring.c" />
     <ClCompile Include="tracks.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\index.html" />
+    <None Include="cpp.hint" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

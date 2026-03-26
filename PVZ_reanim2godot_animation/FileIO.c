@@ -30,6 +30,14 @@ void FileRead(FILE* input, char* file_buffer)
     for (int i = 0; (file_buffer[i] = fgetc(input)) != EOF; i++);
 }
 
+size_t FileGetSize(FILE* file)
+{
+    fseek(file, 0, SEEK_END);
+    const size_t size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    return size;
+}
+
 //void _FileWritePvzTrack(FILE* output, Track* track, int times)
 //{
 //    fprintf(output, "tracks/%d/type = \"%s\"\n", track->num, track->type);
@@ -90,7 +98,7 @@ void FileWriteTracks(const PvzAnimation* anim, const R2GAStartParam* start_param
     //if (start_param->blendModeTrackEnabled)
     //    _FileWritePvzTrack(output, anim->tracks->blend_mode, anim->current_tracks_blendmode_key_times);
 
-    const PvzTracks* tracks = anim->tracks;
+    const PvzTracks* tracks = anim->tracks.back;
     if (start_param->visibleTrackEnabled)    tracks->vis->vptr->PrintToFile(tracks->vis, output);
     tracks->pos->vptr->PrintToFile(tracks->pos, output);
     tracks->rot->vptr->PrintToFile(tracks->rot, output);
@@ -190,7 +198,7 @@ void FileGetFilePath(const char* fileWholePath, char* filePath)
         strcpy_s(filePath, NAME_LENGTH, ".");
     }
 }
-
+#if flase
 void FileExtResource(PvzAnimation* pvz_anim[], const int anim_index, const int anim_num, const R2GAStartParam* const start_param, const bool is_ext_anim_enabled)
 {
     // 写入资源引用部分
@@ -281,3 +289,4 @@ void FileAddNode(FILE* output, const int tracks_num, const int anim_num, const c
     }
     fflush(output);
 }
+#endif

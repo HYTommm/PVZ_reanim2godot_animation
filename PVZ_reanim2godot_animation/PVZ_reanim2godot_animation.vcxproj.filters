@@ -45,6 +45,33 @@
     <ClInclude Include="ResourceFile.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Tomy\include\class\class_macro.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\class\object_class.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\error.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\macro.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\print.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\tomy.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\ustring.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\data_type\data_type.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\data_type\vector.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="convert.c">
@@ -71,10 +98,14 @@
     <ClCompile Include="ResourceFile.c">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Tomy\src\ustring.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\index.html">
       <Filter>源文件</Filter>
     </None>
+    <None Include="cpp.hint" />
   </ItemGroup>
 </Project>

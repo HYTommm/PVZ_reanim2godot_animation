@@ -1,15 +1,24 @@
 ﻿#include "keys.h"
 
 #include <stdlib.h>
-#include <string.h>
+
+#include "Tomy/include/class/class_macro.h"
+#include "Tomy/include/data_type/vector.h"
 
 extern R2GAStartParam startParam;
 
 void Keys_Create(Keys* self)
 {
+    static Keys_VTable keys_vtable = {
+        Keys_Create,
+        Keys_New,
+        Keys_PrintToFile
+    };
     self->vptr = &keys_vtable;
-    memset(self->times, 0, sizeof(self->times));
-    memset(self->transitions, 0, sizeof(self->transitions));
+    //memset(self->times, 0, sizeof(self->times));
+    //memset(self->transitions, 0, sizeof(self->transitions));
+    Create(Vector(f32), &self->times);
+    Create(Vector(f32), &self->transitions);
     self->update = startParam.updateMode;
     self->times_num = 0;
 }
@@ -19,7 +28,7 @@ Keys* Keys_New(void)
     Keys* self = (Keys*)malloc(sizeof(Keys));
     if (!self)
         return NULL;
-    self->vptr = &keys_vtable;
+    Keys_Create(self);
     return self;
 }
 
@@ -29,7 +38,7 @@ void Keys_PrintToFile(const Keys* self, FILE* file)
 
     for (int i = 0; i < self->times_num; i++)
     {
-        fprintf(file, "%f", self->times[i]);
+        fprintf(file, "%f", *VCall(Vec(f32), &self->times, at, i));
         if (i != self->times_num - 1)
             fprintf(file, ", ");
     }
@@ -39,7 +48,8 @@ void Keys_PrintToFile(const Keys* self, FILE* file)
 
     for (int i = 0; i < self->times_num; i++)
     {
-        fprintf(file, "%f", self->transitions[i]);
+        //fprintf(file, "%f", *VCall(Vec(f32), &self->transitions, at, i));
+        fprintf(file, "%.1f", 1.0f);
         if (i != self->times_num - 1)
             fprintf(file, ", ");
     }
@@ -50,9 +60,15 @@ void Keys_PrintToFile(const Keys* self, FILE* file)
 
 void BoolKeys_Create(BoolKeys* self)
 {
+    static Keys_VTable bool_keys_vtable = {
+        BoolKeys_Create,
+        BoolKeys_New,
+        BoolKeys_PrintToFile
+    };
     Keys_Create((Keys*)self);
     self->vptr = &bool_keys_vtable;
-    memset(self->values, 0, sizeof(self->values));
+    //memset(self->values, 0, sizeof(self->values));
+    Create(Vec(bool), &self->values);
 }
 
 BoolKeys* BoolKeys_New(void)
@@ -72,7 +88,7 @@ void BoolKeys_PrintToFile(BoolKeys* self, FILE* file)
 
     for (int i = 0; i < self->times_num; i++)
     {
-        fprintf(file, "%s", self->values[i] ? "true" : "false");
+        fprintf(file, "%s", *VCall(Vec(bool), &self->values, at, i) ? "true" : "false");
         if (i != self->times_num - 1)
             fprintf(file, ", ");
     }
@@ -81,9 +97,16 @@ void BoolKeys_PrintToFile(BoolKeys* self, FILE* file)
 
 void IntKeys_Create(IntKeys* self)
 {
+    static Keys_VTable int_keys_vtable = {
+        IntKeys_Create,
+        IntKeys_New,
+        IntKeys_PrintToFile
+    };
+
     Keys_Create((Keys*)self);
     self->vptr = &int_keys_vtable;
-    memset(self->values, 0, sizeof(self->values));
+    //memset(self->values, 0, sizeof(self->values));
+    Create(Vec(i32), &self->values);
 }
 
 IntKeys* IntKeys_New(void)
@@ -101,7 +124,8 @@ void IntKeys_PrintToFile(IntKeys* self, FILE* file)
     fprintf(file, "\"values\": [");
     for (int i = 0; i < self->times_num; i++)
     {
-        fprintf(file, "%d", self->values[i]);
+        //fprintf(file, "%d", self->values[i]);
+        fprintf(file, "%d", *VCall(Vec(i32), &self->values, at, i));
         if (i != self->times_num - 1)
             fprintf(file, ", ");
     }
@@ -110,6 +134,12 @@ void IntKeys_PrintToFile(IntKeys* self, FILE* file)
 
 void ExtResourceKeys_Create(ExtResourceKeys* self)
 {
+    static Keys_VTable ext_resource_keys_vtable = {
+        ExtResourceKeys_Create,
+        ExtResourceKeys_New,
+        ExtResourceKeys_PrintToFile
+    };
+
     IntKeys_Create((IntKeys*)self);
     self->vptr = &ext_resource_keys_vtable;
 }
@@ -129,14 +159,14 @@ void ExtResourceKeys_PrintToFile(ExtResourceKeys* self, FILE* file)
     fprintf(file, "\"values\": [");
     for (int i = 0; i < self->times_num; i++)
     {
-        if (self->values[i] == -1)
+        const i32 value = *VCall(Vec(i32), &self->values, at, i);
+        if (value == -1)
         {
             fprintf(file, "null");
         }
-        else if (self->values[i] >= 0)
+        else if (value >= 0)
         {
-            // ExtResource("60_fuck")
-            fprintf(file, "ExtResource(\"%d_fuck\")", self->values[i]);
+            fprintf(file, "ExtResource(\"%d_fuck\")", value);
         }
         if (i != self->times_num - 1)
         {
@@ -148,9 +178,16 @@ void ExtResourceKeys_PrintToFile(ExtResourceKeys* self, FILE* file)
 
 void FloatKeys_Create(FloatKeys* self)
 {
+    static Keys_VTable float_keys_vtable = {
+        FloatKeys_Create,
+        FloatKeys_New,
+        FloatKeys_PrintToFile
+    };
+
     Keys_Create((Keys*)self);
     self->vptr = &float_keys_vtable;
-    memset(self->values, 0, sizeof(self->values));
+    //memset(self->values, 0, sizeof(self->values));
+    Create(Vec(f32), &self->values);
 }
 
 FloatKeys* FloatKeys_New(void)
@@ -168,7 +205,8 @@ void FloatKeys_PrintToFile(FloatKeys* self, FILE* file)
     fprintf(file, "\"values\": [");
     for (int i = 0; i < self->times_num; i++)
     {
-        fprintf(file, "%f", self->values[i]);
+        //fprintf(file, "%f", self->values[i]);
+        fprintf(file, "%.3f", *VCall(Vec(f32), &self->values, at, i));
         if (i != self->times_num - 1)
             fprintf(file, ", ");
     }
@@ -177,9 +215,16 @@ void FloatKeys_PrintToFile(FloatKeys* self, FILE* file)
 
 void Vector2Keys_Create(Vector2Keys* self)
 {
+    static Keys_VTable vector2_keys_vtable = {
+        Vector2Keys_Create,
+        Vector2Keys_New,
+        Vector2Keys_PrintToFile
+    };
+
     Keys_Create((Keys*)self);
     self->vptr = &vector2_keys_vtable;
-    memset(self->values, 0, sizeof(self->values));
+    //memset(self->values, 0, sizeof(self->values));
+    Create(Vec(Vector2), &self->values);
 }
 
 Vector2Keys* Vector2Keys_New(void)
@@ -197,7 +242,8 @@ void Vector2Keys_PrintToFile(Vector2Keys* self, FILE* file)
     fprintf(file, "\"values\": [");
     for (int i = 0; i < self->times_num; i++)
     {
-        fprintf(file, "Vector2(%f, %f)", self->values[i].x, self->values[i].y);
+        const Vector2 value = *VCall(Vec(Vector2), &self->values, at, i);
+        fprintf(file, "Vector2(%.3f, %.3f)", value.x, value.y);
         if (i != self->times_num - 1)
             fprintf(file, ", ");
     }
@@ -206,9 +252,16 @@ void Vector2Keys_PrintToFile(Vector2Keys* self, FILE* file)
 
 void ColorKeys_Create(ColorKeys* self)
 {
+    static Keys_VTable color_keys_vtable = {
+        ColorKeys_Create,
+        ColorKeys_New,
+        ColorKeys_PrintToFile
+    };
+
     Keys_Create((Keys*)self);
     self->vptr = &color_keys_vtable;
-    memset(self->values, 0, sizeof(self->values));
+    //memset(self->values, 0, sizeof(self->values));
+    Create(Vec(Color), &self->values);
 }
 
 ColorKeys* ColorKeys_New(void)
@@ -226,7 +279,8 @@ void ColorKeys_PrintToFile(ColorKeys* self, FILE* file)
     fprintf(file, "\"values\": [");
     for (int i = 0; i < self->times_num; i++)
     {
-        fprintf(file, "Color(%f, %f, %f, %f)", self->values[i].r, self->values[i].g, self->values[i].b, self->values[i].a);
+        Color color = *VCall(Vec(Color), &self->values, at, i);
+        fprintf(file, "Color(%.3f, %.3f, %.3f, %.3f)", color.r, color.g, color.b, color.a);
         if (i != self->times_num - 1)
             fprintf(file, ", ");
     }
@@ -235,9 +289,15 @@ void ColorKeys_PrintToFile(ColorKeys* self, FILE* file)
 
 void BlendModeKeys_Create(BlendModeKeys* self)
 {
+    static Keys_VTable blend_mode_keys_vtable = {
+        BlendModeKeys_Create,
+        BlendModeKeys_New,
+        BlendModeKeys_PrintToFile
+    };
     Keys_Create((Keys*)self);
     self->vptr = &blend_mode_keys_vtable;
-    memset(self->values, 0, sizeof(self->values));
+    //memset(self->values, 0, sizeof(self->values));
+    Create(Vec(BlendMode), &self->values);
 }
 
 BlendModeKeys* BlendModeKeys_New(void)
@@ -255,7 +315,7 @@ void BlendModeKeys_PrintToFile(BlendModeKeys* self, FILE* file)
     fprintf(file, "\"values\": [");
     for (int i = 0; i < self->times_num; i++)
     {
-        fprintf(file, "%d", self->values[i]);
+        fprintf(file, "%d", *VCall(Vec(BlendMode), &self->values, at, i));
         if (i != self->times_num - 1)
             fprintf(file, ", ");
     }

@@ -5,13 +5,23 @@
 
 void Track_Create(Track* self)
 {
+    Track_VTable track_vtable = {
+        .Create = Track_Create,
+        .Delete = Track_Delete,
+        .New = Track_New,
+        .PrintToFile = Track_PrintToFile
+    };
+
     self->vptr = &track_vtable;
     self->num = 0;
-    memset(self->type, 0, sizeof(self->type));
-    snprintf(self->type, NAME_LENGTH, "value");
+    //memset(self->type, 0, sizeof(self->type));
+    //snprintf(self->type, NAME_LENGTH, "value");
+    string_init(&self->type);
+    string_append_s(&self->type, "value");
     self->imported = false;
     self->enabled = true;
-    memset(self->path, 0, sizeof(self->path));
+    //memset(self->path, 0, sizeof(self->path));
+    string_init(&self->path);
     self->interp = INTERPOLATION_MODE_LINEAR;
     self->loop_wrap = true;
 }
@@ -32,16 +42,22 @@ void Track_Delete(Track* self)
 
 void Track_PrintToFile(const Track* self, FILE* file)
 {
-    fprintf(file, "tracks/%d/type = \"%s\"\n", self->num, self->type);
+    fprintf(file, "tracks/%d/type = \"%s\"\n", self->num, self->type.data);
     fprintf(file, "tracks/%d/imported = %s\n", self->num, self->imported ? "true" : "false");
     fprintf(file, "tracks/%d/enabled = %s\n", self->num, self->enabled ? "true" : "false");
-    fprintf(file, "tracks/%d/path = NodePath(\"%s\")\n", self->num, self->path);
+    fprintf(file, "tracks/%d/path = NodePath(\"%s\")\n", self->num, self->path.data);
     fprintf(file, "tracks/%d/interp = %d\n", self->num, self->interp);
     fprintf(file, "tracks/%d/loop_wrap = %s\n", self->num, self->loop_wrap ? "true" : "false");
 }
 
 void BoolTrack_Create(BoolTrack* self)
 {
+    static Track_VTable bool_track_vtable = {
+        .Create = BoolTrack_Create,
+        .Delete = Track_Delete,
+        .New = BoolTrack_New,
+        .PrintToFile = BoolTrack_PrintToFile
+    };
     Track_Create((Track*)self);
     self->vptr = &bool_track_vtable;
     BoolKeys_Create(&self->keys);
@@ -66,6 +82,12 @@ void BoolTrack_PrintToFile(BoolTrack* self, FILE* file)
 
 void IntTrack_Create(IntTrack* self)
 {
+    static Track_VTable int_track_vtable = {
+        .Create = IntTrack_Create,
+        .Delete = Track_Delete,
+        .New = IntTrack_New,
+        .PrintToFile = IntTrack_PrintToFile
+    };
     Track_Create((Track*)self);
     self->vptr = &int_track_vtable;
     IntKeys_Create(&self->keys);
@@ -90,6 +112,12 @@ void IntTrack_PrintToFile(IntTrack* self, FILE* file)
 
 void FloatTrack_Create(FloatTrack* self)
 {
+    static Track_VTable float_track_vtable = {
+        .Create = FloatTrack_Create,
+        .Delete = Track_Delete,
+        .New = FloatTrack_New,
+        .PrintToFile = FloatTrack_PrintToFile
+    };
     Track_Create((Track*)self);
     self->vptr = &float_track_vtable;
     FloatKeys_Create(&self->keys);
@@ -114,6 +142,13 @@ void FloatTrack_PrintToFile(FloatTrack* self, FILE* file)
 
 void Vector2Track_Create(Vector2Track* self)
 {
+    static Track_VTable vector2_track_vtable = {
+        .Create = Vector2Track_Create,
+        .Delete = Track_Delete,
+        .New = Vector2Track_New,
+        .PrintToFile = Vector2Track_PrintToFile
+    };
+
     Track_Create((Track*)self);
     self->vptr = &vector2_track_vtable;
     Vector2Keys_Create(&self->keys);
@@ -138,6 +173,12 @@ void Vector2Track_PrintToFile(Vector2Track* self, FILE* file)
 
 void ColorTrack_Create(ColorTrack* self)
 {
+    static Track_VTable color_track_vtable = {
+        .Create = ColorTrack_Create,
+        .Delete = Track_Delete,
+        .New = ColorTrack_New,
+        .PrintToFile = ColorTrack_PrintToFile
+    };
     Track_Create((Track*)self);
     self->vptr = &color_track_vtable;
     ColorKeys_Create(&self->keys);
@@ -162,6 +203,13 @@ void ColorTrack_PrintToFile(ColorTrack* self, FILE* file)
 
 void ExtResourceTrack_Create(ExtResourceTrack* self)
 {
+    static Track_VTable ext_resource_track_vtable = {
+        .Create = ExtResourceTrack_Create,
+        .Delete = Track_Delete,
+        .New = ExtResourceTrack_New,
+        .PrintToFile = ExtResourceTrack_PrintToFile
+    };
+
     Track_Create((Track*)self);
     self->vptr = &ext_resource_track_vtable;
     ExtResourceKeys_Create(&self->keys);
@@ -186,6 +234,13 @@ void ExtResourceTrack_PrintToFile(ExtResourceTrack* self, FILE* file)
 
 void BlendModeTrack_Create(BlendModeTrack* self)
 {
+    static Track_VTable blend_mode_track_vtable = {
+        .Create = BlendModeTrack_Create,
+        .Delete = Track_Delete,
+        .New = BlendModeTrack_New,
+        .PrintToFile = BlendModeTrack_PrintToFile
+    };
+
     Track_Create((Track*)self);
     self->vptr = &blend_mode_track_vtable;
     BlendModeKeys_Create(&self->keys);
@@ -208,8 +263,15 @@ void BlendModeTrack_PrintToFile(BlendModeTrack* self, FILE* file)
     fprintf(file, "}\n");
 }
 
-void PvzTracks_Create(PvzTracks* self)
+void _PvzTracks_Create(PvzTracks* self)
 {
+    static PvzTracks_VTable pvz_tracks_vtable = {
+        .Create = _PvzTracks_Create,
+        .Destroy = PvzTracks_Destroy,
+        .New = PvzTracks_New,
+        .Init = PvzTracks_Delete,
+        .Init = PvzTracks_Init
+    };
     self->vptr = &pvz_tracks_vtable;
     memset(self->name, 0, sizeof(self->name));
     self->length = 0;
@@ -240,7 +302,7 @@ PvzTracks* PvzTracks_New()
     PvzTracks* self = (PvzTracks*)malloc(sizeof(PvzTracks));
     if (!self)
         return NULL;
-    PvzTracks_Create(self);
+    _PvzTracks_Create(self);
     return self;
 }
 
@@ -248,6 +310,33 @@ void PvzTracks_Delete(PvzTracks* self)
 {
     PvzTracks_Destroy(self);
     free(self);
+}
+
+void PvzTracks_Move(PvzTracks* dest, PvzTracks* src)
+{
+    if (!dest || !src) return;
+    memcpy(dest->name, src->name, sizeof(dest->name));
+    dest->length = src->length;
+
+    dest->vis = src->vis;
+    dest->pos = src->pos;
+    dest->rot = src->rot;
+    dest->scale = src->scale;
+    dest->skew = src->skew;
+    dest->texture = src->texture;
+    dest->alpha = src->alpha;
+    dest->blend_mode = src->blend_mode;
+
+    src->vis = NULL;
+    src->pos = NULL;
+    src->rot = NULL;
+    src->scale = NULL;
+    src->skew = NULL;
+    src->texture = NULL;
+    src->alpha = NULL;
+    src->blend_mode = NULL;
+    src->length = 0;
+    memset(src->name, 0, sizeof(src->name));
 }
 
 #define INIT_TRACK(track, start_param)                      \

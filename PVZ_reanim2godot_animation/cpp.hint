@@ -1,0 +1,23 @@
+﻿// 提示文件帮助 Visual Studio IDE 解释 Visual C++ 标识符,
+// 如函数和宏的名称。
+// 有关详细信息，请参见 https://go.microsoft.com/fwlink/?linkid=865984
+
+#define bool  _Bool
+#define false 0
+#define true  1
+
+#define _Vector1(T) Vector_##T
+#define _Vector2(T) _Vector1(T)
+#define _Vector3(T) _Vector2(T)
+#define Vector(T) _Vector3(T)
+#define Vec Vector
+
+
+#define _VCALL_1(T, self, func, ...) ((_##T##_VTable*)((T*)(self))->vptr)->func(self __VA_OPT__(,) __VA_ARGS__)
+#define _VCALL_2(T, self, func, ...) _VCALL_1(T, self, func, __VA_ARGS__)
+#define _VCALL_3(T, self, func, ...) _VCALL_2(T, self, func, __VA_ARGS__)
+#define VCall(T, self, func, ...) _VCALL_3(T, self, func, __VA_ARGS__)
+
+#define FROM(base) base
+#define CLASS typedef struct
+#define VTABLE typedef struct

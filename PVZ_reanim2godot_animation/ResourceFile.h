@@ -7,21 +7,21 @@
 VTABLE{
     void  (*Destroy)(const void* self);
     void  (*Delete)(void* self);
-} File_VTable;
+} _File_VTable;
 
 CLASS{
-    File_VTable * vptr;
+    _File_VTable * vptr;
     FILE* p_file;
     char name[NAME_LENGTH];
 } File;
 
 VTABLE{
-    FROM(File_VTable);
-    void (*OpenOutputFile)(void* self, const char* output_file_path, const char* output_file_name);
+    FROM(_File_VTable);
+    void (*OpenOutputFile)(void* self, const char* output_file_path);
     void (*PrintExtResource)(const void* self, const R2GAStartParam* start_param);
-    void (*PrintSetAnim)(const void* self);
+    void (*PrintSetAnim)(const void* self , int fps);
     void (*PrintTracks)(const void* self, const R2GAStartParam* start_param);
-}ResourceFile_VTable;
+}_ResourceFile_VTable;
 
 CLASS{
     FROM(File);
@@ -42,14 +42,14 @@ void Tres_Destroy(Tres* self);
 Tres* Tres_New(PvzAnimation* p_anim);
 void Tres_Delete(Tres* self);
 
-void Tres_OpenOutputFile(Tres* self, const char* output_file_path, const char* output_file_name);
+void Tres_OpenOutputFile(Tres* self, const char* output_file_path);
 void Tres_PrintExtResource(const Tres* self, const R2GAStartParam* start_param);
-void Tres_PrintSetAnim(const Tres* self);
+void Tres_PrintSetAnim(const Tres* self, int fps);
 
 VTABLE{
-    FROM(ResourceFile_VTable);
+    FROM(_ResourceFile_VTable);
     void (*PrintAddNode)(const void* self, const R2GAStartParam* start_param);
-}Tscn_VTable;
+}_Tscn_VTable;
 
 CLASS{
     FROM(ResourceFile);
@@ -62,8 +62,7 @@ void Tscn_Destroy(Tscn* self);
 Tscn* Tscn_New(PvzAnimation* p_anim, PvzAnimation* anims[], int anims_num);
 void Tscn_Delete(Tscn* self);
 
-void Tscn_OpenOutputFile(Tscn* self, const char* output_file_path, const char* output_file_name);
+void Tscn_OpenOutputFile(Tscn* self, const char* output_file_path);
 void Tscn_PrintExtResource(const Tscn* self, const R2GAStartParam* start_param);
-void Tscn_PrintSetAnim(const Tscn* self);
-void Tscn_PrintTracks(const Tscn* self, const R2GAStartParam* start_param);
+void Tscn_PrintSetAnim(const Tscn* self, int fps);
 void Tscn_PrintAddNode(const Tscn* self, const R2GAStartParam* start_param);
