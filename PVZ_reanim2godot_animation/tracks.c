@@ -14,13 +14,10 @@ void Track_Create(Track* self)
 
     self->vptr = &track_vtable;
     self->num = 0;
-    //memset(self->type, 0, sizeof(self->type));
-    //snprintf(self->type, NAME_LENGTH, "value");
     string_init(&self->type);
     string_append_s(&self->type, "value");
     self->imported = false;
     self->enabled = true;
-    //memset(self->path, 0, sizeof(self->path));
     string_init(&self->path);
     self->interp = INTERPOLATION_MODE_LINEAR;
     self->loop_wrap = true;

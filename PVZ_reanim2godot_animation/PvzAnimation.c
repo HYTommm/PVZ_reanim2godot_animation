@@ -18,10 +18,7 @@ void PvzAnimation_Create(PvzAnimation* self)
         .OpenOutputFiles = PvzAnimation_OpenOutputFiles,
         .FreeFiles = PvzAnimation_FreeFiles,
 
-        //.PrintExtResourceToFile = PvzAnimation_PrintExtResourceToFile,
-        //.PrintSetAnimToFile = PvzAnimation_PrintSetAnimToFile,
         .PrintTracksToFile = PvzAnimation_PrintTracksToFile,
-        //.PrintAddNodeToFile = PvzAnimation_PrintAddNodeToFile
     };
     self->vptr = &pvz_animation_vtable;
     memset(self->anim_name, 0, sizeof(self->anim_name));
