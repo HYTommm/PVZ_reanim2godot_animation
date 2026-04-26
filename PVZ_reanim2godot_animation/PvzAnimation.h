@@ -32,7 +32,7 @@ CLASS{
     Vec(PvzTracks) tracks;
     int current_frame_time_num;
     int current_tracks_num;
-
+    int current_track_num;
     /// <summary>输出后缀</summary>
     char output_file_extension[EXT_LENGTH];
 

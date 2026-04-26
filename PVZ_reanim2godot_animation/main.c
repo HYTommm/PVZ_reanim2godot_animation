@@ -105,7 +105,7 @@ void SetAnimKeyTimes(const PvzTracks* tracks, const int num)
 }
 void SetTrack(PvzAnimation* pvz_animation, char* new_content, const R2GAStartParam* start_param)
 {
-    static int track_num = 0;
+    int track_num = 0;
 
     PvzTracks tracks;
     Create(PvzTracks, &tracks);
@@ -124,31 +124,31 @@ void SetTrack(PvzAnimation* pvz_animation, char* new_content, const R2GAStartPar
 
     if (start_param->visibleTrackEnabled)
     {
-        tracks.vis->num = track_num;
-        track_num++;
+        tracks.vis->num = pvz_animation->current_track_num;
+        pvz_animation->current_track_num++;
     }
-    tracks.pos->num = track_num;
-    track_num++;
-    tracks.rot->num = track_num;
-    track_num++;
-    tracks.scale->num = track_num;
-    track_num++;
-    tracks.skew->num = track_num;
-    track_num++;
+    tracks.pos->num = pvz_animation->current_track_num;
+    pvz_animation->current_track_num++;
+    tracks.rot->num = pvz_animation->current_track_num;
+    pvz_animation->current_track_num++;
+    tracks.scale->num = pvz_animation->current_track_num;
+    pvz_animation->current_track_num++;
+    tracks.skew->num = pvz_animation->current_track_num;
+    pvz_animation->current_track_num++;
     if (start_param->textureTrackEnabled)
     {
-        tracks.texture->num = track_num;
-        track_num++;
+        tracks.texture->num = pvz_animation->current_track_num;
+        pvz_animation->current_track_num++;
     }
     if (start_param->alphaTrackEnabled)
     {
-        tracks.alpha->num = track_num;
-        track_num++;
+        tracks.alpha->num = pvz_animation->current_track_num;
+        pvz_animation->current_track_num++;
     }
     if (start_param->blendModeTrackEnabled)
     {
-        tracks.blend_mode->num = track_num;
-        track_num++;
+        tracks.blend_mode->num = pvz_animation->current_track_num;
+        pvz_animation->current_track_num++;
     }
     SetAnimKeyTimes(&tracks, 0);
 
@@ -420,12 +420,24 @@ void SetKx(const PvzAnimation* anim, const char* new_content)
     //    rot_keys->times_num++;
     //}
 
-    if (fabs(atof(new_content)) > 360 && fabs(fmod(atof(new_content), 360.0)) >= 180)
-        printf("kx > 360\n处理后 kx = %lf\n", fmod(atof(new_content), 360.0));
+    //if (fabs(atof(new_content)) > 360 && fabs(fmod(atof(new_content), 360.0)) >= 180)
+    //    printf("kx > 360\n处理后 kx = %lf\n", fmod(atof(new_content), 360.0));
 
     //sprintf_s(anim->tracks->rot->key.values[rot_keys->times_num - 1], NAME_LENGTH, "%10.6Lf", temp);
 
-    const f32 new_rot_value = fmod(atof(new_content), 360.0) / 180 * PI;
+    //const f32 new_rot_value = fmod(atof(new_content), 360.0) / 180 * PI;
+
+    f32 new_rot_value = atof(new_content) / 180 * PI;
+
+    while (new_rot_value - *rot_keys->values.back > PI)
+    {
+        new_rot_value -= 2 * PI;
+    }
+    while (new_rot_value - *rot_keys->values.back < -PI)
+    {
+        new_rot_value += 2 * PI;
+    }
+
     *VCall(Vec(f32), &rot_keys->values, back) = new_rot_value;
     *VCall(Vec(f32), &rot_keys->times, back) = 1.0 / FPS * anim->current_frame_time_num;
 
@@ -456,7 +468,17 @@ void SetKy(const PvzAnimation* anim, const char* new_content)
     //sprintf_s(pvz_animation->tracks->skew->key.values[pvz_animation->current_tracks_skew_key_times - 1], NAME_LENGTH, "%10.6Lf", temp);
     //skew_keys->values[skew_keys->times_num - 1] = new_skew_value - rot_value;
     //skew_keys->times[skew_keys->times_num - 1] = (float)(1.0 / FPS * anim->current_frame_time_num);
-    *VCall(Vec(f32), &skew_keys->values, back) = new_skew_value - rot_value;
+
+    f32 temp = new_skew_value - rot_value;
+    while (temp - *skew_keys->values.back > PI)
+    {
+        temp -= 2 * PI;
+    }
+    while (temp - *skew_keys->values.back < -PI)
+    {
+        temp += 2 * PI;
+    }
+    *VCall(Vec(f32), &skew_keys->values, back) = temp;
     *VCall(Vec(f32), &skew_keys->times, back) = 1.0 / FPS * anim->current_frame_time_num;
 }
 void SetI(PvzAnimation* anim, const char* new_content)
@@ -475,17 +497,17 @@ void SetI(PvzAnimation* anim, const char* new_content)
     if (texture_keys->times_num)
         last_time = *VCall(Vec(f32), &texture_keys->times, back);
 
-    if (texture_keys->times_num != 0 &&
-        //texture_keys->times[texture_keys->times_num] != (float)(1.0 / FPS * (anim->current_frame_time_num - 1))
-        fabs(last_time - 1.0 / FPS * (anim->current_frame_time_num - 1)) > 0.0001)
-    {
-        //sprintf_s(anim->tracks->texture->key.values[texture_keys->times_num], NAME_LENGTH, "%s", anim->tracks->texture->key.values[texture_keys->times_num - 1]);
-        //texture_keys->values[texture_keys->times_num] = texture_keys->values[texture_keys->times_num - 1];
-        //texture_keys->times[texture_keys->times_num] = (float)(1.0 / FPS * (anim->current_frame_time_num - 1));
-        VCall(Vec(i32), &texture_keys->values, push_back, *VCall(Vec(i32), &texture_keys->values, back));
-        VCall(Vec(f32), &texture_keys->times, push_back, 1.0 / FPS * (anim->current_frame_time_num - 1));
-        texture_keys->times_num++;
-    }
+    //if (texture_keys->times_num != 0 &&
+    //    //texture_keys->times[texture_keys->times_num] != (float)(1.0 / FPS * (anim->current_frame_time_num - 1))
+    //    fabs(last_time - 1.0 / FPS * (anim->current_frame_time_num - 1)) > 0.0001)
+    //{
+    //    //sprintf_s(anim->tracks->texture->key.values[texture_keys->times_num], NAME_LENGTH, "%s", anim->tracks->texture->key.values[texture_keys->times_num - 1]);
+    //    //texture_keys->values[texture_keys->times_num] = texture_keys->values[texture_keys->times_num - 1];
+    //    //texture_keys->times[texture_keys->times_num] = (float)(1.0 / FPS * (anim->current_frame_time_num - 1));
+    //    VCall(Vec(i32), &texture_keys->values, push_back, *VCall(Vec(i32), &texture_keys->values, back));
+    //    VCall(Vec(f32), &texture_keys->times, push_back, 1.0 / FPS * (anim->current_frame_time_num - 1));
+    //    texture_keys->times_num++;
+    //}
     // 提取 IMAGE_REANIM_XXX 中的 XXX 并将除首字母外的其他字符转为小写字母
     if (strncmp(new_content, "IMAGE_REANIM_", 13) == 0)
     {
@@ -522,6 +544,12 @@ void SetI(PvzAnimation* anim, const char* new_content)
     }
     //texture_keys->values[texture_keys->times_num] = res_filename_index;
     //texture_keys->times[texture_keys->times_num] = (float)(1.0 / FPS * anim->current_frame_time_num);
+    //if (texture_keys->times_num == 0)
+    //{
+    //    VCall(Vec(i32), &texture_keys->values, pop_back);
+    //    VCall(Vec(f32), &texture_keys->times, pop_back);
+    //}
+
     VCall(Vec(i32), &texture_keys->values, push_back, res_filename_index);
     VCall(Vec(f32), &texture_keys->times, push_back, 1.0 / FPS * anim->current_frame_time_num);
 
@@ -585,27 +613,27 @@ void SetInitValue(PvzAnimation* anims[], const int anim_index)
 
     //current_anim_tracks->skew->keys.values[0] = first_anim_tracks->skew->keys.values[first_anim_tracks->skew->keys.times_num ? first_anim_tracks->skew->keys.times_num - 1 : 0];
 
-    if (anim_index) VCall(Vec(bool), &current_anim_tracks->vis->keys.values, push_back, *VCall(Vec(bool), &first_anim_tracks->vis->keys.values, front)); // current_anim_tracks->vis->keys.values.push_back(first_anim_tracks->vis->keys.values.front());
+    if (anim_index) VCall(Vec(bool), &current_anim_tracks->vis->keys.values, push_back, *VCall(Vec(bool), &first_anim_tracks->vis->keys.values, back)); // current_anim_tracks->vis->keys.values.push_back(first_anim_tracks->vis->keys.values.front());
     else            VCall(Vec(bool), &current_anim_tracks->vis->keys.values, push_back, true); //&current_anim_tracks->vis->keys.values.push_back(true);
     VCall(Vec(f32), &current_anim_tracks->vis->keys.times, push_back, 0); // current_anim_tracks->vis->keys.times.push_back(0);
     current_anim_tracks->vis->keys.times_num++;
 
-    if (anim_index) VCall(Vec(Vector2), &current_anim_tracks->pos->keys.values, push_back, *VCall(Vec(Vector2), &first_anim_tracks->pos->keys.values, front));
+    if (anim_index) VCall(Vec(Vector2), &current_anim_tracks->pos->keys.values, push_back, *VCall(Vec(Vector2), &first_anim_tracks->pos->keys.values, back));
     else            VCall(Vec(Vector2), &current_anim_tracks->pos->keys.values, push_back, ((Vector2){ 0, 0 }));
     VCall(Vec(f32), &current_anim_tracks->pos->keys.times, push_back, 0);
     current_anim_tracks->pos->keys.times_num++;
 
-    if (anim_index) VCall(Vec(Vector2), &current_anim_tracks->scale->keys.values, push_back, *VCall(Vec(Vector2), &first_anim_tracks->scale->keys.values, front));
+    if (anim_index) VCall(Vec(Vector2), &current_anim_tracks->scale->keys.values, push_back, *VCall(Vec(Vector2), &first_anim_tracks->scale->keys.values, back));
     else            VCall(Vec(Vector2), &current_anim_tracks->scale->keys.values, push_back, ((Vector2){ 1, 1 }));
     VCall(Vec(f32), &current_anim_tracks->scale->keys.times, push_back, 0);
     current_anim_tracks->scale->keys.times_num++;
 
-    if (anim_index) VCall(Vec(f32), &current_anim_tracks->rot->keys.values, push_back, *VCall(Vec(f32), &first_anim_tracks->rot->keys.values, front));
+    if (anim_index) VCall(Vec(f32), &current_anim_tracks->rot->keys.values, push_back, *VCall(Vec(f32), &first_anim_tracks->rot->keys.values, back));
     else            VCall(Vec(f32), &current_anim_tracks->rot->keys.values, push_back, 0);
     VCall(Vec(f32), &current_anim_tracks->rot->keys.times, push_back, 0);
     current_anim_tracks->rot->keys.times_num++;
 
-    if (anim_index) VCall(Vec(f32), &current_anim_tracks->skew->keys.values, push_back, *VCall(Vec(f32), &first_anim_tracks->skew->keys.values, front));
+    if (anim_index) VCall(Vec(f32), &current_anim_tracks->skew->keys.values, push_back, *VCall(Vec(f32), &first_anim_tracks->skew->keys.values, back));
     else            VCall(Vec(f32), &current_anim_tracks->skew->keys.values, push_back, 0);
     VCall(Vec(f32), &current_anim_tracks->skew->keys.times, push_back, 0);
     current_anim_tracks->skew->keys.times_num++;
