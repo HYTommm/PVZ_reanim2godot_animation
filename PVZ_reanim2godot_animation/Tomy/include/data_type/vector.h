@@ -385,7 +385,8 @@ inline void _Vector_##T##_Create(Vector_##T* self) {                            
         _Vector_##T##_Front,                                                     \
         _Vector_##T##_Back,                                                      \
         _Vector_##T##_Data,                                                      \
-        _Vector_##T##_PushBack                                                   \
+        _Vector_##T##_PushBack,                                                   \
+        _VectorBase_PopBack,                                                      \
     };                                                                           \
     _VectorBase_Create((_VectorBase*)self, sizeof(T), CONSTRUCT, DESTROY, COPY, MOVE); \
     self->vptr = (void*)&_Vector_##T##_VTable_Instance;                          \

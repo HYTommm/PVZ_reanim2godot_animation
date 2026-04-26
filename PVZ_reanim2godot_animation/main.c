@@ -214,7 +214,7 @@ void PreSetTrackTPos(const PvzAnimation* anim)
     Vector2Keys* pos_keys = &anim->tracks.back->pos->keys;
     // 注释：如果当前帧时间不为0，则track的position设置为上一帧的值，否则设置为0，0
     //if (pos_keys->times_num)
-    if (pos_keys->values.size)
+    if (anim->current_frame_time_num)
     {
         //pos_keys->values[pos_keys->times_num] = pos_keys->values[pos_keys->times_num - 1];
         VCall(Vec(Vector2), &pos_keys->values, push_back, *VCall(Vec(Vector2), &pos_keys->values, back)); //pos_keys->times.push_back(pos_keys->times[pos_keys->times_num - 1]);
@@ -233,7 +233,7 @@ void PreSetTrackTScale(const PvzAnimation* anim)
 {
     Vector2Keys* scale_keys = &anim->tracks.back->scale->keys;
     // 注释：如果当前帧时间不为0，则track的scale设置为上一帧的值，否则设置为1，1
-    if (scale_keys->times_num)
+    if (anim->current_frame_time_num)
     {
         //scale_keys->values[scale_keys->times_num] = scale_keys->values[scale_keys->times_num - 1];
         VCall(Vec(Vector2), &scale_keys->values, push_back, *VCall(Vec(Vector2), &scale_keys->values, back));
@@ -249,7 +249,7 @@ void PreSetTrackTScale(const PvzAnimation* anim)
 void PreSetTrackTRot(const PvzAnimation* anim)
 {
     FloatKeys* rot_keys = &anim->tracks.back->rot->keys;
-    if (rot_keys->times_num)
+    if (anim->current_frame_time_num)
     {
         //rot_keys->values[rot_keys->times_num] = rot_keys->values[rot_keys->times_num - 1];
         //rot_keys->times[rot_keys->times_num] = (float)(1.0 / FPS * anim->current_frame_time_num);
@@ -265,7 +265,7 @@ void PreSetTrackTRot(const PvzAnimation* anim)
 void PreSetTrackTSkew(const PvzAnimation* anim)
 {
     FloatKeys* skew_keys = &anim->tracks.back->skew->keys;
-    if (skew_keys->times_num)
+    if (anim->current_frame_time_num)
     {
         //skew_keys->values[skew_keys->times_num] = skew_keys->values[skew_keys->times_num - 1];
         //skew_keys->times[skew_keys->times_num] = (float)(1.0 / FPS * anim->current_frame_time_num);
@@ -290,7 +290,7 @@ void PreSetTrackTTexture(const PvzAnimation* anim)
 void PreSetTrackTAlpha(const PvzAnimation* anim)
 {
     ColorKeys* alpha_keys = &anim->tracks.back->alpha->keys;
-    if (alpha_keys->times_num)
+    if (anim->current_frame_time_num)
     {
         //sprintf_s(anim->tracks->alpha->key.values[alpha_keys->times_num], NAME_LENGTH, anim->tracks->alpha->key.values[alpha_keys->times_num - 1]);
         //alpha_keys->values[alpha_keys->times_num] = alpha_keys->values[alpha_keys->times_num - 1];
@@ -489,25 +489,25 @@ void SetI(PvzAnimation* anim, const char* new_content)
     // 如果 texture 的 key 数量 已经超过了 当前帧数，则将 texture 的 key 数量设置为 当前帧数
     /*if (pvz_animation->current_tracks_texture_key_times == pvz_animation->current_frame_time_num)
         printf("tracks_texture_key_times = current_frame_time_num\n");*/
-    if (texture_keys->times_num > anim->current_frame_time_num)
-    {
-        texture_keys->times_num = anim->current_frame_time_num;
-    }
+    //if (texture_keys->times_num > anim->current_frame_time_num)
+    //{
+    //    texture_keys->times_num = anim->current_frame_time_num;
+    //}
     f32 last_time;
     if (texture_keys->times_num)
         last_time = *VCall(Vec(f32), &texture_keys->times, back);
 
-    //if (texture_keys->times_num != 0 &&
-    //    //texture_keys->times[texture_keys->times_num] != (float)(1.0 / FPS * (anim->current_frame_time_num - 1))
-    //    fabs(last_time - 1.0 / FPS * (anim->current_frame_time_num - 1)) > 0.0001)
-    //{
-    //    //sprintf_s(anim->tracks->texture->key.values[texture_keys->times_num], NAME_LENGTH, "%s", anim->tracks->texture->key.values[texture_keys->times_num - 1]);
-    //    //texture_keys->values[texture_keys->times_num] = texture_keys->values[texture_keys->times_num - 1];
-    //    //texture_keys->times[texture_keys->times_num] = (float)(1.0 / FPS * (anim->current_frame_time_num - 1));
-    //    VCall(Vec(i32), &texture_keys->values, push_back, *VCall(Vec(i32), &texture_keys->values, back));
-    //    VCall(Vec(f32), &texture_keys->times, push_back, 1.0 / FPS * (anim->current_frame_time_num - 1));
-    //    texture_keys->times_num++;
-    //}
+    if (texture_keys->times_num != 0 &&
+        //texture_keys->times[texture_keys->times_num] != (float)(1.0 / FPS * (anim->current_frame_time_num - 1))
+        fabs(last_time - 1.0 / FPS * (anim->current_frame_time_num - 1)) > 0.0001)
+    {
+        //sprintf_s(anim->tracks->texture->key.values[texture_keys->times_num], NAME_LENGTH, "%s", anim->tracks->texture->key.values[texture_keys->times_num - 1]);
+        //texture_keys->values[texture_keys->times_num] = texture_keys->values[texture_keys->times_num - 1];
+        //texture_keys->times[texture_keys->times_num] = (float)(1.0 / FPS * (anim->current_frame_time_num - 1));
+        VCall(Vec(i32), &texture_keys->values, push_back, *VCall(Vec(i32), &texture_keys->values, back));
+        VCall(Vec(f32), &texture_keys->times, push_back, 1.0 / FPS * (anim->current_frame_time_num - 1));
+        texture_keys->times_num++;
+    }
     // 提取 IMAGE_REANIM_XXX 中的 XXX 并将除首字母外的其他字符转为小写字母
     if (strncmp(new_content, "IMAGE_REANIM_", 13) == 0)
     {
@@ -544,11 +544,12 @@ void SetI(PvzAnimation* anim, const char* new_content)
     }
     //texture_keys->values[texture_keys->times_num] = res_filename_index;
     //texture_keys->times[texture_keys->times_num] = (float)(1.0 / FPS * anim->current_frame_time_num);
-    //if (texture_keys->times_num == 0)
-    //{
-    //    VCall(Vec(i32), &texture_keys->values, pop_back);
-    //    VCall(Vec(f32), &texture_keys->times, pop_back);
-    //}
+    if (texture_keys->times_num && anim->current_frame_time_num == 0)
+    {
+        VCall(Vec(i32), &texture_keys->values, pop_back);
+        VCall(Vec(f32), &texture_keys->times, pop_back);
+        texture_keys->times_num--;
+    }
 
     VCall(Vec(i32), &texture_keys->values, push_back, res_filename_index);
     VCall(Vec(f32), &texture_keys->times, push_back, 1.0 / FPS * anim->current_frame_time_num);
