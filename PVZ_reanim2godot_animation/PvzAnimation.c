@@ -31,6 +31,7 @@ void PvzAnimation_Create(PvzAnimation* self)
     Create(Vec(PvzTracks), &self->tracks);
     self->current_frame_time_num = 0;
     self->current_tracks_num = 0;
+    self->current_track_num = 0;
 
     memset(self->output_file_extension, 0, sizeof(self->output_file_extension));
     memset(self->str_output, 0, sizeof(self->str_output));
@@ -213,7 +214,7 @@ void PvzAnimation_PrintAddNodeToFile(const PvzAnimation* self, const int anim_nu
         }
     // 添加部件节点
         // 添加根节点 Node2D
-    fprintf_s(p_file, "[node name=\"Node2D\" type=\"Node2D\"]\n\n");
+    fprintf_s(p_file, "[node name=\"%s\" type=\"%s\"]\n\n", start_param->rootnodeType, start_param->rootnodeType);
     // 添加每个分动画的 Sprite2D 节点，节点名与分动画名（轨道名）相同
     for (int i = 0; i < self->current_tracks_num; i++)
     {

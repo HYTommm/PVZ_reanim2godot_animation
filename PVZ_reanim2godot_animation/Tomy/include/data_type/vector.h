@@ -412,8 +412,13 @@ inline void _Vector_##T##_Resize(Vector_##T* self, const umax new_size) {       
 }                                                                                \
 inline void _Vector_##T##_Reserve(Vector_##T* self, const umax new_capacity) {   \
     _VectorBase_Reserve((_VectorBase*)self, new_capacity);                       \
-    self->front = (T*)_VectorBase_Front((_VectorBase*)self);                     \
-    self->back = (T*)_VectorBase_Back((_VectorBase*)self);                       \
+    if (self->size){                                                             \
+        self->front = (T*)_VectorBase_Front((_VectorBase*)self);                 \
+        self->back = (T*)_VectorBase_Back((_VectorBase*)self);                   \
+    } else {                                                                     \
+        self->front = NULL;                                                      \
+        self->back = NULL;                                                       \
+    }                                                                            \
 }                                                                                \
 inline void _Vector_##T##_Clear(Vector_##T* self) {                              \
     _VectorBase_Clear((_VectorBase*)self);                                       \

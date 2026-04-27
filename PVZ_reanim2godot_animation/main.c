@@ -109,6 +109,7 @@ void SetTrack(PvzAnimation* pvz_animation, char* new_content, const R2GAStartPar
 
     PvzTracks tracks;
     Create(PvzTracks, &tracks);
+    PvzTracks_Init(&tracks, start_param);
 
     //pvz_animation->tracks->vis->num = pvz_animation->current_tracks_num *       (7+(is_blend_mode_enabled ? 1 : 0)) + 0;
     //pvz_animation->tracks->pos->num = pvz_animation->current_tracks_num *       (7+(is_blend_mode_enabled ? 1 : 0)) + 1;
@@ -121,6 +122,8 @@ void SetTrack(PvzAnimation* pvz_animation, char* new_content, const R2GAStartPar
     ////blend_mode->num
     //if (is_blend_mode_enabled)
     //	pvz_animation->tracks->blend_mode->num = pvz_animation->current_tracks_num * (7 + 1) + 7;
+
+    //println_emin(pvz_animation->current_track_num);
 
     if (start_param->visibleTrackEnabled)
     {
@@ -493,6 +496,14 @@ void SetI(PvzAnimation* anim, const char* new_content)
     //{
     //    texture_keys->times_num = anim->current_frame_time_num;
     //}
+
+    if (texture_keys->times_num && anim->current_frame_time_num == 0)
+    {
+        VCall(Vec(i32), &texture_keys->values, pop_back);
+        VCall(Vec(f32), &texture_keys->times, pop_back);
+        texture_keys->times_num--;
+    }
+
     f32 last_time;
     if (texture_keys->times_num)
         last_time = *VCall(Vec(f32), &texture_keys->times, back);
@@ -544,12 +555,6 @@ void SetI(PvzAnimation* anim, const char* new_content)
     }
     //texture_keys->values[texture_keys->times_num] = res_filename_index;
     //texture_keys->times[texture_keys->times_num] = (float)(1.0 / FPS * anim->current_frame_time_num);
-    if (texture_keys->times_num && anim->current_frame_time_num == 0)
-    {
-        VCall(Vec(i32), &texture_keys->values, pop_back);
-        VCall(Vec(f32), &texture_keys->times, pop_back);
-        texture_keys->times_num--;
-    }
 
     VCall(Vec(i32), &texture_keys->values, push_back, res_filename_index);
     VCall(Vec(f32), &texture_keys->times, push_back, 1.0 / FPS * anim->current_frame_time_num);
@@ -1067,7 +1072,7 @@ int main(int argc, char* argv[])
         return ErrorCode_Success;
     }
 
-    if (startParam.configFileWholePath[0] != '\0')
+    if (startParam.configFileSpecified && startParam.configFileWholePath[0] != '\0')
     {
         if (StartParamSetFromConfig(&startParam, startParam.configFileWholePath) == Result_Failed)
         {
@@ -1155,7 +1160,7 @@ int main(int argc, char* argv[])
     for (int i = 0; i <= anim_nums; i++)
     {
         ResourceFile* file = resource_files[i];
-        VCall(ResourceFile, file, OpenOutputFile, startParam.inputFilePath);
+        VCall(ResourceFile, file, OpenOutputFile, startParam.outputFileSpecified ? startParam.outputFilePath : startParam.inputFilePath);
     }
     IsBlendModeEnabled(file_text, &startParam);
 

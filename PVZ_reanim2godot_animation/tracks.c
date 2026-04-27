@@ -266,7 +266,7 @@ void _PvzTracks_Create(PvzTracks* self)
         .Create = _PvzTracks_Create,
         .Destroy = PvzTracks_Destroy,
         .New = PvzTracks_New,
-        .Init = PvzTracks_Delete,
+        .Delete = PvzTracks_Delete,
         .Init = PvzTracks_Init
     };
     self->vptr = &pvz_tracks_vtable;

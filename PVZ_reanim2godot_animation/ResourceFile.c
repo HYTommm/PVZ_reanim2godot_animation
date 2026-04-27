@@ -238,7 +238,7 @@ void Tscn_PrintAddNode(const Tscn* self, const R2GAStartParam* start_param)
         }
         // 添加部件节点
         // 添加根节点 Node2D
-    fprintf_s(self->p_file, "[node name=\"Node2D\" type=\"Node2D\"]\n\n");
+    fprintf_s(self->p_file, "[node name=\"%s\" type=\"%s\"]\n\n", self->p_anim->res_file_name, start_param->rootnodeType);
     // 添加每个分动画的 Sprite2D 节点，节点名与分动画名（轨道名）相同
     for (int i = 0; i < self->p_anim->current_tracks_num; i++)
     {

@@ -249,6 +249,7 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
             i++;
             continue;
         }
+        println_emin(format("Unknown interpolation mode: {} ", argv[i]));
     }
 
     return Result_Success;
@@ -257,7 +258,7 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
 Result ReadConfigFile(FILE* file, R2GAConfigParam configParams[], int maxConfigParams)
 {
     int param_count = 0;        // 已解析参数计数器
-    char ch;                    // 当前字符
+    int ch;                    // 当前字符
 
     // 临时存储当前命令的token
     char tokens[MAX_TOKENS][NAME_LENGTH];
@@ -274,6 +275,13 @@ Result ReadConfigFile(FILE* file, R2GAConfigParam configParams[], int maxConfigP
         // 跳过空白字符
         if (isspace(ch))
             continue;
+        // 支持以 '#' 开头的注释，跳过注释直到行尾（Python 风格）
+        if (ch == '#')
+        {
+            // 忽略直到换行或 EOF
+            while ((ch = fgetc(file)) != EOF && ch != '\n');
+            continue;
+        }
         if (ch == '=')
         {
             // 遇到等号，说明当前token解析结束
@@ -469,6 +477,13 @@ Result StartParamSetFromConfig(R2GAStartParam* param, const char* configFileWhol
                 fprintf(stderr, "Warning: Invalid value for AlphaEnabled\n");
             }
             param->alphaTrackEnabledSpecified = true;
+        }
+        // 处理"RootNodeType"参数
+        if (strcmp(configParams[i].key, "RootNodeType") == 0 && param->rootnodeTypeSpecified == false)
+        {
+            strncpy(param->rootnodeType, configParams[i].value, NAME_LENGTH - 1);
+            param->rootnodeType[NAME_LENGTH - 1] = '\0';
+            param->rootnodeTypeSpecified = true;
         }
         // 处理"InterpolationMode"参数
         if (strcmp(configParams[i].key, "InterpolationMode") == 0 && param->interpolationModeSpecified == false)
