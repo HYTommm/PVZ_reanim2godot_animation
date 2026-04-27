@@ -27,7 +27,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="convert.h" />
     <ClInclude Include="data.h" />
     <ClInclude Include="FileIO.h" />
     <ClInclude Include="keys.h" />
@@ -48,7 +47,6 @@
     <ClInclude Include="tracks.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="convert.c" />
     <ClCompile Include="FileIO.c" />
     <ClCompile Include="keys.c" />
     <ClCompile Include="main.c" />

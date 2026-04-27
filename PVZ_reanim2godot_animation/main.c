@@ -1,13 +1,12 @@
-﻿#include <Windows.h>
+﻿#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
-//#include <windows.h>
 
-#include "convert.h"
 #include "StartParam.h"
 #include "FileIO.h"
 #include "main.h"
@@ -24,60 +23,35 @@ bool is_blend_mode_enabled = false;
 
 int FPS;
 
-//char input_file[NAME_LENGTH];
-//char input_filePath[PATH_LENGTH];
-//char output_file[NAME_LENGTH];
-//char output_type[NAME_LENGTH];
-
 /// <summary>
 /// 通过文件内容判断是否应启用混合模式
+/// 遍历file_text，查找"<bm>"关键字，如果找到，则设置is_enabled为true
 /// </summary>
 /// <param name="file_text">文件内容字符串</param>
 /// <param name="start_param">启动参数</param>
-void IsBlendModeEnabled(char* file_text, R2GAStartParam* start_param)
+void IsBlendModeEnabled(const char* file_text, R2GAStartParam* start_param)
 {
-    //if (p != NULL && start_param->blendModeTrackEnabledSpecified && start_param->blendModeTrackEnabled)
-    //{
-    //    start_param->blendModeTrackEnabled = true;
-    //}
-    //else
-    //{
-    //    start_param->blendModeTrackEnabled = false;
-    //}
     if (start_param->blendModeTrackEnabledSpecified) return;
 
     // 遍历file_text，查找"<bm>"关键字，如果找到，则设置is_enabled为true
-    const char* p = strstr(file_text, "<bm>");
-    start_param->blendModeTrackEnabled = p != NULL;
+    start_param->blendModeTrackEnabled = !!strstr(file_text, "<bm>");
 }
 
-void arrayprintf_s(char* str, int num, char* array)
+void SetAnimName(PvzAnimation* anim, char* new_content)
 {
-    for (int i = 0; i < num; i++)
-    {
-        if (array[i] == '\0')
-        {
-            return;
-        }
-        str[i] = array[i];
-    }
+    sprintf_s(anim->anim_name, NAME_LENGTH, "%s", new_content);
 }
-
-void SetAnimName(PvzAnimation* pvz_animation, char* new_content)
+void SetAnimStartFrameTime(PvzAnimation* anim, const int frame_time_num)
 {
-    sprintf_s(pvz_animation->anim_name, NAME_LENGTH, "%s", new_content);
+    anim->start_frame_time = frame_time_num;
 }
-void SetAnimStartFrameTime(PvzAnimation* pvz_animation, int frame_time_num)
+void SetAnimEndFrameTime(PvzAnimation* anim, const int frame_time_num)
 {
-    pvz_animation->start_frame_time = frame_time_num;
+    anim->end_frame_time = frame_time_num;
 }
-void SetAnimEndFrameTime(PvzAnimation* pvz_animation, int frame_time_num)
+void SetAnimResName(PvzAnimation* anim, char* new_content)
 {
-    pvz_animation->end_frame_time = frame_time_num;
-}
-void SetAnimResName(PvzAnimation* pvz_animation, char* new_content)
-{
-    sprintf_s(pvz_animation->res_file_name, NAME_LENGTH, "%s", new_content);
+    sprintf_s(anim->res_file_name, NAME_LENGTH, "%s", new_content);
 }
 
 void SetFPS(const char* new_content)
@@ -86,14 +60,6 @@ void SetFPS(const char* new_content)
 }
 void SetAnimKeyTimes(const PvzTracks* tracks, const int num)
 {
-    //anim->current_tracks_vis_key_times = num;
-    //anim->current_tracks_pos_key_times = num;
-    //anim->current_tracks_rot_key_times = num;
-    //anim->current_tracks_scale_key_times = num;
-    //anim->current_tracks_skew_key_times = num;
-    //anim->current_tracks_texture_key_times = num;
-    //anim->current_tracks_alpha_key_times = num;
-    //anim->current_tracks_blendmode_key_times = num;
     tracks->vis->keys.times_num = num;
     tracks->pos->keys.times_num = num;
     tracks->rot->keys.times_num = num;
@@ -103,60 +69,44 @@ void SetAnimKeyTimes(const PvzTracks* tracks, const int num)
     tracks->alpha->keys.times_num = num;
     tracks->blend_mode->keys.times_num = num;
 }
-void SetTrack(PvzAnimation* pvz_animation, char* new_content, const R2GAStartParam* start_param)
+void SetTrack(PvzAnimation* anim, const R2GAStartParam* start_param)
 {
-    int track_num = 0;
-
     PvzTracks tracks;
     Create(PvzTracks, &tracks);
     PvzTracks_Init(&tracks, start_param);
 
-    //pvz_animation->tracks->vis->num = pvz_animation->current_tracks_num *       (7+(is_blend_mode_enabled ? 1 : 0)) + 0;
-    //pvz_animation->tracks->pos->num = pvz_animation->current_tracks_num *       (7+(is_blend_mode_enabled ? 1 : 0)) + 1;
-    //pvz_animation->tracks->rot->num = pvz_animation->current_tracks_num *       (7+(is_blend_mode_enabled ? 1 : 0)) + 2;
-    //pvz_animation->tracks->scale->num = pvz_animation->current_tracks_num *     (7+(is_blend_mode_enabled ? 1 : 0)) + 3;
-    //pvz_animation->tracks->skew->num = pvz_animation->current_tracks_num *      (7+(is_blend_mode_enabled ? 1 : 0)) + 4;
-    //pvz_animation->tracks->texture->num = pvz_animation->current_tracks_num *   (7+(is_blend_mode_enabled ? 1 : 0)) + 5;
-    //pvz_animation->tracks->alpha->num = pvz_animation->current_tracks_num *     (7+(is_blend_mode_enabled ? 1 : 0)) + 6;
-
-    ////blend_mode->num
-    //if (is_blend_mode_enabled)
-    //	pvz_animation->tracks->blend_mode->num = pvz_animation->current_tracks_num * (7 + 1) + 7;
-
-    //println_emin(pvz_animation->current_track_num);
-
     if (start_param->visibleTrackEnabled)
     {
-        tracks.vis->num = pvz_animation->current_track_num;
-        pvz_animation->current_track_num++;
+        tracks.vis->num = anim->current_track_num;
+        anim->current_track_num++;
     }
-    tracks.pos->num = pvz_animation->current_track_num;
-    pvz_animation->current_track_num++;
-    tracks.rot->num = pvz_animation->current_track_num;
-    pvz_animation->current_track_num++;
-    tracks.scale->num = pvz_animation->current_track_num;
-    pvz_animation->current_track_num++;
-    tracks.skew->num = pvz_animation->current_track_num;
-    pvz_animation->current_track_num++;
+    tracks.pos->num = anim->current_track_num;
+    anim->current_track_num++;
+    tracks.rot->num = anim->current_track_num;
+    anim->current_track_num++;
+    tracks.scale->num = anim->current_track_num;
+    anim->current_track_num++;
+    tracks.skew->num = anim->current_track_num;
+    anim->current_track_num++;
     if (start_param->textureTrackEnabled)
     {
-        tracks.texture->num = pvz_animation->current_track_num;
-        pvz_animation->current_track_num++;
+        tracks.texture->num = anim->current_track_num;
+        anim->current_track_num++;
     }
     if (start_param->alphaTrackEnabled)
     {
-        tracks.alpha->num = pvz_animation->current_track_num;
-        pvz_animation->current_track_num++;
+        tracks.alpha->num = anim->current_track_num;
+        anim->current_track_num++;
     }
     if (start_param->blendModeTrackEnabled)
     {
-        tracks.blend_mode->num = pvz_animation->current_track_num;
-        pvz_animation->current_track_num++;
+        tracks.blend_mode->num = anim->current_track_num;
+        anim->current_track_num++;
     }
     SetAnimKeyTimes(&tracks, 0);
 
-    pvz_animation->current_frame_time_num = 0;
-    VCall(Vec(PvzTracks), &pvz_animation->tracks, push_back, tracks);
+    anim->current_frame_time_num = 0;
+    VCall(Vec(PvzTracks), &anim->tracks, push_back, tracks);
 }
 void SetTrackName(PvzAnimation* anim[], const int anim_num, const char* new_content)
 {
@@ -201,16 +151,8 @@ void SetTrackName(PvzAnimation* anim[], const int anim_num, const char* new_cont
     snprintf(current_tracks->blend_mode->path.data, PATH_LENGTH, "%s:material", current_tracks->name);
     snprintf(current_anim->track_name[current_anim->current_tracks_num], NAME_LENGTH, "%s", current_tracks->name);
 }
-void PreSetTrackTVis(const PvzAnimation* anim)
+void PreSetTrackTVis([[maybe_unused]] const PvzAnimation* anim)
 {
-    BoolKeys* vis_keys = &anim->tracks.back->vis->keys;
-    // 注释：如果当前帧时间为0，则track的visible设置为true
-    if (anim->current_frame_time_num == 0)
-    {
-        if (!strcmp(anim->anim_name, "all"))
-        {
-        }
-    }
 }
 void PreSetTrackTPos(const PvzAnimation* anim)
 {
@@ -219,18 +161,11 @@ void PreSetTrackTPos(const PvzAnimation* anim)
     //if (pos_keys->times_num)
     if (anim->current_frame_time_num)
     {
-        //pos_keys->values[pos_keys->times_num] = pos_keys->values[pos_keys->times_num - 1];
-        VCall(Vec(Vector2), &pos_keys->values, push_back, *VCall(Vec(Vector2), &pos_keys->values, back)); //pos_keys->times.push_back(pos_keys->times[pos_keys->times_num - 1]);
+        VCall(Vec(Vector2), &pos_keys->values, push_back, *pos_keys->values.back);
         const f32 temp = 1.0 / FPS * anim->current_frame_time_num;
-        //pos_keys->times[pos_keys->times_num] = temp;
         VCall(Vec(f32), &pos_keys->times, push_back, temp); //pos_keys->times.push_back(temp);
         pos_keys->times_num++;
     }
-    //else if (strcmp(anim->output_file_extension, "tscn") == 0)
-    //{
-    //    //pos_keys->values[pos_keys->times_num] = (Vector2){ 0.0f, 0.0f };
-    //    VCall(Vec(Vector2), &pos_keys->values, push_back, { 0, 0 }); //pos_keys->times.push_back({0,0});
-    //}
 }
 void PreSetTrackTScale(const PvzAnimation* anim)
 {
@@ -238,48 +173,30 @@ void PreSetTrackTScale(const PvzAnimation* anim)
     // 注释：如果当前帧时间不为0，则track的scale设置为上一帧的值，否则设置为1，1
     if (anim->current_frame_time_num)
     {
-        //scale_keys->values[scale_keys->times_num] = scale_keys->values[scale_keys->times_num - 1];
-        VCall(Vec(Vector2), &scale_keys->values, push_back, *VCall(Vec(Vector2), &scale_keys->values, back));
-        //scale_keys->times[scale_keys->times_num] = (float)(1.0 / FPS * anim->current_frame_time_num);
+        VCall(Vec(Vector2), &scale_keys->values, push_back, *scale_keys->values.back);
         VCall(Vec(f32), &scale_keys->times, push_back, 1.0 / FPS * anim->current_frame_time_num);
         scale_keys->times_num++;
     }
-    //else if (strcmp(anim->output_file_extension, "tscn") == 0)
-    //{
-    //    scale_keys->values[scale_keys->times_num] = (Vector2){ 1.0f, 1.0f };
-    //}
 }
 void PreSetTrackTRot(const PvzAnimation* anim)
 {
     FloatKeys* rot_keys = &anim->tracks.back->rot->keys;
     if (anim->current_frame_time_num)
     {
-        //rot_keys->values[rot_keys->times_num] = rot_keys->values[rot_keys->times_num - 1];
-        //rot_keys->times[rot_keys->times_num] = (float)(1.0 / FPS * anim->current_frame_time_num);
-        VCall(Vec(f32), &rot_keys->values, push_back, *VCall(Vec(f32), &rot_keys->values, back));
+        VCall(Vec(f32), &rot_keys->values, push_back, *rot_keys->values.back);
         VCall(Vec(f32), &rot_keys->times, push_back, 1.0 / FPS * anim->current_frame_time_num);
         rot_keys->times_num++;
     }
-    //else if (strcmp(anim->output_file_extension, "tscn") == 0)
-    //{
-    //    rot_keys->values[rot_keys->times_num] = 0.0 / 180 * PI;
-    //}
 }
 void PreSetTrackTSkew(const PvzAnimation* anim)
 {
     FloatKeys* skew_keys = &anim->tracks.back->skew->keys;
     if (anim->current_frame_time_num)
     {
-        //skew_keys->values[skew_keys->times_num] = skew_keys->values[skew_keys->times_num - 1];
-        //skew_keys->times[skew_keys->times_num] = (float)(1.0 / FPS * anim->current_frame_time_num);
-        VCall(Vec(f32), &skew_keys->values, push_back, *VCall(Vec(f32), &skew_keys->values, back));
+        VCall(Vec(f32), &skew_keys->values, push_back, *skew_keys->values.back);
         VCall(Vec(f32), &skew_keys->times, push_back, 1.0 / FPS * anim->current_frame_time_num);
         skew_keys->times_num++;
     }
-    //else if (strcmp(anim->output_file_extension, "tscn") == 0)
-    //{
-    //    skew_keys->values[skew_keys->times_num] = 0.0 / 180 * PI;
-    //}
 }
 void PreSetTrackTTexture(const PvzAnimation* anim)
 {
@@ -295,19 +212,10 @@ void PreSetTrackTAlpha(const PvzAnimation* anim)
     ColorKeys* alpha_keys = &anim->tracks.back->alpha->keys;
     if (anim->current_frame_time_num)
     {
-        //sprintf_s(anim->tracks->alpha->key.values[alpha_keys->times_num], NAME_LENGTH, anim->tracks->alpha->key.values[alpha_keys->times_num - 1]);
-        //alpha_keys->values[alpha_keys->times_num] = alpha_keys->values[alpha_keys->times_num - 1];
-        //alpha_keys->times[alpha_keys->times_num] = (float)(1.0 / FPS * anim->current_frame_time_num);
-
-        VCall(Vec(Color), &alpha_keys->values, push_back, *VCall(Vec(Color), &alpha_keys->values, back));
+        VCall(Vec(Color), &alpha_keys->values, push_back, *alpha_keys->values.back);
         VCall(Vec(f32), &alpha_keys->times, push_back, 1.0 / FPS * anim->current_frame_time_num);
         alpha_keys->times_num++;
     }
-    //else if (strcmp(anim->output_file_extension, "tscn") == 0)
-    //{
-    //    //sprintf_s(anim->tracks->alpha->key.values[alpha_keys->times_num], NAME_LENGTH, "Color(1, 1, 1, %2.5Lf)", 1.0);
-    //    alpha_keys->values[alpha_keys->times_num] = (Color){ 1, 1, 1, 1 };
-    //}
 }
 
 void SetTrackT(PvzAnimation* anim, char* new_content, R2GAStartParam* start_param)
@@ -326,7 +234,7 @@ void SetTrackT(PvzAnimation* anim, char* new_content, R2GAStartParam* start_para
 
     PreSetTrackTAlpha(anim);
 
-    text(new_content, &anim, start_param);
+    Text(new_content, &anim, start_param);
 
     anim->current_frame_time_num++;
 }
@@ -344,10 +252,10 @@ void SetF(const PvzAnimation* anim, const char* new_content)
 
     if (anim->current_frame_time_num) // 如果当前帧时间不为0
     {
-        const f32 last_time = *VCall(Vec(f32), &vis_keys->times, back);
+        const f32 last_time = *vis_keys->times.back;
         if (fabs(last_time - 1.0 / FPS * (anim->current_frame_time_num - 1)) > 0.0001)
         {
-            VCall(Vec(bool), &vis_keys->values, push_back, *VCall(Vec(bool), &vis_keys->values, back));
+            VCall(Vec(bool), &vis_keys->values, push_back, *vis_keys->values.back);
             VCall(Vec(f32), &vis_keys->times, push_back, 1.0 / FPS * (anim->current_frame_time_num - 1));
             vis_keys->times_num++;
         }
@@ -357,78 +265,29 @@ void SetF(const PvzAnimation* anim, const char* new_content)
     }
     else
     {
-        *VCall(Vec(bool), &vis_keys->values, front) = new_value;
+        *vis_keys->values.front = new_value;
     }
 }
 void SetX(const PvzAnimation* anim, const char* new_content)
 {
-    Vector2Keys* pos_keys = &anim->tracks.back->pos->keys;
-    //if (!pos_keys->times_num)
-    //{
-    //    printf("pvz_animations->current_tracks_pos_key_times_x = 0\n");
-
-    //    pos_keys->values[pos_keys->times_num] = (Vector2){ 0.0f, 0.0f };
-    //    pos_keys->times_num++;
-    //}
-    //pos_keys->values[pos_keys->times_num - 1].x = atof(new_content);
-    //pos_keys->times[pos_keys->times_num - 1] = (float)(1.0 / FPS * anim->current_frame_time_num);
-
-    VCall(Vec(Vector2), &pos_keys->values, back)->x = atof(new_content);
+    anim->tracks.back->pos->keys.values.back->x = atof(new_content);
 }
 void SetY(const PvzAnimation* anim, const char* new_content)
 {
-    Vector2Keys* pos_keys = &anim->tracks.back->pos->keys;
-    //if (!pos_keys->times_num)
-    //{
-    //    printf("pvz_animations->current_tracks_pos_key_times_y = 0\n");
-    //    pos_keys->times_num++;
-    //}
-
-    //pos_keys->values[pos_keys->times_num - 1].y = atof(new_content);
-    //pos_keys->times[pos_keys->times_num - 1] = (float)(1.0 / FPS * anim->current_frame_time_num);
-    VCall(Vec(Vector2), &pos_keys->values, back)->y = atof(new_content);
+    anim->tracks.back->pos->keys.values.back->y = atof(new_content);
 }
 void SetSx(const PvzAnimation* anim, const char* new_content)
 {
-    Vector2Keys* scale_keys = &anim->tracks.back->scale->keys;
-    //if (!scale_keys->times_num)
-    //{
-    //    printf("tracks_scale_key_times_x = 0\n");
-    //    scale_keys->times_num++;
-    //}
-    //scale_keys->values[scale_keys->times_num - 1].x = atof(new_content);
-    //scale_keys->times[scale_keys->times_num - 1] = (float)(1.0 / FPS * anim->current_frame_time_num);
-    VCall(Vec(Vector2), &scale_keys->values, back)->x = atof(new_content);
+    anim->tracks.back->scale->keys.values.back->x = atof(new_content);
 }
 void SetSy(const PvzAnimation* anim, const char* new_content)
 {
-    Vector2Keys* scale_keys = &anim->tracks.back->scale->keys;
-    //if (!scale_keys->times_num)
-    //{
-    //    printf("tracks_scale_key_times_y = 0\n");
-    //    //sprintf_s(anim->tracks->scale->key.values[scale_keys->times_num], NAME_LENGTH, "Vector2(1.000, %5.3Lf)", atof(new_content));
-    //    scale_keys->times_num++;
-    //}
-    //scale_keys->values[scale_keys->times_num - 1].y = atof(new_content);
-    //scale_keys->times[scale_keys->times_num - 1] = (float)(1.0 / FPS * anim->current_frame_time_num);
-    VCall(Vec(Vector2), &scale_keys->values, back)->y = atof(new_content);
+    anim->tracks.back->scale->keys.values.back->y = atof(new_content);
 }
 void SetKx(const PvzAnimation* anim, const char* new_content)
 {
     FloatKeys* rot_keys = &anim->tracks.back->rot->keys;
     FloatKeys* skew_keys = &anim->tracks.back->skew->keys;
-
-    //if (!rot_keys->times_num)
-    //{
-    //    rot_keys->times_num++;
-    //}
-
-    //if (fabs(atof(new_content)) > 360 && fabs(fmod(atof(new_content), 360.0)) >= 180)
-    //    printf("kx > 360\n处理后 kx = %lf\n", fmod(atof(new_content), 360.0));
-
-    //sprintf_s(anim->tracks->rot->key.values[rot_keys->times_num - 1], NAME_LENGTH, "%10.6Lf", temp);
-
-    //const f32 new_rot_value = fmod(atof(new_content), 360.0) / 180 * PI;
 
     f32 new_rot_value = atof(new_content) / 180 * PI;
 
@@ -441,24 +300,20 @@ void SetKx(const PvzAnimation* anim, const char* new_content)
         new_rot_value += 2 * PI;
     }
 
-    *VCall(Vec(f32), &rot_keys->values, back) = new_rot_value;
-    *VCall(Vec(f32), &rot_keys->times, back) = 1.0 / FPS * anim->current_frame_time_num;
+    *rot_keys->values.back = new_rot_value;
+    *rot_keys->times.back = 1.0 / FPS * anim->current_frame_time_num;
 
     float last_skew = 0, last_rot = 0;
     if (skew_keys->times_num != 1)
     {
-        //last_skew = anim->tracks->skew->keys.values[skew_keys->times_num - 2];
-        last_skew = *(VCall(Vec(f32), &skew_keys->values, back) - 1);
+        last_skew = *(skew_keys->values.back - 1);
     }
     if (rot_keys->times_num != 1)
     {
-        //last_rot = rot_keys->values[rot_keys->times_num - 2];
-        last_rot = *(VCall(Vec(f32), &rot_keys->values, back) - 1);
+        last_rot = *(rot_keys->values.back - 1);
     }
-    //skew_keys->values[skew_keys->times_num - 1] = last_skew + last_rot - new_rot_value;
-    //skew_keys->times[skew_keys->times_num - 1] = (float)(1.0 / FPS * anim->current_frame_time_num);
-    *VCall(Vec(f32), &skew_keys->values, back) = last_skew + last_rot - new_rot_value;
-    *VCall(Vec(f32), &skew_keys->times, back) = 1.0 / FPS * anim->current_frame_time_num;
+    *skew_keys->values.back = last_skew + last_rot - new_rot_value;
+    *skew_keys->times.back = 1.0 / FPS * anim->current_frame_time_num;
 }
 void SetKy(const PvzAnimation* anim, const char* new_content)
 {
@@ -466,11 +321,7 @@ void SetKy(const PvzAnimation* anim, const char* new_content)
     FloatKeys* skew_keys = &anim->tracks.back->skew->keys;
 
     const f32 new_skew_value = fmod(atof(new_content), 360.0) / 180 * PI;
-    const f32 rot_value = *VCall(Vec(f32), &rot_keys->values, back);
-
-    //sprintf_s(pvz_animation->tracks->skew->key.values[pvz_animation->current_tracks_skew_key_times - 1], NAME_LENGTH, "%10.6Lf", temp);
-    //skew_keys->values[skew_keys->times_num - 1] = new_skew_value - rot_value;
-    //skew_keys->times[skew_keys->times_num - 1] = (float)(1.0 / FPS * anim->current_frame_time_num);
+    const f32 rot_value = *rot_keys->values.back;
 
     f32 temp = new_skew_value - rot_value;
     while (temp - *skew_keys->values.back > PI)
@@ -481,22 +332,14 @@ void SetKy(const PvzAnimation* anim, const char* new_content)
     {
         temp += 2 * PI;
     }
-    *VCall(Vec(f32), &skew_keys->values, back) = temp;
-    *VCall(Vec(f32), &skew_keys->times, back) = 1.0 / FPS * anim->current_frame_time_num;
+    *skew_keys->values.back = temp;
+    *skew_keys->times.back = 1.0 / FPS * anim->current_frame_time_num;
 }
 void SetI(PvzAnimation* anim, const char* new_content)
 {
     ExtResourceKeys* texture_keys = &anim->tracks.back->texture->keys;
     char temp[NAME_LENGTH] = { 0 };
     int res_filename_index = 0;
-    // 如果 texture 的 key 数量 已经超过了 当前帧数，则将 texture 的 key 数量设置为 当前帧数
-    /*if (pvz_animation->current_tracks_texture_key_times == pvz_animation->current_frame_time_num)
-        printf("tracks_texture_key_times = current_frame_time_num\n");*/
-    //if (texture_keys->times_num > anim->current_frame_time_num)
-    //{
-    //    texture_keys->times_num = anim->current_frame_time_num;
-    //}
-
     if (texture_keys->times_num && anim->current_frame_time_num == 0)
     {
         VCall(Vec(i32), &texture_keys->values, pop_back);
@@ -505,17 +348,11 @@ void SetI(PvzAnimation* anim, const char* new_content)
     }
 
     f32 last_time;
-    if (texture_keys->times_num)
-        last_time = *VCall(Vec(f32), &texture_keys->times, back);
 
-    if (texture_keys->times_num != 0 &&
-        //texture_keys->times[texture_keys->times_num] != (float)(1.0 / FPS * (anim->current_frame_time_num - 1))
+    if (texture_keys->times_num && (last_time = *texture_keys->times.back, true) &&
         fabs(last_time - 1.0 / FPS * (anim->current_frame_time_num - 1)) > 0.0001)
     {
-        //sprintf_s(anim->tracks->texture->key.values[texture_keys->times_num], NAME_LENGTH, "%s", anim->tracks->texture->key.values[texture_keys->times_num - 1]);
-        //texture_keys->values[texture_keys->times_num] = texture_keys->values[texture_keys->times_num - 1];
-        //texture_keys->times[texture_keys->times_num] = (float)(1.0 / FPS * (anim->current_frame_time_num - 1));
-        VCall(Vec(i32), &texture_keys->values, push_back, *VCall(Vec(i32), &texture_keys->values, back));
+        VCall(Vec(i32), &texture_keys->values, push_back, *texture_keys->values.back);
         VCall(Vec(f32), &texture_keys->times, push_back, 1.0 / FPS * (anim->current_frame_time_num - 1));
         texture_keys->times_num++;
     }
@@ -539,22 +376,12 @@ void SetI(PvzAnimation* anim, const char* new_content)
         res_filename_index < anim->texture_filename_times && strcmp(anim->texture_filename[res_filename_index], temp) != 0;
         res_filename_index++)
     {
-        //if ()
-        //{
-            //sprintf_s(anim->tracks->texture->key.values[texture_keys->times_num], NAME_LENGTH, "ExtResource(\"%d_fuck\")", i);
-            //texture_keys->values[texture_keys->times_num] = i;
-            //break;
-        //}
     }
     if (res_filename_index == anim->texture_filename_times)
     {
         sprintf_s(anim->texture_filename[res_filename_index], NAME_LENGTH, "%s", temp);
-        //sprintf_s(anim->tracks->texture->key.values[texture_keys->times_num], NAME_LENGTH, "ExtResource(\"%d_fuck\")", i);
-        //texture_keys->values[texture_keys->times_num] = i;
         anim->texture_filename_times++;
     }
-    //texture_keys->values[texture_keys->times_num] = res_filename_index;
-    //texture_keys->times[texture_keys->times_num] = (float)(1.0 / FPS * anim->current_frame_time_num);
 
     VCall(Vec(i32), &texture_keys->values, push_back, res_filename_index);
     VCall(Vec(f32), &texture_keys->times, push_back, 1.0 / FPS * anim->current_frame_time_num);
@@ -568,17 +395,12 @@ void SetA(const PvzAnimation* anim, const char* new_content)
 
     if (alpha_keys->times_num)
     {
-        //sprintf_s(anim->tracks->alpha->key.values[alpha_keys->times_num - 1], NAME_LENGTH, "Color(1, 1, 1, %2.5Lf)", atof(new_content));
-        //alpha_keys->values[alpha_keys->times_num - 1] = (Color){ 1, 1, 1, atof(new_content) };
-        VCall(Vec(Color), &alpha_keys->values, back)->a = atof(new_content);
+        alpha_keys->values.back->a = atof(new_content);
     }
     else
     {
         printf("tracks_alpha_key_times = 0\n");
-        //sprintf_s(anim->tracks->alpha->key.values[alpha_keys->times_num], NAME_LENGTH, "Color(1, 1, 1, %2.5Lf)", atof(new_content));
-        //alpha_keys->values[alpha_keys->times_num] = (Color){ 1, 1, 1, atof(new_content) };
         VCall(Vec(Color), &alpha_keys->values, push_back, ((Color){1, 1, 1, atof(new_content)}));
-        //alpha_keys->times[alpha_keys->times_num - 1] = (float)(1.0 / FPS * anim->current_frame_time_num);
         VCall(Vec(f32), &alpha_keys->times, push_back, 1.0 / FPS * anim->current_frame_time_num);
         alpha_keys->times_num++;
     }
@@ -588,71 +410,36 @@ void SetBm(const PvzAnimation* anim, const char* new_content)
 {
     BlendModeKeys* blend_mode_keys = &anim->tracks.back->blend_mode->keys;
     if (strcmp(new_content, "normal") == 0)
-    {
-        //sprintf_s(anim->tracks->blend_mode->key.values[blend_mode_keys->times_num], NAME_LENGTH, "SubResource(\"ShaderMaterial_%s\")", new_content);
-        //blend_mode_keys->values[blend_mode_keys->times_num] = BLEND_MODE_NORMAL;
         VCall(Vec(BlendMode), &blend_mode_keys->values, push_back, BLEND_MODE_NORMAL);
-    }
     else if (strcmp(new_content, "add") == 0)
-    {
-        //blend_mode_keys->values[blend_mode_keys->times_num] = BLEND_MODE_ADD;
         VCall(Vec(BlendMode), &blend_mode_keys->values, push_back, BLEND_MODE_ADD);
-    }
-    //anim->tracks->blend_mode->key.times[blend_mode_keys->times_num] = (float)(1.0 / FPS * anim->current_frame_time_num);
-    //blend_mode_keys->times[blend_mode_keys->times_num] = (float)(1.0 / FPS * anim->current_frame_time_num);
     VCall(Vec(f32), &blend_mode_keys->times, push_back, 1.0 / FPS * anim->current_frame_time_num);
     blend_mode_keys->times_num++;
 }
 
 void SetInitValue(PvzAnimation* anims[], const int anim_index)
 {
+    #define INIT_TRACK(track, type, ...) \
+        do {if (anim_index) VCall(Vec(type), &current_anim_tracks->track->keys.values, push_back, *first_anim_tracks->track->keys.values.back); \
+            else VCall(Vec(type), &current_anim_tracks->track->keys.values, push_back, ((type)__VA_ARGS__)); \
+            VCall(Vec(f32), &current_anim_tracks->track->keys.times, push_back, 0); \
+            current_anim_tracks->track->keys.times_num++; } while(0)
+
     const PvzTracks* first_anim_tracks = anims[0]->tracks.back;
     const PvzTracks* current_anim_tracks = anims[anim_index]->tracks.back;
 
-    //current_anim_tracks->vis->keys.values[0] = first_anim_tracks->vis->keys.values[first_anim_tracks->vis->keys.times_num ? first_anim_tracks->vis->keys.times_num - 1 : 0];
+    INIT_TRACK(vis, bool, true);
+    INIT_TRACK(pos, Vector2, { 0, 0 });
+    INIT_TRACK(scale, Vector2, { 1, 1 });
+    INIT_TRACK(rot, f32, 0);
+    INIT_TRACK(skew, f32, 0);
+    INIT_TRACK(alpha, Color, { 1, 1, 1, 1 });
 
-    //current_anim_tracks->pos->keys.values[0] = first_anim_tracks->pos->keys.values[first_anim_tracks->pos->keys.times_num ? first_anim_tracks->pos->keys.times_num - 1 : 0];
-
-    //current_anim_tracks->scale->keys.values[0] = first_anim_tracks->scale->keys.values[first_anim_tracks->scale->keys.times_num ? first_anim_tracks->scale->keys.times_num - 1 : 0];
-
-    //current_anim_tracks->rot->keys.values[0] = first_anim_tracks->rot->keys.values[first_anim_tracks->rot->keys.times_num ? first_anim_tracks->rot->keys.times_num - 1 : 0];
-
-    //current_anim_tracks->skew->keys.values[0] = first_anim_tracks->skew->keys.values[first_anim_tracks->skew->keys.times_num ? first_anim_tracks->skew->keys.times_num - 1 : 0];
-
-    if (anim_index) VCall(Vec(bool), &current_anim_tracks->vis->keys.values, push_back, *VCall(Vec(bool), &first_anim_tracks->vis->keys.values, back)); // current_anim_tracks->vis->keys.values.push_back(first_anim_tracks->vis->keys.values.front());
-    else            VCall(Vec(bool), &current_anim_tracks->vis->keys.values, push_back, true); //&current_anim_tracks->vis->keys.values.push_back(true);
-    VCall(Vec(f32), &current_anim_tracks->vis->keys.times, push_back, 0); // current_anim_tracks->vis->keys.times.push_back(0);
-    current_anim_tracks->vis->keys.times_num++;
-
-    if (anim_index) VCall(Vec(Vector2), &current_anim_tracks->pos->keys.values, push_back, *VCall(Vec(Vector2), &first_anim_tracks->pos->keys.values, back));
-    else            VCall(Vec(Vector2), &current_anim_tracks->pos->keys.values, push_back, ((Vector2){ 0, 0 }));
-    VCall(Vec(f32), &current_anim_tracks->pos->keys.times, push_back, 0);
-    current_anim_tracks->pos->keys.times_num++;
-
-    if (anim_index) VCall(Vec(Vector2), &current_anim_tracks->scale->keys.values, push_back, *VCall(Vec(Vector2), &first_anim_tracks->scale->keys.values, back));
-    else            VCall(Vec(Vector2), &current_anim_tracks->scale->keys.values, push_back, ((Vector2){ 1, 1 }));
-    VCall(Vec(f32), &current_anim_tracks->scale->keys.times, push_back, 0);
-    current_anim_tracks->scale->keys.times_num++;
-
-    if (anim_index) VCall(Vec(f32), &current_anim_tracks->rot->keys.values, push_back, *VCall(Vec(f32), &first_anim_tracks->rot->keys.values, back));
-    else            VCall(Vec(f32), &current_anim_tracks->rot->keys.values, push_back, 0);
-    VCall(Vec(f32), &current_anim_tracks->rot->keys.times, push_back, 0);
-    current_anim_tracks->rot->keys.times_num++;
-
-    if (anim_index) VCall(Vec(f32), &current_anim_tracks->skew->keys.values, push_back, *VCall(Vec(f32), &first_anim_tracks->skew->keys.values, back));
-    else            VCall(Vec(f32), &current_anim_tracks->skew->keys.values, push_back, 0);
-    VCall(Vec(f32), &current_anim_tracks->skew->keys.times, push_back, 0);
-    current_anim_tracks->skew->keys.times_num++;
-
+    // 纹理特殊处理（逻辑不同，独立保留）
     int zero_fuck_index = -1;
-    //if (first_anim_tracks->texture->keys.times_num)
     if (first_anim_tracks->texture->keys.values.size)
     {
-        //const int zero_texture_index = first_anim_tracks->texture->keys.times_num - 1;
-        //sscanf_s(anims[0]->tracks->texture->key.values[zero_texture_index], "ExtResource(\"%d_fuck\")", &zero_fuck_index);
-        //const int zero_fuck_index = first_anim_tracks->texture->keys.values[zero_texture_index];
-
-        zero_fuck_index = *VCall(Vec(i32), &first_anim_tracks->texture->keys.values, back);
+        zero_fuck_index = *first_anim_tracks->texture->keys.values.back;
     }
     if (zero_fuck_index != -1)
     {
@@ -660,19 +447,11 @@ void SetInitValue(PvzAnimation* anims[], const int anim_index)
     }
     else
     {
-        //current_anim_tracks->texture->keys.values[current_anim_tracks->texture->keys.times_num] = -1;
-        //current_anim_tracks->texture->keys.times[current_anim_tracks->texture->keys.times_num] = 0;
         VCall(Vec(i32), &current_anim_tracks->texture->keys.values, push_back, -1);
         VCall(Vec(f32), &current_anim_tracks->texture->keys.times, push_back, 0);
-
         current_anim_tracks->texture->keys.times_num++;
     }
-
-    //current_anim_tracks->alpha->keys.values[0] = first_anim_tracks->alpha->keys.values[first_anim_tracks->alpha->keys.times_num ? first_anim_tracks->alpha->keys.times_num - 1 : 0];
-    if (anim_index) VCall(Vec(Color), &current_anim_tracks->alpha->keys.values, push_back, *VCall(Vec(Color), &first_anim_tracks->alpha->keys.values, front));
-    else            VCall(Vec(Color), &current_anim_tracks->alpha->keys.values, push_back, ((Color){ 1, 1, 1, 1 }));
-    VCall(Vec(f32), &current_anim_tracks->alpha->keys.times, push_back, 0);
-    current_anim_tracks->alpha->keys.times_num++;
+    #undef INIT_TRACK
 }
 
 /// <summary>
@@ -684,7 +463,7 @@ void SetInitValue(PvzAnimation* anims[], const int anim_index)
 /// <param name="tap_name">tag的名字，这里应传入被修改的字符串</param>
 /// <param name="content">tag的内容，这里应传入被修改的字符串</param>
 /// <returns></returns>
-int tap(char* input, int* offset, char* tap_name, char* content)
+int Tap(const char* input, int* offset, char* tap_name, char* content)
 {
     char temp;
 
@@ -696,21 +475,14 @@ int tap(char* input, int* offset, char* tap_name, char* content)
     }
     (*offset)++;
     int i = 0;
-    for (i = 0;
-        (temp = input[*offset]) != '>';
-        i++, (*offset)++)
-    {
-        tap_name[i] = temp;
-    }
+    for (i = 0; (temp = input[*offset]) != '>'; i++, (*offset)++)    tap_name[i] = temp;
     tap_name[i] = '\0';
     (*offset)++;
     int k = 0;
     for (int j = 1; temp = input[*offset]; j++, (*offset)++)
     {
         if (temp == '<')
-        {
             k = j;
-        }
         if (k && j - k >= 2 && temp != tap_name[j - k - 2])
         {
             if (temp == '>' && '\0' == tap_name[j - k - 2])
@@ -734,7 +506,7 @@ int tap(char* input, int* offset, char* tap_name, char* content)
 /// <param name="old_content">递归时传入的字符串，用于读取上一层内容，当第一次调用时传入完整文件内容</param>
 /// <param name="pvz_animations"></param>
 /// <param name="start_param"></param>
-void SeekAnim(char* old_content, PvzAnimation* pvz_animations[], R2GAStartParam* start_param)
+void SeekAnim(const char* old_content, PvzAnimation* pvz_animations[], R2GAStartParam* start_param)
 {
     static bool is_track_anim_finished = false;
     static int anim_index = 0;
@@ -746,7 +518,7 @@ void SeekAnim(char* old_content, PvzAnimation* pvz_animations[], R2GAStartParam*
         fprintf(stderr, "SeekAnim_content = NULL\n");
         return;
     }
-    while (tap(old_content, &offset, tap_name, new_content) != -1 && is_track_anim_finished == false)
+    while (Tap(old_content, &offset, tap_name, new_content) != -1 && is_track_anim_finished == false)
     {
         if (!strcmp(tap_name, dictionary[TRACK_INDEX]/*track*/))
         {
@@ -838,7 +610,7 @@ void SeekAnim(char* old_content, PvzAnimation* pvz_animations[], R2GAStartParam*
 /// <param name="old_content">递归时传入的字符串，用于读取上一层内容，当第一次调用时传入完整文件内容</param>
 /// <param name="pvz_animations"></param>
 /// <param name="start_param"></param>
-void text(char* old_content, PvzAnimation* pvz_animations[], R2GAStartParam* start_param)
+void Text(char* old_content, PvzAnimation* pvz_animations[], R2GAStartParam* start_param)
 {
     int anim_index = 0;
     int offset = 0;
@@ -851,7 +623,7 @@ void text(char* old_content, PvzAnimation* pvz_animations[], R2GAStartParam* sta
         return;
     }
 
-    while (tap(old_content, &offset, tap_name, new_content) != -1)
+    while (Tap(old_content, &offset, tap_name, new_content) != -1)
     {
         if (!strcmp(tap_name, dictionary[FPS_INDEX]/*fps*/))
         {
@@ -864,9 +636,9 @@ void text(char* old_content, PvzAnimation* pvz_animations[], R2GAStartParam* sta
             current_frame_time_num = 0;
             for (anim_index = 0; anim_index <= anim_nums; anim_index++)
             {
-                SetTrack(pvz_animations[anim_index], new_content, start_param);
+                SetTrack(pvz_animations[anim_index], start_param);
             }
-            text(new_content, pvz_animations, start_param);
+            Text(new_content, pvz_animations, start_param);
             for (anim_index = 0; anim_index <= anim_nums; anim_index++)
             {
                 PvzAnimation* anim = pvz_animations[anim_index];
@@ -876,10 +648,7 @@ void text(char* old_content, PvzAnimation* pvz_animations[], R2GAStartParam* sta
                 if (texture_keys->times_num != 0)
                 {
                     // 复制最后一个值
-                    //sprintf_s(pvz_animations[anim_index]->tracks->texture->key.values[pvz_animations[anim_index]->current_tracks_texture_key_times], NAME_LENGTH, "%s", pvz_animations[anim_index]->tracks->texture->key.values[pvz_animations[anim_index]->current_tracks_texture_key_times - 1]);
-                    //texture_keys->values[texture_keys->times_num] = texture_keys->values[texture_keys->times_num - 1];
-                    //texture_keys->times[texture_keys->times_num] = (float)(1.0 / FPS * (anim->current_frame_time_num - 1));
-                    VCall(Vec(i32), &texture_keys->values, push_back, *VCall(Vec(i32), &texture_keys->values, back));
+                    VCall(Vec(i32), &texture_keys->values, push_back, *texture_keys->values.back);
                     VCall(Vec(f32), &texture_keys->times, push_back, 1.0 / FPS * (anim->current_frame_time_num - 1));
                     texture_keys->times_num++;
                 }
@@ -888,10 +657,7 @@ void text(char* old_content, PvzAnimation* pvz_animations[], R2GAStartParam* sta
                 if (vis_keys->times_num != 0)
                 {
                     // 复制最后一个值
-                    //sprintf_s(pvz_animations[anim_index]->tracks->vis->key.values[pvz_animations[anim_index]->current_tracks_vis_key_times], NAME_LENGTH, "%s", pvz_animations[anim_index]->tracks->vis->key.values[pvz_animations[anim_index]->current_tracks_vis_key_times - 1]);
-                    //vis_keys->values[vis_keys->times_num] = vis_keys->values[vis_keys->times_num - 1];
-                    //vis_keys->times[vis_keys->times_num] = (float)(1.0 / FPS * (anim->current_frame_time_num - 1));
-                    VCall(Vec(i32), &vis_keys->values, push_back, *VCall(Vec(i32), &vis_keys->values, back));
+                    VCall(Vec(i32), &vis_keys->values, push_back, *vis_keys->values.back);
                     VCall(Vec(f32), &vis_keys->times, push_back, 1.0 / FPS * (anim->current_frame_time_num - 1));
                     vis_keys->times_num++;
                 }
@@ -922,7 +688,6 @@ void text(char* old_content, PvzAnimation* pvz_animations[], R2GAStartParam* sta
                 {
                     // 函数：设置初始值
                     SetInitValue(pvz_animations, anim_index);
-                    //pvz_animations[anim_index];
                 }
                 SetTrackT(pvz_animations[anim_index], new_content, start_param);
             }
@@ -975,14 +740,12 @@ void text(char* old_content, PvzAnimation* pvz_animations[], R2GAStartParam* sta
             continue;
         }
 
-        /*a*/
         if (!strcmp(tap_name, dictionary[A_INDEX]/*a*/))
         {
             SetA(pvz_animations[0], new_content);
             continue;
         }
 
-        /*bm*/
         if (!strcmp(tap_name, dictionary[BM_INDEX]/*bm*/))
         {
             SetBm(pvz_animations[0], new_content);
@@ -1080,31 +843,6 @@ int main(int argc, char* argv[])
             return ErrorCode_CannotParseConfigFile;
         }
     }
-    // 检查命令行参数数量是否为5
-    /*if (argc != 5)
-    {
-        print_help(argv[0]);
-        return 1;
-    }*/
-    // 判断输出模式
-    /*sprintf_s(output_type, NAME_LENGTH, "%s", argv[4]);
-    if (strcmp(output_type, MODE_TSCN_BY_ANIM_STR) && strcmp(output_type, MODE_ANIM_TRES_STR) && strcmp(output_type, MODE_AUTO_STR))
-    {
-        print_help(argv[0]);
-        return 2;
-    }*/
-
-    // 打开输入文件
-    //sprintf_s(input_file, NAME_LENGTH, "%s", argv[1]);
-    //FileGetFilePath(input_file, input_filePath);
-    //
-    //errno_t err = fopen_s(&fp_input, argv[1], "r");
-    //if (err != 0 || fp_input == NULL)
-    //{
-    //	printf(argv[1]);
-    //	fprintf(stderr, "fp_input = NULL\n");
-    //	return 3;
-    //}
 
     FileOpen(&fp_input, startParam.inputFileWholePath, "r", ErrorCode_CannotOpenInputFile);
 
@@ -1114,8 +852,8 @@ int main(int argc, char* argv[])
     for (int i = 0; i < MAX_ANIM_NUM; i++)
     {
         pvz_animations[i] = PvzAnimation_New();
-        if (i == 0) PvzAnimation_Init(pvz_animations[i], "all", "tscn", i, &startParam);
-        else        PvzAnimation_Init(pvz_animations[i], "null", "tres", i, &startParam);
+        if (i == 0) PvzAnimation_Init(pvz_animations[i], "all", i);
+        else        PvzAnimation_Init(pvz_animations[i], "null", i);
     }
 
     //FileGetFileNameWithoutExt(argv[1], pvz_animations[0]->res_file_name);
@@ -1160,34 +898,40 @@ int main(int argc, char* argv[])
     for (int i = 0; i <= anim_nums; i++)
     {
         ResourceFile* file = resource_files[i];
-        VCall(ResourceFile, file, OpenOutputFile, startParam.outputFileSpecified ? startParam.outputFilePath : startParam.inputFilePath);
     }
     IsBlendModeEnabled(file_text, &startParam);
 
     // 处理文件内容并写入输出文件
-    text(file_text, pvz_animations, &startParam);
+    Text(file_text, pvz_animations, &startParam);
 
     for (int i = 0; i <= anim_nums; i++)
     {
-        PvzAnimation* anim = pvz_animations[i];
-        const ResourceFile* file = resource_files[i];
+        ResourceFile* file = resource_files[i];
 
-        VCall(ResourceFile, file, PrintExtResource, &startParam);
-        VCall(ResourceFile, file, PrintSetAnim, FPS);
-        VCall(ResourceFile, file, PrintTracks, &startParam);
-        if (i == 0)    VCall(Tscn, file, PrintAddNode, &startParam);
+        // 统一条件：i==0时排除 AnimTres模式，i>0时排除 TscnByAnim模式
+        if ((i == 0 && startParam.outputMode != OutputMode_AnimTres) ||
+            (i > 0 && startParam.outputMode != OutputMode_TscnByAnim))
+        {
+            VCall(ResourceFile, file, OpenOutputFile,
+                startParam.outputFileSpecified ? startParam.outputFilePath : startParam.inputFilePath);
+            VCall(ResourceFile, file, PrintExtResource, &startParam);
+            VCall(ResourceFile, file, PrintSetAnim, FPS);
+            VCall(ResourceFile, file, PrintTracks, &startParam);
+
+            if (i == 0) VCall(Tscn, file, PrintAddNode, &startParam);
+        }
     }
 
     bool is_tscn_remove_output_files = false;
     bool is_tres_remove_output_files = false;
-    if (startParam.outputMode == OutputMode_TscnByAnim)
-    {
-        is_tres_remove_output_files = true;
-    }
-    if (startParam.outputMode == OutputMode_AnimTres)
-    {
-        is_tscn_remove_output_files = true;
-    }
+    //if (startParam.outputMode == OutputMode_TscnByAnim)
+    //{
+    //    is_tres_remove_output_files = true;
+    //}
+    //if (startParam.outputMode == OutputMode_AnimTres)
+    //{
+    //    is_tscn_remove_output_files = true;
+    //}
 
     //fprintf(ofp_output, "length = %.6Lf\n", (float)time_num * (1.0 / FPS));
     //fprintf(ofp_output, "step = %.6Lf\n", 1.0 / FPS);
@@ -1195,7 +939,6 @@ int main(int argc, char* argv[])
     for (int i = 0; i < MAX_ANIM_NUM; i++)
     {
         PvzAnimation* anim = pvz_animations[i];
-        anim->vptr->FreeFiles(anim, (i ? is_tres_remove_output_files : is_tscn_remove_output_files));
         anim->vptr->Delete(anim);
     }
     for (int i = 0; i <= anim_nums; i++)

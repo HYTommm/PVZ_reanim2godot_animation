@@ -16,7 +16,6 @@ void _ResourceFile_Destroy(ResourceFile* self)
 {
     if (self == NULL) return;
     if (self->p_file) FileClose(self->p_file);
-    //if (self->p_anim) self->p_anim->vptr->Destroy(self->p_anim);
     self->vptr = NULL;
     self->p_file = NULL;
     self->p_anim = NULL;
@@ -24,7 +23,7 @@ void _ResourceFile_Destroy(ResourceFile* self)
 
 void ResourceFile_PrintTracks(const ResourceFile* self, const R2GAStartParam* start_param)
 {
-    self->p_anim->vptr->PrintTracksToFile(self->p_anim, self->p_file, start_param);
+    VCall(PvzAnimation, self->p_anim, PrintTracksToFile, self->p_file, start_param);
 }
 
 ///////////////////////////
