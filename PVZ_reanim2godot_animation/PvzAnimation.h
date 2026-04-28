@@ -41,7 +41,5 @@ PvzAnimation* PvzAnimation_New();
 void PvzAnimation_Delete(PvzAnimation* self);
 
 void PvzAnimation_Init(PvzAnimation* self, const char* anim_name, int anim_index);
-void PvzAnimation_OpenOutputFiles(PvzAnimation* self, const char* output_file_path);
-void PvzAnimation_FreeFiles(const PvzAnimation* self, bool is_remove_output_files);
 
 void PvzAnimation_PrintTracksToFile(const PvzAnimation* self, FILE* p_file, const R2GAStartParam* start_param);

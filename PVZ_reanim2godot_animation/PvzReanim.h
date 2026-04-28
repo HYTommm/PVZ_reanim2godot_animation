@@ -6,7 +6,7 @@
 #define CLASS typedef struct
 #define VTABLE typedef struct
 
-#define VERSION "4.0_dev_3"
+#define VERSION "4.0_dev_4"
 
 #define MAX_PARAMS 100       // 最大参数数量
 #define MAX_TOKENS 50        // 单个命令最大token数
@@ -25,6 +25,7 @@
 #define COL_OPT      "\033[96m"    // 亮青色 (选项标识)
 #define COL_VAL      "\033[92m"    // 亮绿色 (参数值)
 #define COL_ERR      "\033[31m"    // 亮红色 (错误信息)
+#define COL_WARN     "\033[93m"    // 亮黄色 (警告信息)
 #define COL_RESET    "\033[0m"     // 重置所有样式
 
 #define MODE_TSCN_STR "tscn"
@@ -335,6 +336,23 @@ typedef struct R2GAStartParam
     /// 动画黑名单数量
     /// </summary>
     int animBlacklistNum;
+
+    /// <summary>
+    /// 更新模式字典是否被指定
+    /// </summary>
+    bool updateModeDicSpecified;
+    /// <summary>
+    /// 更新模式字典条目数量
+    /// </summary>
+    int updateModeDicCount;
+    /// <summary>
+    /// 更新模式字典 - 轨道名列表
+    /// </summary>
+    char updateModeDicKeys[MAX_TRACKS_NUM][NAME_LENGTH];
+    /// <summary>
+    /// 更新模式字典 - 对应的更新模式
+    /// </summary>
+    UpdateMode updateModeDicValues[MAX_TRACKS_NUM];
 } R2GAStartParam;
 
 /// <summary>

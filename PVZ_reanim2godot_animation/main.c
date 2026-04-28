@@ -562,7 +562,7 @@ void SeekAnim(const char* old_content, PvzAnimation* pvz_animations[], R2GAStart
                 char res_file_name[NAME_LENGTH];
 
                 //FileGetFileNameWithoutExt(input_file, res_name);
-                strncpy(res_file_name, start_param->inputFileName, NAME_LENGTH - 1);
+                strncpy(res_file_name, start_param->animNameSpecified ? start_param->animName : start_param->inputFileName, NAME_LENGTH - 1);
                 res_file_name[NAME_LENGTH - 1] = '\0';
                 strcat_s(res_file_name, NAME_LENGTH, "_");
                 strcat_s(res_file_name, NAME_LENGTH, anim_name);
@@ -857,7 +857,7 @@ int main(int argc, char* argv[])
     }
 
     //FileGetFileNameWithoutExt(argv[1], pvz_animations[0]->res_file_name);
-    strncpy(pvz_animations[0]->res_file_name, startParam.inputFileName, NAME_LENGTH);
+    strncpy(pvz_animations[0]->res_file_name, startParam.animNameSpecified ? startParam.animName : startParam.inputFileName, NAME_LENGTH);
 
     pvz_animations[0]->start_frame_time = 0;
     pvz_animations[0]->end_frame_time = MAX_TIMES_NUM - 1;
@@ -921,20 +921,6 @@ int main(int argc, char* argv[])
             if (i == 0) VCall(Tscn, file, PrintAddNode, &startParam);
         }
     }
-
-    bool is_tscn_remove_output_files = false;
-    bool is_tres_remove_output_files = false;
-    //if (startParam.outputMode == OutputMode_TscnByAnim)
-    //{
-    //    is_tres_remove_output_files = true;
-    //}
-    //if (startParam.outputMode == OutputMode_AnimTres)
-    //{
-    //    is_tscn_remove_output_files = true;
-    //}
-
-    //fprintf(ofp_output, "length = %.6Lf\n", (float)time_num * (1.0 / FPS));
-    //fprintf(ofp_output, "step = %.6Lf\n", 1.0 / FPS);
 
     for (int i = 0; i < MAX_ANIM_NUM; i++)
     {
