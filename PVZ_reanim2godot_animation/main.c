@@ -23,6 +23,8 @@ bool is_blend_mode_enabled = false;
 
 int FPS;
 
+R2GAStartParam startParam;
+
 /// <summary>
 /// 通过文件内容判断是否应启用混合模式
 /// 遍历file_text，查找"<bm>"关键字，如果找到，则设置is_enabled为true
@@ -166,6 +168,8 @@ void PreSetTrackTVis([[maybe_unused]] const PvzAnimation* anim)
 }
 void PreSetTrackTPos(const PvzAnimation* anim)
 {
+    if (startParam.frameMode == FRAME_MODE_KEYFRAME) return;
+
     Vector2Keys* pos_keys = &anim->tracks.back->pos->keys;
     // 注释：如果当前帧时间不为0，则track的position设置为上一帧的值，否则设置为0，0
     //if (pos_keys->times_num)
@@ -179,6 +183,8 @@ void PreSetTrackTPos(const PvzAnimation* anim)
 }
 void PreSetTrackTScale(const PvzAnimation* anim)
 {
+    if (startParam.frameMode == FRAME_MODE_KEYFRAME) return;
+
     Vector2Keys* scale_keys = &anim->tracks.back->scale->keys;
     // 注释：如果当前帧时间不为0，则track的scale设置为上一帧的值，否则设置为1，1
     if (anim->current_frame_time_num)
@@ -190,6 +196,8 @@ void PreSetTrackTScale(const PvzAnimation* anim)
 }
 void PreSetTrackTRot(const PvzAnimation* anim)
 {
+    if (startParam.frameMode == FRAME_MODE_KEYFRAME) return;
+
     FloatKeys* rot_keys = &anim->tracks.back->rot->keys;
     if (anim->current_frame_time_num)
     {
@@ -200,6 +208,8 @@ void PreSetTrackTRot(const PvzAnimation* anim)
 }
 void PreSetTrackTSkew(const PvzAnimation* anim)
 {
+    if (startParam.frameMode == FRAME_MODE_KEYFRAME) return;
+
     FloatKeys* skew_keys = &anim->tracks.back->skew->keys;
     if (anim->current_frame_time_num)
     {
@@ -219,6 +229,8 @@ void PreSetTrackTTexture(const PvzAnimation* anim)
 
 void PreSetTrackTAlpha(const PvzAnimation* anim)
 {
+    if (startParam.frameMode == FRAME_MODE_KEYFRAME) return;
+
     ColorKeys* alpha_keys = &anim->tracks.back->alpha->keys;
     if (anim->current_frame_time_num)
     {
@@ -226,6 +238,66 @@ void PreSetTrackTAlpha(const PvzAnimation* anim)
         VCall(Vec(f32), &alpha_keys->times, push_back, 1.0 / FPS * anim->current_frame_time_num);
         alpha_keys->times_num++;
     }
+}
+
+// 确保当前帧存在可写的 keyframe，不存在则用默认值创建
+static Vector2* EnsurePosKeyframe(const PvzAnimation* anim)
+{
+    Vector2Keys* keys = &anim->tracks.back->pos->keys;
+    f32 time = 1.0f / FPS * anim->current_frame_time_num;
+    if (keys->times_num && fabs(*keys->times.back - time) < 0.0001f)
+        return keys->values.back;
+    Vector2 v = { 0, 0 };
+    VCall(Vec(Vector2), &keys->values, push_back, v);
+    VCall(Vec(f32), &keys->times, push_back, time);
+    keys->times_num++;
+    return keys->values.back;
+}
+static Vector2* EnsureScaleKeyframe(const PvzAnimation* anim)
+{
+    Vector2Keys* keys = &anim->tracks.back->scale->keys;
+    f32 time = 1.0f / FPS * anim->current_frame_time_num;
+    if (keys->times_num && fabs(*keys->times.back - time) < 0.0001f)
+        return keys->values.back;
+    Vector2 v = { 1, 1 };
+    VCall(Vec(Vector2), &keys->values, push_back, v);
+    VCall(Vec(f32), &keys->times, push_back, time);
+    keys->times_num++;
+    return keys->values.back;
+}
+static f32* EnsureRotKeyframe(const PvzAnimation* anim)
+{
+    FloatKeys* keys = &anim->tracks.back->rot->keys;
+    f32 time = 1.0f / FPS * anim->current_frame_time_num;
+    if (keys->times_num && fabs(*keys->times.back - time) < 0.0001f)
+        return keys->values.back;
+    VCall(Vec(f32), &keys->values, push_back, 0.0f);
+    VCall(Vec(f32), &keys->times, push_back, time);
+    keys->times_num++;
+    return keys->values.back;
+}
+static f32* EnsureSkewKeyframe(const PvzAnimation* anim)
+{
+    FloatKeys* keys = &anim->tracks.back->skew->keys;
+    f32 time = 1.0f / FPS * anim->current_frame_time_num;
+    if (keys->times_num && fabs(*keys->times.back - time) < 0.0001f)
+        return keys->values.back;
+    VCall(Vec(f32), &keys->values, push_back, 0.0f);
+    VCall(Vec(f32), &keys->times, push_back, time);
+    keys->times_num++;
+    return keys->values.back;
+}
+static f32* EnsureAlphaKeyframe(const PvzAnimation* anim)
+{
+    ColorKeys* keys = &anim->tracks.back->alpha->keys;
+    f32 time = 1.0f / FPS * anim->current_frame_time_num;
+    if (keys->times_num && fabs(*keys->times.back - time) < 0.0001f)
+        return &keys->values.back->a;
+    Color c = { 1, 1, 1, 1 };
+    VCall(Vec(Color), &keys->values, push_back, c);
+    VCall(Vec(f32), &keys->times, push_back, time);
+    keys->times_num++;
+    return &keys->values.back->a;
 }
 
 void SetTrackT(PvzAnimation* anim, char* new_content, R2GAStartParam* start_param)
@@ -280,70 +352,51 @@ void SetF(const PvzAnimation* anim, const char* new_content)
 }
 void SetX(const PvzAnimation* anim, const char* new_content)
 {
-    anim->tracks.back->pos->keys.values.back->x = atof(new_content);
+    EnsurePosKeyframe(anim)->x = (float)atof(new_content);
 }
 void SetY(const PvzAnimation* anim, const char* new_content)
 {
-    anim->tracks.back->pos->keys.values.back->y = atof(new_content);
+    EnsurePosKeyframe(anim)->y = (float)atof(new_content);
 }
 void SetSx(const PvzAnimation* anim, const char* new_content)
 {
-    anim->tracks.back->scale->keys.values.back->x = atof(new_content);
+    EnsureScaleKeyframe(anim)->x = (float)atof(new_content);
 }
 void SetSy(const PvzAnimation* anim, const char* new_content)
 {
-    anim->tracks.back->scale->keys.values.back->y = atof(new_content);
+    EnsureScaleKeyframe(anim)->y = (float)atof(new_content);
 }
 void SetKx(const PvzAnimation* anim, const char* new_content)
 {
-    FloatKeys* rot_keys = &anim->tracks.back->rot->keys;
-    FloatKeys* skew_keys = &anim->tracks.back->skew->keys;
+    f32* rot = EnsureRotKeyframe(anim);
+    f32* skew = EnsureSkewKeyframe(anim);
 
-    f32 new_rot_value = atof(new_content) / 180 * PI;
+    f32 new_rot_value = (float)atof(new_content) / 180 * PI;
 
-    while (new_rot_value - *rot_keys->values.back > PI)
-    {
+    f32 prev_rot = *rot;
+    while (new_rot_value - prev_rot > PI)
         new_rot_value -= 2 * PI;
-    }
-    while (new_rot_value - *rot_keys->values.back < -PI)
-    {
+    while (new_rot_value - prev_rot < -PI)
         new_rot_value += 2 * PI;
-    }
 
-    *rot_keys->values.back = new_rot_value;
-    *rot_keys->times.back = 1.0 / FPS * anim->current_frame_time_num;
-
-    float last_skew = 0, last_rot = 0;
-    if (skew_keys->times_num != 1)
-    {
-        last_skew = *(skew_keys->values.back - 1);
-    }
-    if (rot_keys->times_num != 1)
-    {
-        last_rot = *(rot_keys->values.back - 1);
-    }
-    *skew_keys->values.back = last_skew + last_rot - new_rot_value;
-    *skew_keys->times.back = 1.0 / FPS * anim->current_frame_time_num;
+    f32 prev_skew = *skew;
+    *rot = new_rot_value;
+    *skew = prev_skew + prev_rot - new_rot_value;
 }
 void SetKy(const PvzAnimation* anim, const char* new_content)
 {
-    const FloatKeys* rot_keys = &anim->tracks.back->rot->keys;
-    FloatKeys* skew_keys = &anim->tracks.back->skew->keys;
+    f32* rot = EnsureRotKeyframe(anim);
+    f32* skew = EnsureSkewKeyframe(anim);
 
-    const f32 new_skew_value = fmod(atof(new_content), 360.0) / 180 * PI;
-    const f32 rot_value = *rot_keys->values.back;
+    f32 new_skew_value = (float)fmod(atof(new_content), 360.0) / 180 * PI;
+    f32 temp = new_skew_value - *rot;
 
-    f32 temp = new_skew_value - rot_value;
-    while (temp - *skew_keys->values.back > PI)
-    {
+    while (temp - *skew > PI)
         temp -= 2 * PI;
-    }
-    while (temp - *skew_keys->values.back < -PI)
-    {
+    while (temp - *skew < -PI)
         temp += 2 * PI;
-    }
-    *skew_keys->values.back = temp;
-    *skew_keys->times.back = 1.0 / FPS * anim->current_frame_time_num;
+
+    *skew = temp;
 }
 void SetI(PvzAnimation* anim, const char* new_content)
 {
@@ -401,19 +454,7 @@ void SetI(PvzAnimation* anim, const char* new_content)
 
 void SetA(const PvzAnimation* anim, const char* new_content)
 {
-    ColorKeys* alpha_keys = &anim->tracks.back->alpha->keys;
-
-    if (alpha_keys->times_num)
-    {
-        alpha_keys->values.back->a = atof(new_content);
-    }
-    else
-    {
-        printf("tracks_alpha_key_times = 0\n");
-        VCall(Vec(Color), &alpha_keys->values, push_back, ((Color){1, 1, 1, atof(new_content)}));
-        VCall(Vec(f32), &alpha_keys->times, push_back, 1.0 / FPS * anim->current_frame_time_num);
-        alpha_keys->times_num++;
-    }
+    *EnsureAlphaKeyframe(anim) = (float)atof(new_content);
 }
 
 void SetBm(const PvzAnimation* anim, const char* new_content)
@@ -788,6 +829,7 @@ static void print_help(char* exe_name)
     printf("  " COL_OPT "-bm, --blend_mode" COL_RESET "                     " "开启混合模式 (默认关闭)\n");
     printf("  " COL_OPT "-nbm, --no-blend_mode" COL_RESET "                 " "强制关闭混合模式\n");
     printf("  " COL_OPT "-im, --interpolation-mode" COL_RESET " " COL_VAL "<插值模式>" COL_RESET " " "设置插值模式 (可选: " COL_VAL "nearest, linear, cubic" COL_RESET ", 默认: " COL_VAL "linear" COL_RESET ")\n");
+    printf("  " COL_OPT "-fm, --frame-mode" COL_RESET " " COL_VAL "<帧模式>" COL_RESET "              " "设置帧模式 (可选: " COL_VAL "inherit, keyframe" COL_RESET ", 默认: " COL_VAL "inherit" COL_RESET ")\n");
     printf("  " COL_OPT "-h, --help" COL_RESET "                           " "显示此帮助信息\n\n");
 
     printf(COL_HEADER "输出模式:" COL_RESET "\n");
@@ -798,7 +840,11 @@ static void print_help(char* exe_name)
     printf(COL_HEADER "插值模式:" COL_RESET "\n");
     printf("  " COL_VAL "nearest" COL_RESET "                              " "最近邻插值\n");
     printf("  " COL_VAL "linear" COL_RESET "                               " "线性插值\n");
-    printf("  " COL_VAL "cubic" COL_RESET "                                " "三次方插值" COL_RESET "\n");
+    printf("  " COL_VAL "cubic" COL_RESET "                                " "三次方插值" COL_RESET "\n\n");
+
+    printf(COL_HEADER "帧模式:" COL_RESET "\n");
+    printf("  " COL_VAL "inherit" COL_RESET "                              " "空字段继承上一帧的值（默认）\n");
+    printf("  " COL_VAL "keyframe" COL_RESET "                             " "空字段留空，由引擎插值" COL_RESET "\n");
 }
 
 static void PrintErrorMsg(char* error_msg)
@@ -823,8 +869,6 @@ static void enable_vt_mode(void)
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
     SetConsoleMode(hOut, dwMode);
 }
-
-R2GAStartParam startParam;
 
 int main(int argc, char* argv[])
 {

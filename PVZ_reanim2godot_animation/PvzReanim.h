@@ -45,6 +45,11 @@
 #define INTERPOLATION_MODE_LINEAR_STR "linear"
 #define INTERPOLATION_MODE_CUBIC_STR "cubic"
 
+#define FRAME_MODE_INHERIT_STR "inherit"
+#define FRAME_MODE_INHERIT_STR_CAMEL "Inherit"
+#define FRAME_MODE_KEYFRAME_STR "keyframe"
+#define FRAME_MODE_KEYFRAME_STR_CAMEL "Keyframe"
+
 /// <summary>
 /// 错误码
 /// </summary>
@@ -127,6 +132,12 @@ typedef enum BlendMode
 }BlendMode;
 
 VECTOR_IMPL(BlendMode);
+
+typedef enum FrameMode
+{
+    FRAME_MODE_INHERIT,  // 旧行为：空字段=继承上一帧
+    FRAME_MODE_KEYFRAME  // 新行为：空字段=留空，引擎插值
+}FrameMode;
 
 //#define UPDATE_MODE UPDATE_MODE_CONTINUOUS
 //#define INTERPOLATION_MODE INTERPOLATION_MODE_LINEAR
@@ -252,6 +263,15 @@ typedef struct R2GAStartParam
     /// 更新模式，默认为连续更新
     /// </summary>
     UpdateMode updateMode;
+
+    /// <summary>
+    /// 帧模式是否被指定
+    /// </summary>
+    bool frameModeSpecified;
+    /// <summary>
+    /// 帧模式，默认为继承模式
+    /// </summary>
+    FrameMode frameMode;
 
     /// <summary>
     /// 配置文件是否被指定

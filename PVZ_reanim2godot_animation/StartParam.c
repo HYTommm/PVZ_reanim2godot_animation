@@ -59,6 +59,10 @@ Result StartParamInit(R2GAStartParam* param)
     param->updateModeSpecified = false;
     param->updateMode = UPDATE_MODE_CONTINUOUS;
 
+    // 帧模式
+    param->frameModeSpecified = false;
+    param->frameMode = FRAME_MODE_INHERIT;
+
     // 配置文件路径
     param->configFileSpecified = false;
 
@@ -285,6 +289,20 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
             i++;
             continue;
         }
+        // 处理"-fm", "--frame-mode"参数--指定帧模式
+        if (strcmp(arg, "-fm") == 0 || strcmp(arg, "--frame-mode") == 0)
+        {
+            if (i + 1 >= argc)    return Result_Failed;
+
+            char* frameMode = argv[i + 1];
+            if (strcmp(frameMode, FRAME_MODE_INHERIT_STR) == 0)    param->frameMode = FRAME_MODE_INHERIT;
+            else if (strcmp(frameMode, FRAME_MODE_KEYFRAME_STR) == 0)    param->frameMode = FRAME_MODE_KEYFRAME;
+            else    return Result_Failed;
+            param->frameModeSpecified = true;
+            i++;
+            continue;
+        }
+
         println_emin(format("Unknown interpolation mode: {} ", argv[i]));
     }
 
@@ -846,6 +864,17 @@ Result StartParamSetFromConfig(R2GAStartParam* param, const char* configFileWhol
                 print_error("Warning: Invalid value for UpdateMode\n");
             }
             param->updateModeSpecified = true;
+        }
+        // 处理"FrameMode"参数
+        if (strcmp(configParams[i].key, "FrameMode") == 0 && param->frameModeSpecified == false)
+        {
+            if (strcmp(configParams[i].value, "Inherit") == 0 || strcmp(configParams[i].value, "inherit") == 0)
+                param->frameMode = FRAME_MODE_INHERIT;
+            else if (strcmp(configParams[i].value, "Keyframe") == 0 || strcmp(configParams[i].value, "keyframe") == 0)
+                param->frameMode = FRAME_MODE_KEYFRAME;
+            else
+                print_error("Warning: Invalid value for FrameMode\n");
+            param->frameModeSpecified = true;
         }
     }
 
