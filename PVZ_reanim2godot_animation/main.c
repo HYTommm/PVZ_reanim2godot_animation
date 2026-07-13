@@ -23,6 +23,8 @@ bool is_blend_mode_enabled = false;
 
 int FPS;
 
+R2GAStartParam startParam;
+
 /// <summary>
 /// 通过文件内容判断是否应启用混合模式
 /// 遍历file_text，查找"<bm>"关键字，如果找到，则设置is_enabled为true
@@ -68,6 +70,7 @@ void SetAnimKeyTimes(const PvzTracks* tracks, const int num)
     tracks->texture->keys.times_num = num;
     tracks->alpha->keys.times_num = num;
     tracks->blend_mode->keys.times_num = num;
+    tracks->transform->keys.times_num = num;
 }
 void SetTrack(PvzAnimation* anim, const R2GAStartParam* start_param)
 {
@@ -80,14 +83,22 @@ void SetTrack(PvzAnimation* anim, const R2GAStartParam* start_param)
         tracks.vis->num = anim->current_track_num;
         anim->current_track_num++;
     }
-    tracks.pos->num = anim->current_track_num;
-    anim->current_track_num++;
-    tracks.rot->num = anim->current_track_num;
-    anim->current_track_num++;
-    tracks.scale->num = anim->current_track_num;
-    anim->current_track_num++;
-    tracks.skew->num = anim->current_track_num;
-    anim->current_track_num++;
+    if (start_param->trackMode == TRACK_MODE_TRANSFORM)
+    {
+        tracks.transform->num = anim->current_track_num;
+        anim->current_track_num++;
+    }
+    else
+    {
+        tracks.pos->num = anim->current_track_num;
+        anim->current_track_num++;
+        tracks.rot->num = anim->current_track_num;
+        anim->current_track_num++;
+        tracks.scale->num = anim->current_track_num;
+        anim->current_track_num++;
+        tracks.skew->num = anim->current_track_num;
+        anim->current_track_num++;
+    }
     if (start_param->textureTrackEnabled)
     {
         tracks.texture->num = anim->current_track_num;
@@ -152,10 +163,17 @@ void SetTrackName(PvzAnimation* anim[], const int anim_num, const char* new_cont
     //snprintf(current_anim->track_name[current_anim->current_tracks_num], NAME_LENGTH, "%s", current_tracks->name);
 
     string_append_s(&current_tracks->vis->path, format("{}:visible", current_tracks->name)->data);
-    string_append_s(&current_tracks->pos->path, format("{}:position", current_tracks->name)->data);
-    string_append_s(&current_tracks->rot->path, format("{}:rotation", current_tracks->name)->data);
-    string_append_s(&current_tracks->scale->path, format("{}:scale", current_tracks->name)->data);
-    string_append_s(&current_tracks->skew->path, format("{}:skew", current_tracks->name)->data);
+    if (startParam.trackMode == TRACK_MODE_TRANSFORM)
+    {
+        string_append_s(&current_tracks->transform->path, format("{}:transform", current_tracks->name)->data);
+    }
+    else
+    {
+        string_append_s(&current_tracks->pos->path, format("{}:position", current_tracks->name)->data);
+        string_append_s(&current_tracks->rot->path, format("{}:rotation", current_tracks->name)->data);
+        string_append_s(&current_tracks->scale->path, format("{}:scale", current_tracks->name)->data);
+        string_append_s(&current_tracks->skew->path, format("{}:skew", current_tracks->name)->data);
+    }
     string_append_s(&current_tracks->texture->path, format("{}:texture", current_tracks->name)->data);
     string_append_s(&current_tracks->alpha->path, format("{}:self_modulate", current_tracks->name)->data);
     string_append_s(&current_tracks->blend_mode->path, format("{}:material", current_tracks->name)->data);
@@ -166,6 +184,8 @@ void PreSetTrackTVis([[maybe_unused]] const PvzAnimation* anim)
 }
 void PreSetTrackTPos(const PvzAnimation* anim)
 {
+    if (startParam.frameMode == FRAME_MODE_KEYFRAME || startParam.trackMode == TRACK_MODE_TRANSFORM) return;
+
     Vector2Keys* pos_keys = &anim->tracks.back->pos->keys;
     // 注释：如果当前帧时间不为0，则track的position设置为上一帧的值，否则设置为0，0
     //if (pos_keys->times_num)
@@ -179,6 +199,8 @@ void PreSetTrackTPos(const PvzAnimation* anim)
 }
 void PreSetTrackTScale(const PvzAnimation* anim)
 {
+    if (startParam.frameMode == FRAME_MODE_KEYFRAME || startParam.trackMode == TRACK_MODE_TRANSFORM) return;
+
     Vector2Keys* scale_keys = &anim->tracks.back->scale->keys;
     // 注释：如果当前帧时间不为0，则track的scale设置为上一帧的值，否则设置为1，1
     if (anim->current_frame_time_num)
@@ -190,6 +212,8 @@ void PreSetTrackTScale(const PvzAnimation* anim)
 }
 void PreSetTrackTRot(const PvzAnimation* anim)
 {
+    if (startParam.frameMode == FRAME_MODE_KEYFRAME || startParam.trackMode == TRACK_MODE_TRANSFORM) return;
+
     FloatKeys* rot_keys = &anim->tracks.back->rot->keys;
     if (anim->current_frame_time_num)
     {
@@ -200,6 +224,8 @@ void PreSetTrackTRot(const PvzAnimation* anim)
 }
 void PreSetTrackTSkew(const PvzAnimation* anim)
 {
+    if (startParam.frameMode == FRAME_MODE_KEYFRAME || startParam.trackMode == TRACK_MODE_TRANSFORM) return;
+
     FloatKeys* skew_keys = &anim->tracks.back->skew->keys;
     if (anim->current_frame_time_num)
     {
@@ -219,6 +245,8 @@ void PreSetTrackTTexture(const PvzAnimation* anim)
 
 void PreSetTrackTAlpha(const PvzAnimation* anim)
 {
+    if (startParam.frameMode == FRAME_MODE_KEYFRAME) return;
+
     ColorKeys* alpha_keys = &anim->tracks.back->alpha->keys;
     if (anim->current_frame_time_num)
     {
@@ -226,6 +254,78 @@ void PreSetTrackTAlpha(const PvzAnimation* anim)
         VCall(Vec(f32), &alpha_keys->times, push_back, 1.0 / FPS * anim->current_frame_time_num);
         alpha_keys->times_num++;
     }
+}
+
+// 确保当前帧存在可写的 keyframe，不存在则用默认值创建
+static Vector2* EnsurePosKeyframe(const PvzAnimation* anim)
+{
+    Vector2Keys* keys = &anim->tracks.back->pos->keys;
+    f32 time = 1.0f / FPS * anim->current_frame_time_num;
+    if (keys->times_num && fabs(*keys->times.back - time) < 0.0001f)
+        return keys->values.back;
+    Vector2 v = { 0, 0 };
+    VCall(Vec(Vector2), &keys->values, push_back, v);
+    VCall(Vec(f32), &keys->times, push_back, time);
+    keys->times_num++;
+    return keys->values.back;
+}
+static Vector2* EnsureScaleKeyframe(const PvzAnimation* anim)
+{
+    Vector2Keys* keys = &anim->tracks.back->scale->keys;
+    f32 time = 1.0f / FPS * anim->current_frame_time_num;
+    if (keys->times_num && fabs(*keys->times.back - time) < 0.0001f)
+        return keys->values.back;
+    Vector2 v = { 1, 1 };
+    VCall(Vec(Vector2), &keys->values, push_back, v);
+    VCall(Vec(f32), &keys->times, push_back, time);
+    keys->times_num++;
+    return keys->values.back;
+}
+static f32* EnsureRotKeyframe(const PvzAnimation* anim)
+{
+    FloatKeys* keys = &anim->tracks.back->rot->keys;
+    f32 time = 1.0f / FPS * anim->current_frame_time_num;
+    if (keys->times_num && fabs(*keys->times.back - time) < 0.0001f)
+        return keys->values.back;
+    VCall(Vec(f32), &keys->values, push_back, 0.0f);
+    VCall(Vec(f32), &keys->times, push_back, time);
+    keys->times_num++;
+    return keys->values.back;
+}
+static f32* EnsureSkewKeyframe(const PvzAnimation* anim)
+{
+    FloatKeys* keys = &anim->tracks.back->skew->keys;
+    f32 time = 1.0f / FPS * anim->current_frame_time_num;
+    if (keys->times_num && fabs(*keys->times.back - time) < 0.0001f)
+        return keys->values.back;
+    VCall(Vec(f32), &keys->values, push_back, 0.0f);
+    VCall(Vec(f32), &keys->times, push_back, time);
+    keys->times_num++;
+    return keys->values.back;
+}
+static f32* EnsureAlphaKeyframe(const PvzAnimation* anim)
+{
+    ColorKeys* keys = &anim->tracks.back->alpha->keys;
+    f32 time = 1.0f / FPS * anim->current_frame_time_num;
+    if (keys->times_num && fabs(*keys->times.back - time) < 0.0001f)
+        return &keys->values.back->a;
+    Color c = { 1, 1, 1, 1 };
+    VCall(Vec(Color), &keys->values, push_back, c);
+    VCall(Vec(f32), &keys->times, push_back, time);
+    keys->times_num++;
+    return &keys->values.back->a;
+}
+static Transform2D* EnsureTransformKeyframe(const PvzAnimation* anim)
+{
+    Transform2DKeys* keys = &anim->tracks.back->transform->keys;
+    f32 time = 1.0f / FPS * anim->current_frame_time_num;
+    if (keys->times_num && fabs(*keys->times.back - time) < 0.0001f)
+        return keys->values.back;
+    Transform2D t = { 0, 0, 1, 1, 0, 0 };
+    VCall(Vec(Transform2D), &keys->values, push_back, t);
+    VCall(Vec(f32), &keys->times, push_back, time);
+    keys->times_num++;
+    return keys->values.back;
 }
 
 void SetTrackT(PvzAnimation* anim, char* new_content, R2GAStartParam* start_param)
@@ -280,70 +380,94 @@ void SetF(const PvzAnimation* anim, const char* new_content)
 }
 void SetX(const PvzAnimation* anim, const char* new_content)
 {
-    anim->tracks.back->pos->keys.values.back->x = atof(new_content);
+    if (startParam.trackMode == TRACK_MODE_TRANSFORM)
+    {
+        EnsureTransformKeyframe(anim)->x = (float)atof(new_content);
+        return;
+    }
+    EnsurePosKeyframe(anim)->x = (float)atof(new_content);
 }
 void SetY(const PvzAnimation* anim, const char* new_content)
 {
-    anim->tracks.back->pos->keys.values.back->y = atof(new_content);
+    if (startParam.trackMode == TRACK_MODE_TRANSFORM)
+    {
+        EnsureTransformKeyframe(anim)->y = (float)atof(new_content);
+        return;
+    }
+    EnsurePosKeyframe(anim)->y = (float)atof(new_content);
 }
 void SetSx(const PvzAnimation* anim, const char* new_content)
 {
-    anim->tracks.back->scale->keys.values.back->x = atof(new_content);
+    if (startParam.trackMode == TRACK_MODE_TRANSFORM)
+    {
+        EnsureTransformKeyframe(anim)->sx = (float)atof(new_content);
+        return;
+    }
+    EnsureScaleKeyframe(anim)->x = (float)atof(new_content);
 }
 void SetSy(const PvzAnimation* anim, const char* new_content)
 {
-    anim->tracks.back->scale->keys.values.back->y = atof(new_content);
+    if (startParam.trackMode == TRACK_MODE_TRANSFORM)
+    {
+        EnsureTransformKeyframe(anim)->sy = (float)atof(new_content);
+        return;
+    }
+    EnsureScaleKeyframe(anim)->y = (float)atof(new_content);
 }
 void SetKx(const PvzAnimation* anim, const char* new_content)
 {
-    FloatKeys* rot_keys = &anim->tracks.back->rot->keys;
-    FloatKeys* skew_keys = &anim->tracks.back->skew->keys;
+    f32 new_rot_value = (float)atof(new_content) / 180 * PI;
 
-    f32 new_rot_value = atof(new_content) / 180 * PI;
-
-    while (new_rot_value - *rot_keys->values.back > PI)
+    if (startParam.trackMode == TRACK_MODE_TRANSFORM)
     {
+        Transform2D* t = EnsureTransformKeyframe(anim);
+        f32 prev_rot = t->rot;
+        while (new_rot_value - prev_rot > PI) new_rot_value -= 2 * PI;
+        while (new_rot_value - prev_rot < -PI) new_rot_value += 2 * PI;
+        f32 prev_skew = t->skew;
+        t->rot = new_rot_value;
+        t->skew = prev_skew + prev_rot - new_rot_value;
+        return;
+    }
+
+    f32* rot = EnsureRotKeyframe(anim);
+    f32* skew = EnsureSkewKeyframe(anim);
+
+    f32 prev_rot = *rot;
+    while (new_rot_value - prev_rot > PI)
         new_rot_value -= 2 * PI;
-    }
-    while (new_rot_value - *rot_keys->values.back < -PI)
-    {
+    while (new_rot_value - prev_rot < -PI)
         new_rot_value += 2 * PI;
-    }
 
-    *rot_keys->values.back = new_rot_value;
-    *rot_keys->times.back = 1.0 / FPS * anim->current_frame_time_num;
-
-    float last_skew = 0, last_rot = 0;
-    if (skew_keys->times_num != 1)
-    {
-        last_skew = *(skew_keys->values.back - 1);
-    }
-    if (rot_keys->times_num != 1)
-    {
-        last_rot = *(rot_keys->values.back - 1);
-    }
-    *skew_keys->values.back = last_skew + last_rot - new_rot_value;
-    *skew_keys->times.back = 1.0 / FPS * anim->current_frame_time_num;
+    f32 prev_skew = *skew;
+    *rot = new_rot_value;
+    *skew = prev_skew + prev_rot - new_rot_value;
 }
 void SetKy(const PvzAnimation* anim, const char* new_content)
 {
-    const FloatKeys* rot_keys = &anim->tracks.back->rot->keys;
-    FloatKeys* skew_keys = &anim->tracks.back->skew->keys;
+    f32 new_skew_value = (float)fmod(atof(new_content), 360.0) / 180 * PI;
 
-    const f32 new_skew_value = fmod(atof(new_content), 360.0) / 180 * PI;
-    const f32 rot_value = *rot_keys->values.back;
-
-    f32 temp = new_skew_value - rot_value;
-    while (temp - *skew_keys->values.back > PI)
+    if (startParam.trackMode == TRACK_MODE_TRANSFORM)
     {
+        Transform2D* t = EnsureTransformKeyframe(anim);
+        f32 temp = new_skew_value - t->rot;
+        while (temp - t->skew > PI) temp -= 2 * PI;
+        while (temp - t->skew < -PI) temp += 2 * PI;
+        t->skew = temp;
+        return;
+    }
+
+    f32* rot = EnsureRotKeyframe(anim);
+    f32* skew = EnsureSkewKeyframe(anim);
+
+    f32 temp = new_skew_value - *rot;
+
+    while (temp - *skew > PI)
         temp -= 2 * PI;
-    }
-    while (temp - *skew_keys->values.back < -PI)
-    {
+    while (temp - *skew < -PI)
         temp += 2 * PI;
-    }
-    *skew_keys->values.back = temp;
-    *skew_keys->times.back = 1.0 / FPS * anim->current_frame_time_num;
+
+    *skew = temp;
 }
 void SetI(PvzAnimation* anim, const char* new_content)
 {
@@ -401,19 +525,7 @@ void SetI(PvzAnimation* anim, const char* new_content)
 
 void SetA(const PvzAnimation* anim, const char* new_content)
 {
-    ColorKeys* alpha_keys = &anim->tracks.back->alpha->keys;
-
-    if (alpha_keys->times_num)
-    {
-        alpha_keys->values.back->a = atof(new_content);
-    }
-    else
-    {
-        printf("tracks_alpha_key_times = 0\n");
-        VCall(Vec(Color), &alpha_keys->values, push_back, ((Color){1, 1, 1, atof(new_content)}));
-        VCall(Vec(f32), &alpha_keys->times, push_back, 1.0 / FPS * anim->current_frame_time_num);
-        alpha_keys->times_num++;
-    }
+    *EnsureAlphaKeyframe(anim) = (float)atof(new_content);
 }
 
 void SetBm(const PvzAnimation* anim, const char* new_content)
@@ -439,10 +551,22 @@ void SetInitValue(PvzAnimation* anims[], const int anim_index)
     const PvzTracks* current_anim_tracks = anims[anim_index]->tracks.back;
 
     INIT_TRACK(vis, bool, true);
-    INIT_TRACK(pos, Vector2, { 0, 0 });
-    INIT_TRACK(scale, Vector2, { 1, 1 });
-    INIT_TRACK(rot, f32, 0);
-    INIT_TRACK(skew, f32, 0);
+    if (startParam.trackMode == TRACK_MODE_TRANSFORM)
+    {
+        if (anim_index)
+            VCall(Vec(Transform2D), &current_anim_tracks->transform->keys.values, push_back, *first_anim_tracks->transform->keys.values.back);
+        else
+            VCall(Vec(Transform2D), &current_anim_tracks->transform->keys.values, push_back, ((Transform2D){0, 0, 1, 1, 0, 0}));
+        VCall(Vec(f32), &current_anim_tracks->transform->keys.times, push_back, 0);
+        current_anim_tracks->transform->keys.times_num++;
+    }
+    else
+    {
+        INIT_TRACK(pos, Vector2, { 0, 0 });
+        INIT_TRACK(scale, Vector2, { 1, 1 });
+        INIT_TRACK(rot, f32, 0);
+        INIT_TRACK(skew, f32, 0);
+    }
     INIT_TRACK(alpha, Color, { 1, 1, 1, 1 });
 
     // 纹理特殊处理（逻辑不同，独立保留）
@@ -788,6 +912,8 @@ static void print_help(char* exe_name)
     printf("  " COL_OPT "-bm, --blend_mode" COL_RESET "                     " "开启混合模式 (默认关闭)\n");
     printf("  " COL_OPT "-nbm, --no-blend_mode" COL_RESET "                 " "强制关闭混合模式\n");
     printf("  " COL_OPT "-im, --interpolation-mode" COL_RESET " " COL_VAL "<插值模式>" COL_RESET " " "设置插值模式 (可选: " COL_VAL "nearest, linear, cubic" COL_RESET ", 默认: " COL_VAL "linear" COL_RESET ")\n");
+    printf("  " COL_OPT "-fm, --frame-mode" COL_RESET " " COL_VAL "<帧模式>" COL_RESET "              " "设置帧模式 (可选: " COL_VAL "inherit, keyframe" COL_RESET ", 默认: " COL_VAL "inherit" COL_RESET ")\n");
+    printf("  " COL_OPT "-tm, --track-mode" COL_RESET " " COL_VAL "<轨道模式>" COL_RESET "             " "设置轨道模式 (可选: " COL_VAL "separate, transform" COL_RESET ", 默认: " COL_VAL "separate" COL_RESET ")\n");
     printf("  " COL_OPT "-h, --help" COL_RESET "                           " "显示此帮助信息\n\n");
 
     printf(COL_HEADER "输出模式:" COL_RESET "\n");
@@ -798,7 +924,15 @@ static void print_help(char* exe_name)
     printf(COL_HEADER "插值模式:" COL_RESET "\n");
     printf("  " COL_VAL "nearest" COL_RESET "                              " "最近邻插值\n");
     printf("  " COL_VAL "linear" COL_RESET "                               " "线性插值\n");
-    printf("  " COL_VAL "cubic" COL_RESET "                                " "三次方插值" COL_RESET "\n");
+    printf("  " COL_VAL "cubic" COL_RESET "                                " "三次方插值" COL_RESET "\n\n");
+
+    printf(COL_HEADER "帧模式:" COL_RESET "\n");
+    printf("  " COL_VAL "inherit" COL_RESET "                              " "空字段继承上一帧的值（默认）\n");
+    printf("  " COL_VAL "keyframe" COL_RESET "                             " "空字段留空，由引擎插值" COL_RESET "\n\n");
+
+    printf(COL_HEADER "轨道模式:" COL_RESET "\n");
+    printf("  " COL_VAL "separate" COL_RESET "                             " "pos/rot/scale/skew分开轨道（默认）\n");
+    printf("  " COL_VAL "transform" COL_RESET "                            " "合并为Transform2D轨道（隐藏API）" COL_RESET "\n");
 }
 
 static void PrintErrorMsg(char* error_msg)
@@ -823,8 +957,6 @@ static void enable_vt_mode(void)
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
     SetConsoleMode(hOut, dwMode);
 }
-
-R2GAStartParam startParam;
 
 int main(int argc, char* argv[])
 {

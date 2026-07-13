@@ -321,3 +321,45 @@ void BlendModeKeys_PrintToFile(BlendModeKeys* self, FILE* file)
     }
     fprintf(file, "]\n");
 }
+
+void Transform2DKeys_Create(Transform2DKeys* self)
+{
+    static Keys_VTable transform2d_keys_vtable = {
+        Transform2DKeys_Create,
+        Transform2DKeys_New,
+        Transform2DKeys_PrintToFile
+    };
+    Keys_Create((Keys*)self);
+    self->vptr = &transform2d_keys_vtable;
+    Create(Vec(Transform2D), &self->values);
+}
+
+Transform2DKeys* Transform2DKeys_New(void)
+{
+    Transform2DKeys* self = (Transform2DKeys*)malloc(sizeof(Transform2DKeys));
+    if (!self) return NULL;
+    Transform2DKeys_Create(self);
+    return self;
+}
+
+void Transform2DKeys_PrintToFile(Transform2DKeys* self, FILE* file)
+{
+    Keys_PrintToFile((Keys*)self, file);
+    fprintf(file, "\"values\": [");
+    for (int i = 0; i < self->times_num; i++)
+    {
+        const Transform2D t = *VCall(Vec(Transform2D), &self->values, at, i);
+        float c_rot = cosf(t.rot);
+        float s_rot = sinf(t.rot);
+        float c_rot_skew = cosf(t.rot + t.skew);
+        float s_rot_skew = sinf(t.rot + t.skew);
+        float a = c_rot * t.sx;
+        float b = s_rot * t.sx;
+        float c = -s_rot_skew * t.sy;
+        float d = c_rot_skew * t.sy;
+        fprintf(file, "Transform2D(%.3f, %.3f, %.3f, %.3f, %.3f, %.3f)", a, b, c, d, t.x, t.y);
+        if (i != self->times_num - 1)
+            fprintf(file, ", ");
+    }
+    fprintf(file, "]\n");
+}

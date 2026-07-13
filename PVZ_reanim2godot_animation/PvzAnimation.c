@@ -74,10 +74,17 @@ void PvzAnimation_PrintTracksToFile(const PvzAnimation* self, FILE* p_file, cons
     for (umax i = 0; i < self->tracks.size; i++)
     {
         if (start_param->visibleTrackEnabled)    tracks->vis->vptr->PrintToFile(tracks->vis, p_file);
-        tracks->pos->vptr->PrintToFile(tracks->pos, p_file);
-        tracks->rot->vptr->PrintToFile(tracks->rot, p_file);
-        tracks->scale->vptr->PrintToFile(tracks->scale, p_file);
-        tracks->skew->vptr->PrintToFile(tracks->skew, p_file);
+        if (start_param->trackMode == TRACK_MODE_TRANSFORM)
+        {
+            tracks->transform->vptr->PrintToFile(tracks->transform, p_file);
+        }
+        else
+        {
+            tracks->pos->vptr->PrintToFile(tracks->pos, p_file);
+            tracks->rot->vptr->PrintToFile(tracks->rot, p_file);
+            tracks->scale->vptr->PrintToFile(tracks->scale, p_file);
+            tracks->skew->vptr->PrintToFile(tracks->skew, p_file);
+        }
         if (start_param->textureTrackEnabled)    tracks->texture->vptr->PrintToFile(tracks->texture, p_file);
         if (start_param->alphaTrackEnabled)      tracks->alpha->vptr->PrintToFile(tracks->alpha, p_file);
         tracks++;

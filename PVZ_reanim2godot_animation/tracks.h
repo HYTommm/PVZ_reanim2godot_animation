@@ -89,6 +89,15 @@ void BlendModeTrack_Create(BlendModeTrack* self);
 BlendModeTrack* BlendModeTrack_New();
 void BlendModeTrack_PrintToFile(BlendModeTrack* self, FILE* file);
 
+CLASS
+{
+    FROM(Track);
+    Transform2DKeys keys;
+}Transform2DTrack;
+void Transform2DTrack_Create(Transform2DTrack* self);
+Transform2DTrack* Transform2DTrack_New();
+void Transform2DTrack_PrintToFile(Transform2DTrack* self, FILE* file);
+
 VTABLE{
     void  (*Create)(void* self);
     void  (*Destroy)(const void* self);
@@ -110,6 +119,7 @@ CLASS{
     ExtResourceTrack* texture;
     ColorTrack* alpha;
     BlendModeTrack* blend_mode;
+    Transform2DTrack* transform;
 }PvzTracks;
 
 void _PvzTracks_Create(PvzTracks* self);

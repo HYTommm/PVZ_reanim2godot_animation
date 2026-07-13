@@ -1,4 +1,4 @@
-﻿#include "tracks.h"
+#include "tracks.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -260,6 +260,35 @@ void BlendModeTrack_PrintToFile(BlendModeTrack* self, FILE* file)
     fprintf(file, "}\n");
 }
 
+void Transform2DTrack_Create(Transform2DTrack* self)
+{
+    static Track_VTable transform2d_track_vtable = {
+        .Create = Transform2DTrack_Create,
+        .Delete = Track_Delete,
+        .New = Transform2DTrack_New,
+        .PrintToFile = Transform2DTrack_PrintToFile
+    };
+    Track_Create((Track*)self);
+    self->vptr = &transform2d_track_vtable;
+    Transform2DKeys_Create(&self->keys);
+}
+
+Transform2DTrack* Transform2DTrack_New()
+{
+    Transform2DTrack* self = (Transform2DTrack*)malloc(sizeof(Transform2DTrack));
+    if (!self) return NULL;
+    Transform2DTrack_Create(self);
+    return self;
+}
+
+void Transform2DTrack_PrintToFile(Transform2DTrack* self, FILE* file)
+{
+    Track_PrintToFile((Track*)self, file);
+    fprintf(file, "tracks/%d/keys = {\n", self->num);
+    Transform2DKeys_PrintToFile(&self->keys, file);
+    fprintf(file, "}\n");
+}
+
 void _PvzTracks_Create(PvzTracks* self)
 {
     static PvzTracks_VTable pvz_tracks_vtable = {
@@ -280,6 +309,7 @@ void _PvzTracks_Create(PvzTracks* self)
     if ((self->texture = ExtResourceTrack_New()) == NULL) return;
     if ((self->alpha = ColorTrack_New()) == NULL) return;
     if ((self->blend_mode = BlendModeTrack_New()) == NULL) return;
+    if ((self->transform = Transform2DTrack_New()) == NULL) return;
 }
 
 void PvzTracks_Destroy(const PvzTracks* self)
@@ -292,6 +322,7 @@ void PvzTracks_Destroy(const PvzTracks* self)
     self->texture->vptr->Delete(self->texture);
     self->alpha->vptr->Delete(self->alpha);
     self->blend_mode->vptr->Delete(self->blend_mode);
+    self->transform->vptr->Delete(self->transform);
 }
 
 PvzTracks* PvzTracks_New()
@@ -323,6 +354,7 @@ void PvzTracks_Move(PvzTracks* dest, PvzTracks* src)
     dest->texture = src->texture;
     dest->alpha = src->alpha;
     dest->blend_mode = src->blend_mode;
+    dest->transform = src->transform;
 
     src->vis = NULL;
     src->pos = NULL;
@@ -332,6 +364,7 @@ void PvzTracks_Move(PvzTracks* dest, PvzTracks* src)
     src->texture = NULL;
     src->alpha = NULL;
     src->blend_mode = NULL;
+    src->transform = NULL;
     src->length = 0;
     memset(src->name, 0, sizeof(src->name));
 }
@@ -353,4 +386,5 @@ void PvzTracks_Init(const PvzTracks* self, const R2GAStartParam* start_param)
     INIT_TRACK(self->texture, start_param);
     INIT_TRACK(self->alpha, start_param);
     INIT_TRACK(self->blend_mode, start_param);
+    INIT_TRACK(self->transform, start_param);
 }
