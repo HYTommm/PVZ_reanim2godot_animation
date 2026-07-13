@@ -121,6 +121,106 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "选择素材文件夹"
 
+[node name="config_file_box" type="HBoxContainer" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2"]
+layout_mode = 2
+
+[node name="config_file_path_option" type="OptionButton" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/config_file_box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(540, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 6.0
+clip_text = true
+
+[node name="config_file_select_button" type="Button" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/config_file_box"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "选择配置文件"
+
+[node name="output_mode" type="HBoxContainer" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/output_mode"]
+layout_mode = 2
+text = "输出模式："
+
+[node name="OutputModeOptionButton" type="OptionButton" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/output_mode"]
+unique_name_in_owner = true
+layout_mode = 2
+selected = 0
+item_count = 3
+popup/item_0/text = "auto"
+popup/item_0/id = 0
+popup/item_1/text = "tscn_by_anim"
+popup/item_1/id = 1
+popup/item_2/text = "anim_tres"
+popup/item_2/id = 2
+
+[node name="interpolation_mode" type="HBoxContainer" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/interpolation_mode"]
+layout_mode = 2
+text = "插值模式："
+
+[node name="InterpolationModeOptionButton" type="OptionButton" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/interpolation_mode"]
+unique_name_in_owner = true
+layout_mode = 2
+selected = 0
+item_count = 3
+popup/item_0/text = "linear"
+popup/item_0/id = 0
+popup/item_1/text = "nearest"
+popup/item_1/id = 1
+popup/item_2/text = "cubic"
+popup/item_2/id = 2
+
+[node name="blend_mode" type="HBoxContainer" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/blend_mode"]
+layout_mode = 2
+text = "混合模式："
+
+[node name="BlendModeCheckButton" type="CheckButton" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/blend_mode"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="frame_mode" type="HBoxContainer" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/frame_mode"]
+layout_mode = 2
+text = "帧模式："
+
+[node name="FrameModeOptionButton" type="OptionButton" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/frame_mode"]
+unique_name_in_owner = true
+layout_mode = 2
+selected = 0
+item_count = 2
+popup/item_0/text = "inherit"
+popup/item_0/id = 0
+popup/item_1/text = "keyframe"
+popup/item_1/id = 1
+
+[node name="track_mode" type="HBoxContainer" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/track_mode"]
+layout_mode = 2
+text = "轨道模式："
+
+[node name="TrackModeOptionButton" type="OptionButton" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/track_mode"]
+unique_name_in_owner = true
+layout_mode = 2
+selected = 0
+item_count = 2
+popup/item_0/text = "separate"
+popup/item_0/id = 0
+popup/item_1/text = "transform"
+popup/item_1/id = 1
+
 [node name="run_button" type="Button" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -152,19 +252,16 @@ vertical_alignment = 1
 
 [node name="Label5" type="Label" parent="HBoxContainer/PluginIntroductionPanel/ScrollContainer/VBoxContainer"]
 layout_mode = 2
-text = "版本：v1.0.0"
+text = "版本：v2.0.0"
 vertical_alignment = 1
 
 [node name="Label4" type="Label" parent="HBoxContainer/PluginIntroductionPanel/ScrollContainer/VBoxContainer"]
 custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
 text = "插件简介：
-1、使用G2Ra对PVZ原始动画文件转换为Godot游戏引擎所支持的动画格式。
-2、实现了原始动画路径、动画存放路径、素材文件夹路径的选择和自动保存
-3、动画转换完成后，自动刷新资源目录
-4、生成文件存放在原始动画文件目录下
-5、UI设计参考Todo Controller
-TODO:
-1、修改生成文件到动画存放路径"
+1、使用G2Ra 4.0将PVZ原始动画文件（reanim）转换为Godot游戏引擎所支持的动画格式。
+2、动画转换完成后，自动刷新资源目录
+3、每次运行时存档可选参数
+4、UI设计参考Todo Controller"
 vertical_alignment = 1
 autowrap_mode = 3
