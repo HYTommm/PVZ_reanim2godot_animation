@@ -203,13 +203,8 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
         // 处理"-bm", "--blend-mode"参数--启用混合模式
         if (strcmp(arg, "-bm") == 0 || strcmp(arg, "--blend-mode") == 0)
         {
-            if (i + 1 >= argc)
-            {
-                return Result_Failed;
-            }
             param->blendModeTrackEnabledSpecified = true;
             param->blendModeTrackEnabled = true;
-            i++;
             continue;
         }
         // 处理"-nbm", "--no-blend-mode"参数--禁用混合模式
@@ -217,6 +212,7 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
         {
             param->blendModeTrackEnabledSpecified = true;
             param->blendModeTrackEnabled = false;
+            continue;
         }
         // 处理"-rnt", "--root-node-type"参数--指定根节点类型
         if (strcmp(arg, "-rnt") == 0 || strcmp(arg, "--root-node-type") == 0)

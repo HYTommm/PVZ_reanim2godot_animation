@@ -141,14 +141,24 @@ void SetTrackName(PvzAnimation* anim[], const int anim_num, const char* new_cont
         snprintf(temp_name, NAME_LENGTH, "%s%d", current_tracks->name, track_str_end_num);
         snprintf(current_tracks->name, NAME_LENGTH, "%s", temp_name);
     }
-    snprintf(current_tracks->vis->path.data, PATH_LENGTH, "%s:visible", current_tracks->name);
-    snprintf(current_tracks->pos->path.data, PATH_LENGTH, "%s:position", current_tracks->name);
-    snprintf(current_tracks->rot->path.data, PATH_LENGTH, "%s:rotation", current_tracks->name);
-    snprintf(current_tracks->scale->path.data, PATH_LENGTH, "%s:scale", current_tracks->name);
-    snprintf(current_tracks->skew->path.data, PATH_LENGTH, "%s:skew", current_tracks->name);
-    snprintf(current_tracks->texture->path.data, PATH_LENGTH, "%s:texture", current_tracks->name);
-    snprintf(current_tracks->alpha->path.data, PATH_LENGTH, "%s:self_modulate", current_tracks->name);
-    snprintf(current_tracks->blend_mode->path.data, PATH_LENGTH, "%s:material", current_tracks->name);
+    //snprintf(current_tracks->vis->path.data, PATH_LENGTH, "%s:visible", current_tracks->name);
+    //snprintf(current_tracks->pos->path.data, PATH_LENGTH, "%s:position", current_tracks->name);
+    //snprintf(current_tracks->rot->path.data, PATH_LENGTH, "%s:rotation", current_tracks->name);
+    //snprintf(current_tracks->scale->path.data, PATH_LENGTH, "%s:scale", current_tracks->name);
+    //snprintf(current_tracks->skew->path.data, PATH_LENGTH, "%s:skew", current_tracks->name);
+    //snprintf(current_tracks->texture->path.data, PATH_LENGTH, "%s:texture", current_tracks->name);
+    //snprintf(current_tracks->alpha->path.data, PATH_LENGTH, "%s:self_modulate", current_tracks->name);
+    //snprintf(current_tracks->blend_mode->path.data, PATH_LENGTH, "%s:material", current_tracks->name);
+    //snprintf(current_anim->track_name[current_anim->current_tracks_num], NAME_LENGTH, "%s", current_tracks->name);
+
+    string_append_s(&current_tracks->vis->path, format("{}:visible", current_tracks->name)->data);
+    string_append_s(&current_tracks->pos->path, format("{}:position", current_tracks->name)->data);
+    string_append_s(&current_tracks->rot->path, format("{}:rotation", current_tracks->name)->data);
+    string_append_s(&current_tracks->scale->path, format("{}:scale", current_tracks->name)->data);
+    string_append_s(&current_tracks->skew->path, format("{}:skew", current_tracks->name)->data);
+    string_append_s(&current_tracks->texture->path, format("{}:texture", current_tracks->name)->data);
+    string_append_s(&current_tracks->alpha->path, format("{}:self_modulate", current_tracks->name)->data);
+    string_append_s(&current_tracks->blend_mode->path, format("{}:material", current_tracks->name)->data);
     snprintf(current_anim->track_name[current_anim->current_tracks_num], NAME_LENGTH, "%s", current_tracks->name);
 }
 void PreSetTrackTVis([[maybe_unused]] const PvzAnimation* anim)
