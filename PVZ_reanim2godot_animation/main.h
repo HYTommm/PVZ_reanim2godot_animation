@@ -1,60 +1,57 @@
 ﻿#pragma once
 
-int tap(char* input, int* offset, char* tap_name, char* content);
+int Tap(const char* input, int* offset, char* tap_name, char* content);
 
-void text(char* old_content, PVZAnimation* pvz_animation[]);
-void arrayprintf_s(char* str, int num, char* array);
+void Text(char* old_content, PvzAnimation* pvz_animation[], R2GAStartParam* start_param);
 
-void SetAnimName(PVZAnimation* pvz_animation, char* new_content);
-void SetAnimStartFrameTime(PVZAnimation* pvz_animation, int frame_time_num);
-void SetAnimEndFrameTime(PVZAnimation* pvz_animation, int frame_time_num);
+void SetAnimName(PvzAnimation* anim, char* new_content);
+void SetAnimStartFrameTime(PvzAnimation* anim, int frame_time_num);
+void SetAnimEndFrameTime(PvzAnimation* anim, int frame_time_num);
 
-//void SetAllTracksNum(PVZAnimation* pvz_animation, int num);// 尚未实现
+//void SetAllTracksNum(PvzAnimation* pvz_animation, int num);// 尚未实现
 
-void SetAnimResName(PVZAnimation* pvz_animation, char* new_content);
+void SetAnimResName(PvzAnimation* anim, char* new_content);
 
-void SetFPS(char* new_content);
+void SetFPS(const char* new_content);
 
-void PreSetTrackTVis(PVZAnimation* pvz_animation);
+void PreSetTrackTVis(const PvzAnimation* anim);
 
-void SetTrackName(PVZAnimation* pvz_animation[], int anim_num, char* new_content);
+void SetTrackName(PvzAnimation* anim[], int anim_num, const char* new_content);
 
-void SetTrack(PVZAnimation* pvz_animation, char* new_content);
+void SetTrack(PvzAnimation* anim, const R2GAStartParam* start_param);
 
-void SetAnimKeyTimes(PVZAnimation* pvz_animation, int num);
+void SetAnimKeyTimes(const PvzTracks* tracks, int num);
 
-void PreSetTrackTPos(PVZAnimation* pvz_animation);
+void PreSetTrackTPos(const PvzAnimation* anim);
 
-void PreSetTrackTScale(PVZAnimation* pvz_animation);
+void PreSetTrackTScale(const PvzAnimation* anim);
 
-void PreSetTrackTRot(PVZAnimation* pvz_animation);
+void PreSetTrackTRot(const PvzAnimation* anim);
 
-void PreSetTrackTSkew(PVZAnimation* pvz_animation);
+void PreSetTrackTSkew(const PvzAnimation* anim);
 
-void PreSetTrackTAlpha(PVZAnimation* pvz_animation);
+void PreSetTrackTAlpha(const PvzAnimation* anim);
 
-void PreSetTrackTTexture(PVZAnimation* pvz_animation);
+void PreSetTrackTTexture(const PvzAnimation* anim);
 
-void SetTrackT(PVZAnimation* pvz_animation, char* new_content);
+void SetTrackT(PvzAnimation* anim, char* new_content, R2GAStartParam* start_param);
 
-void SetF(PVZAnimation* pvz_animation, char* new_content);
+void SetF(const PvzAnimation* anim, const char* new_content);
 
-void SetX(PVZAnimation* pvz_animation, char* new_content);
+void SetX(const PvzAnimation* anim, const char* new_content);
 
-void SetX(PVZAnimation* pvz_animation, char* new_content);
+void SetY(const PvzAnimation* anim, const char* new_content);
 
-void SetY(PVZAnimation* pvz_animation, char* new_content);
+void SetSx(const PvzAnimation* anim, const char* new_content);
 
-void SetSx(PVZAnimation* pvz_animation, char* new_content);
+void SetSy(const PvzAnimation* anim, const char* new_content);
 
-void SetSy(PVZAnimation* pvz_animation, char* new_content);
+void SetKx(const PvzAnimation* anim, const char* new_content);
 
-void SetKx(PVZAnimation* pvz_animation, char* new_content);
+void SetKy(const PvzAnimation* anim, const char* new_content);
 
-void SetKy(PVZAnimation* pvz_animation, char* new_content);
+void SetI(PvzAnimation* anim, const char* new_content);
 
-void SetI(PVZAnimation* pvz_animation, char* new_content);
+void SetA(const PvzAnimation* anim, const char* new_content);
 
-void SetA(PVZAnimation* pvz_animation, char* new_content);
-
-void SetBm(PVZAnimation* pvz_animation, char* new_content);
+void SetBm(const PvzAnimation* anim, const char* new_content);

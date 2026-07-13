@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="convert.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="FileIO.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -27,16 +24,82 @@
     <ClInclude Include="PvzReanim.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="StartParam.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="data.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="keys.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="tracks.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="PvzAnimation.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ResourceFile.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\class\class_macro.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\class\object_class.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\error.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\macro.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\print.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\tomy.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\ustring.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\data_type\data_type.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\data_type\vector.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="convert.c">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="FileIO.c">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="main.c">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="StartParam.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="keys.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="tracks.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="PvzAnimation.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="ResourceFile.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Tomy\src\ustring.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\index.html">
+      <Filter>源文件</Filter>
+    </None>
+    <None Include="cpp.hint" />
   </ItemGroup>
 </Project>
