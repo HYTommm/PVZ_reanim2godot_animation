@@ -50,6 +50,11 @@
 #define FRAME_MODE_KEYFRAME_STR "keyframe"
 #define FRAME_MODE_KEYFRAME_STR_CAMEL "Keyframe"
 
+#define TRACK_MODE_SEPARATE_STR "separate"
+#define TRACK_MODE_SEPARATE_STR_CAMEL "Separate"
+#define TRACK_MODE_TRANSFORM_STR "transform"
+#define TRACK_MODE_TRANSFORM_STR_CAMEL "Transform"
+
 /// <summary>
 /// 错误码
 /// </summary>
@@ -138,6 +143,12 @@ typedef enum FrameMode
     FRAME_MODE_INHERIT,  // 旧行为：空字段=继承上一帧
     FRAME_MODE_KEYFRAME  // 新行为：空字段=留空，引擎插值
 }FrameMode;
+
+typedef enum TrackMode
+{
+    TRACK_MODE_SEPARATE,  // 旧行为：pos/rot/scale/skew 分开轨道
+    TRACK_MODE_TRANSFORM  // 新行为：合并为 Transform2D 轨道
+}TrackMode;
 
 //#define UPDATE_MODE UPDATE_MODE_CONTINUOUS
 //#define INTERPOLATION_MODE INTERPOLATION_MODE_LINEAR
@@ -272,6 +283,15 @@ typedef struct R2GAStartParam
     /// 帧模式，默认为继承模式
     /// </summary>
     FrameMode frameMode;
+
+    /// <summary>
+    /// 轨道模式是否被指定
+    /// </summary>
+    bool trackModeSpecified;
+    /// <summary>
+    /// 轨道模式，默认为分开轨道
+    /// </summary>
+    TrackMode trackMode;
 
     /// <summary>
     /// 配置文件是否被指定

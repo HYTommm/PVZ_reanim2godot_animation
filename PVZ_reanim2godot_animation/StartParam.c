@@ -63,6 +63,10 @@ Result StartParamInit(R2GAStartParam* param)
     param->frameModeSpecified = false;
     param->frameMode = FRAME_MODE_INHERIT;
 
+    // 轨道模式
+    param->trackModeSpecified = false;
+    param->trackMode = TRACK_MODE_SEPARATE;
+
     // 配置文件路径
     param->configFileSpecified = false;
 
@@ -299,6 +303,19 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
             else if (strcmp(frameMode, FRAME_MODE_KEYFRAME_STR) == 0)    param->frameMode = FRAME_MODE_KEYFRAME;
             else    return Result_Failed;
             param->frameModeSpecified = true;
+            i++;
+            continue;
+        }
+        // 处理"-tm", "--track-mode"参数--指定轨道模式
+        if (strcmp(arg, "-tm") == 0 || strcmp(arg, "--track-mode") == 0)
+        {
+            if (i + 1 >= argc)    return Result_Failed;
+
+            char* trackMode = argv[i + 1];
+            if (strcmp(trackMode, TRACK_MODE_SEPARATE_STR) == 0)    param->trackMode = TRACK_MODE_SEPARATE;
+            else if (strcmp(trackMode, TRACK_MODE_TRANSFORM_STR) == 0)    param->trackMode = TRACK_MODE_TRANSFORM;
+            else    return Result_Failed;
+            param->trackModeSpecified = true;
             i++;
             continue;
         }
@@ -875,6 +892,17 @@ Result StartParamSetFromConfig(R2GAStartParam* param, const char* configFileWhol
             else
                 print_error("Warning: Invalid value for FrameMode\n");
             param->frameModeSpecified = true;
+        }
+        // 处理"TrackMode"参数
+        if (strcmp(configParams[i].key, "TrackMode") == 0 && param->trackModeSpecified == false)
+        {
+            if (strcmp(configParams[i].value, "Separate") == 0 || strcmp(configParams[i].value, "separate") == 0)
+                param->trackMode = TRACK_MODE_SEPARATE;
+            else if (strcmp(configParams[i].value, "Transform") == 0 || strcmp(configParams[i].value, "transform") == 0)
+                param->trackMode = TRACK_MODE_TRANSFORM;
+            else
+                print_error("Warning: Invalid value for TrackMode\n");
+            param->trackModeSpecified = true;
         }
     }
 

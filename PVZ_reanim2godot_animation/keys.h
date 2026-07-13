@@ -103,3 +103,13 @@ typedef struct BlendModeKeys
 void BlendModeKeys_Create(BlendModeKeys* self);
 BlendModeKeys* BlendModeKeys_New(void);
 void BlendModeKeys_PrintToFile(BlendModeKeys* self, FILE* file);
+
+typedef struct Transform2DKeys
+{
+    FROM(Keys);
+    Vector(Transform2D) values;
+}Transform2DKeys;
+
+void Transform2DKeys_Create(Transform2DKeys* self);
+Transform2DKeys* Transform2DKeys_New(void);
+void Transform2DKeys_PrintToFile(Transform2DKeys* self, FILE* file);
