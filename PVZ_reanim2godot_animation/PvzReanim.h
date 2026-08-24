@@ -344,6 +344,14 @@ typedef struct R2GAStartParam
     /// </summary>
     char rootnodeType[NAME_LENGTH];
     /// <summary>
+    /// 根节点名称是否被指定
+    /// </summary>
+    bool rootNodeNameSpecified;
+    /// <summary>
+    /// 根节点名称（默认为空，用资源名）
+    /// </summary>
+    char rootNodeName[NAME_LENGTH];
+    /// <summary>
     /// 动画名称是否被指定
     /// </summary>
     bool animNameSpecified;

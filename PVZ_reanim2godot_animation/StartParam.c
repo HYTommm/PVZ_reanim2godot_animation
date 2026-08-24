@@ -91,6 +91,9 @@ Result StartParamInit(R2GAStartParam* param)
     strncpy(param->rootnodeType, "Node2D", NAME_LENGTH - 1);
     param->rootnodeType[NAME_LENGTH - 1] = '\0';
 
+    // 根节点名称
+    param->rootNodeNameSpecified = false;
+
     // 动画名称
     param->animNameSpecified = false;
 
@@ -232,6 +235,16 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
             strncpy(param->rootnodeType, argv[i + 1], NAME_LENGTH - 1);
             param->rootnodeType[NAME_LENGTH - 1] = '\0';
             param->rootnodeTypeSpecified = true;
+            i++;
+            continue;
+        }
+        // 处理"-rnn", "--root-node-name"参数--指定根节点名称
+        if (strcmp(arg, "-rnn") == 0 || strcmp(arg, "--root-node-name") == 0)
+        {
+            if (i + 1 >= argc) return Result_Failed;
+            strncpy(param->rootNodeName, argv[i + 1], NAME_LENGTH - 1);
+            param->rootNodeName[NAME_LENGTH - 1] = '\0';
+            param->rootNodeNameSpecified = true;
             i++;
             continue;
         }
@@ -780,6 +793,18 @@ Result StartParamSetFromConfig(R2GAStartParam* param, const char* configFileWhol
             strncpy(param->rootnodeType, configParams[i].value, NAME_LENGTH - 1);
             param->rootnodeType[NAME_LENGTH - 1] = '\0';
             param->rootnodeTypeSpecified = true;
+        }
+        // 处理"RootNodeName"参数
+        if (strcmp(configParams[i].key, "RootNodeName") == 0 && param->rootNodeNameSpecified == false)
+        {
+            if (strcmp(configParams[i].value, "") == 0)
+            {
+                print_warning("Warning: RootNodeName is empty, will use resource name.\n");
+                continue;
+            }
+            strncpy(param->rootNodeName, configParams[i].value, NAME_LENGTH - 1);
+            param->rootNodeName[NAME_LENGTH - 1] = '\0';
+            param->rootNodeNameSpecified = true;
         }
         // 处理"AnimName"参数
         if (strcmp(configParams[i].key, "AnimName") == 0 && param->animNameSpecified == false)
