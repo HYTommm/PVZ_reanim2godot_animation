@@ -61,3 +61,9 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+
+###############################################################################
+# Shell / Python 脚本固定用 LF：CRLF 会让 shebang 变成 "bad interpreter"
+###############################################################################
+*.sh text eol=lf
+*.py text eol=lf
