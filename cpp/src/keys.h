@@ -1,12 +1,16 @@
 // 关键帧集合。
 //
-// 原实现有 8 个 `XxxKeys` 结构体，每个都手写了一遍
+// 原实现有 8 个 `XxxKeys` 结构体，每个都手写一遍
 // 「times / transitions / update / values」的打印循环，差异只有两点：
 //   (a) values 的元素类型
 //   (b) 单个值怎么写出来
 // 所以这里用一个类模板 + 打印策略把它们收掉，8 个名字作为别名保留。
 //
-// ★ times_num 的处理 ★
+// 没有虚函数：全代码里 keys 都以具体类型被持有（PvzTracks 的成员就是
+// `KeysOf<Vector2, ...>` 这种确切类型），多态派发在这里没有意义。
+// 原实现之所以有 vtable，是因为类型被擦除成了 void*；C++ 不需要照着抄。
+//
+// ★ times_num ★
 // 原实现同时维护 `times` 向量和 `times_num` 计数。核对过 main.c 里
 // times_num 的全部 30 处出现：每一处 `times_num++` 都紧跟着一次对 times 的
 // push_back，唯一的复位 `SetAnimKeyTimes(tracks, 0)` 只作用在刚创建、
@@ -24,31 +28,23 @@
 
 namespace r2ga {
 
-/// 关键帧集合的公共部分。
+/// 关键帧集合共有的数据与公共段落。
 ///
-/// 注意 `transitions`：原实现创建了这个向量却从不写入，打印时硬编码输出
-/// 字面量 1.0f。这里直接删掉该成员，打印处同样输出字面量。
-class Keys
+/// `transitions` 被删掉了：原实现创建了这个向量却从不写入，打印时硬编码
+/// 输出字面量 1.0f。这里同样只输出字面量。
+struct KeysCommon
 {
-public:
     std::vector<f32> times;
 
-    /// `"update": %d,`。原实现先由全局 startParam.updateMode 初始化，
-    /// 随后 PvzTracks_Init 对全部 9 条轨道重新赋值（vis 例外，被强制为
-    /// Continuous），所以初值本身不可观测。
+    /// `"update": %d,`。由 PvzTracks::init 统一赋值（vis 被强制为 Continuous），
+    /// 所以这里的初值不可观测，只是个安全的起点。
     UpdateMode update = UpdateMode::Continuous;
 
-    virtual ~Keys() = default;
-
-    /// 打印 times / transitions / update 三段，然后是各类型的 values。
-    void print_to_file(OutFile& out) const;
-
-protected:
-    /// 只打印 values 段（含首尾），由各类型的策略决定内容。
-    virtual void print_values(OutFile& out) const = 0;
+    /// `"times"` / `"transitions"` / `"update"` 三段，所有类型共用。
+    void print_header(OutFile& out) const;
 };
 
-/// values 的书写策略。每个策略负责"单个值写成什么字节"。
+/// 值的书写策略：每种类型只回答"单个值写成什么字节"。
 struct BoolValueWriter
 {
     static void write(OutFile& out, bool v) { out.write(v ? "true" : "false"); }
@@ -56,7 +52,7 @@ struct BoolValueWriter
 
 struct IntValueWriter
 {
-    static void write(OutFile& out, i32 v) { out.raw(fmt_d(v)); }
+    static void write(OutFile& out, i32 v) { out.print("{:d}", v); }
 };
 
 /// 贴图引用。注意原实现的输出是畸形的：
@@ -77,14 +73,14 @@ struct ExtResourceValueWriter
 
 struct FloatValueWriter
 {
-    static void write(OutFile& out, f32 v) { out.raw(fmt_f3(v)); }
+    static void write(OutFile& out, f32 v) { out.print("{:.3f}", v); }
 };
 
 struct Vector2ValueWriter
 {
     static void write(OutFile& out, const Vector2& v)
     {
-        out.print("Vector2({}, {})", fmt_f3(v.x), fmt_f3(v.y));
+        out.print("Vector2({:.3f}, {:.3f})", v.x, v.y);
     }
 };
 
@@ -92,16 +88,13 @@ struct ColorValueWriter
 {
     static void write(OutFile& out, const Color& v)
     {
-        out.print("Color({}, {}, {}, {})", fmt_f3(v.r), fmt_f3(v.g), fmt_f3(v.b), fmt_f3(v.a));
+        out.print("Color({:.3f}, {:.3f}, {:.3f}, {:.3f})", v.r, v.g, v.b, v.a);
     }
 };
 
 struct BlendModeValueWriter
 {
-    static void write(OutFile& out, BlendMode v)
-    {
-        out.raw(fmt_d(static_cast<int>(v)));
-    }
+    static void write(OutFile& out, BlendMode v) { out.print("{:d}", static_cast<int>(v)); }
 };
 
 /// 把 PvZ 语义的 (原点, 缩放, 旋转, 扭曲) 合成为 Godot Transform2D 的 6 元组。
@@ -110,56 +103,29 @@ struct Transform2DValueWriter
 {
     static void write(OutFile& out, const Transform2D& t)
     {
-        const f32 c_rot       = std::cos(t.rot);
-        const f32 s_rot       = std::sin(t.rot);
-        const f32 c_rot_skew  = std::cos(t.rot + t.skew);
-        const f32 s_rot_skew  = std::sin(t.rot + t.skew);
+        const f32 c_rot      = std::cos(t.rot);
+        const f32 s_rot      = std::sin(t.rot);
+        const f32 c_rot_skew = std::cos(t.rot + t.skew);
+        const f32 s_rot_skew = std::sin(t.rot + t.skew);
         const f32 a = c_rot * t.sx;
         const f32 b = s_rot * t.sx;
         const f32 c = -s_rot_skew * t.sy;
         const f32 d = c_rot_skew * t.sy;
-        out.print("Transform2D({}, {}, {}, {}, {}, {})",
-                  fmt_f3(a), fmt_f3(b), fmt_f3(c), fmt_f3(d), fmt_f3(t.x), fmt_f3(t.y));
+        out.print("Transform2D({:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f})",
+                  a, b, c, d, t.x, t.y);
     }
 };
 
 /// 一种关键帧集合：元素类型 T，值的写法由 W 决定。
 template <class T, class W>
-class KeysOf final : public Keys
+struct KeysOf : KeysCommon
 {
-public:
     std::vector<T> values;
 
-    /// 确保最后一个值是当前帧时间对应的那个，返回它的引用；
-    /// 不存在则以 `default_value` 新建一个。对应原实现的 Ensure*Keyframe。
-    ///
-    /// `time` 由调用方按原实现的字面量类型算好（Ensure* 用的是 float 运算，
-    /// PreSet* 用的是 double 运算，两者不可互换）。
-    T& ensure(f32 time, const T& default_value)
+    /// 打印完整段落（公共三段 + values）。
+    void print_to_file(OutFile& out) const
     {
-        if (!times.empty() && std::fabs(times.back() - time) < 0.0001f)
-            return values.back();
-        values.push_back(default_value);
-        times.push_back(time);
-        return values.back();
-    }
-
-    /// 复制最后一个值到当前帧（原实现 PreSet* 系列的"继承上一帧"）。
-    void push_inherited(f32 time)
-    {
-        values.push_back(values.back());
-        times.push_back(time);
-    }
-
-    void pop_last()
-    {
-        values.pop_back();
-        times.pop_back();
-    }
-
-protected:
-    void print_values(OutFile& out) const override
-    {
+        print_header(out);
         out.write("\"values\": [");
         for (std::size_t i = 0; i < times.size(); ++i)
         {
@@ -172,6 +138,35 @@ protected:
                 out.write(", ");
         }
         out.write("]\n");
+    }
+
+    // ------ 写关键帧。时间由调用方按原实现的字面量类型算好 ------
+    // 注意 Ensure* 用的是 float 运算（1.0f / fps），PreSet* 用的是 double
+    // 运算（1.0 / fps），两者不可互换，所以时间一律从外面传进来。
+
+    /// 当前帧已有 keyframe 就复用它，否则用 `default_value` 新建一个并返回。
+    /// 对应原实现的 Ensure*Keyframe。
+    T& ensure(f32 time, const T& default_value)
+    {
+        if (!times.empty() && std::fabs(times.back() - time) < 0.0001f)
+            return values.back();
+        values.push_back(default_value);
+        times.push_back(time);
+        return values.back();
+    }
+
+    /// 把最后一个值复制到当前帧（原实现 PreSet* 的"继承上一帧"）。
+    void push_inherited(f32 time)
+    {
+        values.push_back(values.back());
+        times.push_back(time);
+    }
+
+    /// 弹出最后一条（SetI 在第 0 帧重复出现时用它去掉 SetInitValue 写的那条）。
+    void pop_last()
+    {
+        values.pop_back();
+        times.pop_back();
     }
 };
 

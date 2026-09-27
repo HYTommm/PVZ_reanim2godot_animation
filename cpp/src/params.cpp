@@ -11,12 +11,6 @@
 namespace r2ga {
 namespace {
 
-/// 对应 strncpy(dst, src, n - 1); dst[n - 1] = '\0';
-std::string truncate(std::string_view s, std::size_t n)
-{
-    return std::string(s.substr(0, n));
-}
-
 bool any_of(std::string_view s, std::string_view a, std::string_view b)
 {
     return s == a || s == b;
@@ -119,6 +113,15 @@ std::optional<bool> parse_bool_flag(std::string_view s)
     return std::nullopt;
 }
 
+bool resolve_blend_mode(const Params& params, std::string_view file_text)
+{
+    // 显式指定过（-bm/-nbm 或配置文件）就以其为准
+    if (params.blendMode.has_value())
+        return *params.blendMode;
+    // 原实现：!!strstr(file_text, "<bm>")
+    return file_text.find("<bm>") != std::string_view::npos;
+}
+
 Result parse_args(Params& p, int argc, char** argv)
 {
     // 位置参数不足时直接失败。注意这个界是 `argc <= 4`：
@@ -137,15 +140,14 @@ Result parse_args(Params& p, int argc, char** argv)
     const std::string_view anim_path   = argv[2];
     const std::string_view res_path    = argv[3];
 
-    p.inputFileWholePath = truncate(input_file, PATH_LENGTH - 1);
-    p.animOutputGodotPath = truncate(anim_path, PATH_LENGTH - 1);
+    p.inputFileWholePath = clamp_path(input_file);
+    // 原实现把 animOutputGodotPath 连着赋了两遍（同一来源，重复但无害），这里只留一次
+    p.animOutputGodotPath = clamp_path(anim_path);
 
     p.inputFilePath = get_file_path(input_file);
     p.inputFileName = get_file_name_without_ext(input_file);
 
-    // 原实现这里把 animOutputGodotPath 又赋了一遍（重复但无害），此处合并为一次。
-    p.animOutputGodotPath = truncate(anim_path, PATH_LENGTH - 1);
-    p.resourceGodotPath   = truncate(res_path, PATH_LENGTH - 1);
+    p.resourceGodotPath = clamp_path(res_path);
 
     for (int i = 4; i < argc; ++i)
     {
@@ -160,7 +162,7 @@ Result parse_args(Params& p, int argc, char** argv)
         if (any_of(arg, "-of", "--output-file"))
         {
             if (i + 1 >= argc) return Result::Failed;
-            p.outputFileWholePath = truncate(argv[i + 1], PATH_LENGTH - 1);
+            p.outputFileWholePath = clamp_path(argv[i + 1]);
             p.outputFileSpecified = true;
             p.outputFilePath = get_file_path(p.outputFileWholePath);
             p.outputFileName = get_file_name_without_ext(p.outputFileWholePath);
@@ -181,7 +183,7 @@ Result parse_args(Params& p, int argc, char** argv)
         if (any_of(arg, "-cf", "--config-file"))
         {
             if (i + 1 >= argc) return Result::Failed;
-            p.configFileWholePath = truncate(argv[i + 1], PATH_LENGTH - 1);
+            p.configFileWholePath = clamp_path(argv[i + 1]);
             p.configFileSpecified = true;
             ++i;
             continue;
@@ -202,7 +204,7 @@ Result parse_args(Params& p, int argc, char** argv)
         if (any_of(arg, "-rnt", "--root-node-type"))
         {
             if (i + 1 >= argc) return Result::Failed;
-            p.rootNodeType = truncate(argv[i + 1], NAME_LENGTH - 1);
+            p.rootNodeType = clamp_name(argv[i + 1]);
             ++i;
             continue;
         }
@@ -210,7 +212,7 @@ Result parse_args(Params& p, int argc, char** argv)
         if (any_of(arg, "-rnn", "--root-node-name"))
         {
             if (i + 1 >= argc) return Result::Failed;
-            p.rootNodeName = truncate(argv[i + 1], NAME_LENGTH - 1);
+            p.rootNodeName = clamp_name(argv[i + 1]);
             ++i;
             continue;
         }
@@ -218,7 +220,7 @@ Result parse_args(Params& p, int argc, char** argv)
         if (any_of(arg, "-an", "--anim-name"))
         {
             if (i + 1 >= argc) return Result::Failed;
-            p.animName = truncate(argv[i + 1], NAME_LENGTH - 1);
+            p.animName = clamp_name(argv[i + 1]);
             ++i;
             continue;
         }

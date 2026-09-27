@@ -6,6 +6,9 @@
 
 #pragma once
 
+#include <string>
+#include <string_view>
+
 namespace r2ga {
 
 // 写进 .tres/.tscn 注释行的版本号（ResourceFile.c 里用的是这个宏）
@@ -34,5 +37,22 @@ inline constexpr const char* COL_VAL    = "\033[92m";    // 亮绿色（参数�
 inline constexpr const char* COL_ERR    = "\033[31m";    // 亮红色（错误信息）
 inline constexpr const char* COL_WARN   = "\033[93m";    // 亮黄色（警告信息）
 inline constexpr const char* COL_RESET  = "\033[0m";     // 重置所有样式
+
+// ------------------------------------------------------------ 按上限截断
+//
+// 原实现往定长缓冲里写用的是 strncpy/snprintf/sprintf_s，超过上限就截断；
+// 这里统一成一组函数，避免同一个概念在多处各写一遍。
+
+/// 截断到至多 n 个字符。
+inline std::string clamp_len(std::string_view s, std::size_t n)
+{
+    return std::string(s.substr(0, n));
+}
+
+/// 截断到名称上限（NAME_LENGTH - 1，留一个位置给结尾）。
+inline std::string clamp_name(std::string_view s) { return clamp_len(s, NAME_LENGTH - 1); }
+
+/// 截断到路径上限。
+inline std::string clamp_path(std::string_view s) { return clamp_len(s, PATH_LENGTH - 1); }
 
 }  // namespace r2ga

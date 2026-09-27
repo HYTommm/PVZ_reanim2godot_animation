@@ -7,13 +7,17 @@
 //   - 输出过滤条件 `(i==0 && mode != AnimTres) || (i>0 && mode != TscnByAnim)`
 //     （所以 `tscn` 模式与 `auto` 模式行为完全相同）
 //   - 退出码 1 / 0 与各 ErrorCode
+//
+// 输出约定：stdout 一律用 std::print；stderr 上的两处错误信息沿用 fprintf，
+// 因为它们就是原实现 fprintf(stderr, ...) 的直译，且 print_warning/print_error
+// 需要 varargs 转发。
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
 #include <cstdio>
 #include <memory>
-#include <span>
+#include <print>
 #include <string>
 #include <vector>
 
@@ -32,7 +36,7 @@ using namespace r2ga;
 
 void print_error_msg(const char* error_msg)
 {
-    std::printf("%s错误: %s\n%s", COL_ERR, error_msg, COL_RESET);
+    std::print("{}{}{}\n{}", COL_ERR, "错误: ", error_msg, COL_RESET);
 }
 
 void print_param_error()
@@ -61,106 +65,87 @@ int main(int argc, char** argv)
 
     enable_vt_mode();
 
-    RunContext ctx;
-    const Result result = parse_args(ctx.params, argc, argv);
-    std::printf("debug: %d\n", static_cast<int>(result));
+    Params params;
+    const Result result = parse_args(params, argc, argv);
+    std::print("debug: {}\n", static_cast<int>(result));
 
     if (result == Result::Failed)
     {
         print_param_error();
         return 1;
     }
-    if (ctx.params.help)
+    if (params.help)
     {
         print_help(argv[0]);
         return static_cast<int>(ErrorCode_Success);
     }
 
     // 只有在指定了配置文件且路径非空时才解析
-    if (ctx.params.configFileSpecified && !ctx.params.configFileWholePath.empty())
-        parse_config(ctx.params, ctx.params.configFileWholePath);
+    if (params.configFileSpecified && !params.configFileWholePath.empty())
+        parse_config(params, params.configFileWholePath);
 
-    ctx.input_text = read_text_file(ctx.params.inputFileWholePath, ErrorCode_CannotOpenInputFile);
+    const std::string input_text =
+        read_text_file(params.inputFileWholePath, ErrorCode_CannotOpenInputFile);
 
-    // 一次性创建 MAX_ANIM_NUM 个动画槽位
-    // 注意这里用 deque 语义的稳定地址：先 reserve 再逐个 push，指针不会失效
-    ctx.animations.reserve(MAX_ANIM_NUM);
-    for (int i = 0; i < MAX_ANIM_NUM; ++i)
-    {
-        auto anim = std::make_unique<PvzAnimation>();
-        anim->anim_name  = (i == 0) ? "all" : "null";
-        anim->anim_index = i;
-        ctx.animations.push_back(std::move(anim));
-    }
+    // 混合模式影响 tracks/N 的编号，所以必须在建轨道（seek_anim）之前定下来
+    params.blendMode = resolve_blend_mode(params, input_text);
 
-    // 展平成裸指针数组，供解析器与输出层使用
-    std::vector<PvzAnimation*> anims;
-    anims.reserve(ctx.animations.size());
-    for (const auto& a : ctx.animations)
-        anims.push_back(a.get());
+    Model model;
+    model.reset(MAX_ANIM_NUM);
 
-    std::span<PvzAnimation*> all_anims(anims.data(), anims.size());
+    // 第 0 个动画（伪动画 "all"）的资源名取自动画名参数或输入文件名
+    model[0].res_file_name = params.anim_name_is_set() ? params.anim_name()
+                                                       : params.inputFileName;
+    model[0].start_frame_time = 0;
+    model[0].end_frame_time   = MAX_TIMES_NUM - 1;
 
-    // 第 0 个动画的资源名取自动画名参数或输入文件名
-    anims[0]->res_file_name = ctx.params.anim_name_is_set() ? ctx.params.anim_name()
-                                                           : ctx.params.inputFileName;
-    anims[0]->start_frame_time = 0;
-    anims[0]->end_frame_time   = MAX_TIMES_NUM - 1;
-
-    Parser parser(ctx);
+    Parser parser(params, model);
 
     // 第一遍：扫描动画定义与起止帧
-    parser.seek_anim(ctx.input_text, all_anims);
+    parser.seek_anim(input_text);
 
-    std::printf("debug: 共有%d个动画\n\n", ctx.anim_nums);
-    for (int i = 0; i <= ctx.anim_nums; ++i)
+    const ParseState& st = parser.state();
+    std::print("debug: 共有{}个动画\n\n", st.anim_nums);
+    for (int i = 0; i <= st.anim_nums; ++i)
     {
-        std::printf("debug: 第%d个动画的资源名为%s\n", i, anims[static_cast<std::size_t>(i)]->res_file_name.c_str());
-        std::printf("debug: 第%d个动画的起始帧时间为%d\n", i, anims[static_cast<std::size_t>(i)]->start_frame_time);
-        std::printf("debug: 第%d个动画的结束帧时间为%d\n\n", i, anims[static_cast<std::size_t>(i)]->end_frame_time);
+        const PvzAnimation& anim = model[static_cast<std::size_t>(i)];
+        std::print("debug: 第{}个动画的资源名为{}\n", i, anim.res_file_name);
+        std::print("debug: 第{}个动画的起始帧时间为{}\n", i, anim.start_frame_time);
+        std::print("debug: 第{}个动画的结束帧时间为{}\n\n", i, anim.end_frame_time);
     }
 
-    // 建输出资源：下标 0 是 .tscn，其余每个动画一个 .tres
-    std::vector<std::unique_ptr<ResourceFile>> resource_files;
-    for (int i = 0; i <= ctx.anim_nums; ++i)
+    // 建输出资源：下标 0 是 .tscn（内含全部动画），其余每个动画一个 .tres
+    const std::size_t anim_slots = static_cast<std::size_t>(st.anim_nums) + 1;
+    std::vector<std::unique_ptr<ResourceFile>> files;
+    files.reserve(anim_slots);
+    for (std::size_t i = 0; i < anim_slots; ++i)
     {
         if (i == 0)
-        {
-            resource_files.push_back(std::make_unique<Tscn>(
-                anims[0],
-                std::span<PvzAnimation*>(anims.data(), static_cast<std::size_t>(ctx.anim_nums) + 1)));
-        }
+            files.push_back(std::make_unique<Tscn>(&model[0], model.all().first(anim_slots)));
         else
-        {
-            resource_files.push_back(std::make_unique<Tres>(anims[static_cast<std::size_t>(i)]));
-        }
+            files.push_back(std::make_unique<Tres>(&model[i]));
     }
 
-    // 必须先建轨道（会占用 tracks/N 的 N）再判定混合模式，再生成数据
-    parser.is_blend_mode_enabled(ctx.input_text);
-    parser.text(ctx.input_text, all_anims);
+    // 第二遍：生成关键帧数据
+    parser.text(input_text, model.all());
 
-    for (int i = 0; i <= ctx.anim_nums; ++i)
+    for (std::size_t i = 0; i < anim_slots; ++i)
     {
-        ResourceFile* file = resource_files[static_cast<std::size_t>(i)].get();
-
-        const OutputMode mode = ctx.params.output_mode();
+        const OutputMode mode = params.output_mode();
         if ((i == 0 && mode != OutputMode::AnimTres) ||
             (i > 0 && mode != OutputMode::TscnByAnim))
         {
-            file->open_output_file(ctx.params.outputFileSpecified ? ctx.params.outputFilePath
-                                                                  : ctx.params.inputFilePath);
-            file->print_ext_resource(ctx.params);
-            file->print_set_anim(ctx.fps);
-            file->print_tracks(ctx.params);
+            ResourceFile& file = *files[i];
+            file.open_output_file(params.outputFileSpecified ? params.outputFilePath
+                                                             : params.inputFilePath);
+            file.print_ext_resource(params);
+            file.print_set_anim(st.fps);
+            file.print_tracks(params);
 
             if (i == 0)
-                static_cast<Tscn*>(file)->print_add_node(ctx.params);
+                static_cast<Tscn&>(file).print_add_node(params);
         }
     }
-
-    for (const auto& f : resource_files)
-        f->close();
 
     return static_cast<int>(ErrorCode_Success);
 }

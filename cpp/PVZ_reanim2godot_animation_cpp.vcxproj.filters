@@ -18,6 +18,9 @@
     <ClInclude Include="src\help.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\keyframe.h">
+      <Filter>src</Filter>
+    </ClInclude>
     <ClInclude Include="src\keys.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -27,10 +30,16 @@
     <ClInclude Include="src\params.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\parse_state.h">
+      <Filter>src</Filter>
+    </ClInclude>
     <ClInclude Include="src\parser.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\resource.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tag_scanner.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\track.h">
@@ -56,6 +65,9 @@
     <ClCompile Include="src\help.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\keyframe.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="src\keys.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -74,27 +86,33 @@
     <ClCompile Include="src\resource.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\tag_scanner.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="src\track.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="tools\run_matrix.sh">
-      <Filter>tools</Filter>
-    </None>
     <None Include="tools\diff_matrix.sh">
-      <Filter>tools</Filter>
-    </None>
-    <None Include="tools\run_errors.sh">
       <Filter>tools</Filter>
     </None>
     <None Include="tools\gen_help.py">
       <Filter>tools</Filter>
     </None>
-    <None Include="tools\verify.sh">
+    <None Include="tools\gen_vcxproj.py">
       <Filter>tools</Filter>
     </None>
     <None Include="tools\rmtree.sh">
+      <Filter>tools</Filter>
+    </None>
+    <None Include="tools\run_errors.sh">
+      <Filter>tools</Filter>
+    </None>
+    <None Include="tools\run_matrix.sh">
+      <Filter>tools</Filter>
+    </None>
+    <None Include="tools\verify.sh">
       <Filter>tools</Filter>
     </None>
     <None Include="README.md" />

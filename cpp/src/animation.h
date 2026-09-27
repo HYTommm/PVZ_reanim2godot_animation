@@ -1,14 +1,16 @@
-// 一个动画的资源容器。
+// 动画模型。
 //
 // 注意两个同名的"帧计数"是不同的东西，别混：
-//   - `Parser::frame_counter_`   —— 解析器里的**全局**帧号（原 main.c 的全局
-//     变量 current_frame_time_num）
+//   - `ParseState::frame_counter`        —— 解析器里的**全局**帧号
+//                                            （原 main.c 的全局 current_frame_time_num）
 //   - `PvzAnimation::current_frame_time_num` —— **每个动画各自的**帧号
 //     原实现里同名，但作用域完全不同。
 
 #pragma once
 
 #include <cstddef>
+#include <memory>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -56,6 +58,29 @@ public:
     /// 原实现是定长数组下标写（`arr[i] = x`），越界即 UB。
     /// 这里用按需扩容的容器复现同样的"下标语义"，但不越界。
     static void assign_at(std::vector<std::string>& v, std::size_t idx, std::string value);
+};
+
+/// 全部动画槽位。
+///
+/// 原实现一次性创建 MAX_ANIM_NUM 个动画并把 `PvzAnimation*[]` 到处传。
+/// 这里把所有权与裸指针视图收在一处 —— 它是**最终产物**，
+/// 与解析过程中反复变化的游标状态（ParseState）是两回事，不该混在一个结构里。
+class Model
+{
+public:
+    /// 建 count 个槽位。第 0 个是伪动画 "all"，其余占位 "null"。
+    void reset(int count);
+
+    /// 全部槽位的裸指针视图（长度 == count）
+    std::span<PvzAnimation*> all() { return std::span<PvzAnimation*>(raw_); }
+
+    PvzAnimation&       operator[](std::size_t i) { return *raw_[i]; }
+    const PvzAnimation& operator[](std::size_t i) const { return *raw_[i]; }
+    std::size_t         size() const { return raw_.size(); }
+
+private:
+    std::vector<std::unique_ptr<PvzAnimation>> owned_;
+    std::vector<PvzAnimation*>                 raw_;
 };
 
 }  // namespace r2ga

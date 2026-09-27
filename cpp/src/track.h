@@ -4,9 +4,12 @@
 // 每个子类手写一遍「印前缀 + `tracks/N/keys = {` + keys + `}`」。
 // 这里同样用一个类模板收掉，8 个名字作为别名保留。
 //
-// `PvzTracks` 是"一个 reanim track 在某个动画下的全部轨道"，持有 9 条固定的
-// 异质轨道。原实现用裸指针 + 手写 Move，这里用 unique_ptr：可移动、不可拷贝，
-// 恰好对应原实现 push_back 时的所有权转移，且不会再有悬垂指针。
+// 与 keys.h 一样没有虚函数：PvzTracks 的 9 个成员都是确切类型，从没有过
+// 通过基类的调用。TrackCommon 只承担字段复用与公共前缀打印。
+//
+// `PvzTracks` 持有 9 条固定的异质轨道。原实现用裸指针 + 手写 Move；
+// 这里用 unique_ptr：可移动、不可拷贝，恰好对应原实现 push_back 时的
+// 所有权转移，且不会再有悬垂指针。
 
 #pragma once
 
@@ -21,11 +24,9 @@ namespace r2ga {
 
 struct Params;
 
-// ------------------------------------------------------------------- Track
-
-class Track
+/// 轨道共有的字段与公共前缀打印。
+struct TrackCommon
 {
-public:
     int num = 0;
     std::string type = "value";  // 原实现只赋过 "value"，且从不改写
     bool imported = false;
@@ -34,22 +35,16 @@ public:
     InterpolationMode interp = InterpolationMode::Linear;
     bool loop_wrap = true;
 
-    virtual ~Track() = default;
-
-    virtual void print_to_file(OutFile& out) const = 0;
-
-protected:
     /// `tracks/<num>/...` 六行公共前缀。
     void print_header(OutFile& out) const;
 };
 
 template <class K>
-class TrackOf final : public Track
+struct TrackOf : TrackCommon
 {
-public:
     K keys;
 
-    void print_to_file(OutFile& out) const override
+    void print_to_file(OutFile& out) const
     {
         print_header(out);
         out.print("tracks/{}/keys = {{\n", num);
@@ -66,8 +61,6 @@ using ColorTrack       = TrackOf<ColorKeys>;
 using ExtResourceTrack = TrackOf<ExtResourceKeys>;
 using BlendModeTrack   = TrackOf<BlendModeKeys>;
 using Transform2DTrack = TrackOf<Transform2DKeys>;
-
-// --------------------------------------------------------------- PvzTracks
 
 /// 一个 reanim track 在某一个动画里的全部轨道数据。
 /// 9 条轨道总是全部创建，是否参与输出由 num 的分配和 Params 的开关决定。

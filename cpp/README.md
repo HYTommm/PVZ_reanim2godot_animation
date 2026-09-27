@@ -49,12 +49,28 @@ msbuild /tmp/r2ga_head/PVZ_reanim2godot_animation/PVZ_reanim2godot_animation.vcx
 
 | 脚本 | 作用 |
 |---|---|
-| `run_matrix.sh` | 跑「样例 × 选项」矩阵，产物落到唯一新目录 |
+| `run_matrix.sh` | 跑「样例 × 选项」矩阵，产物落到唯一新目录（`MAXJOBS` 控制并行度） |
 | `diff_matrix.sh` | 逐字节比对两份矩阵输出 |
 | `run_errors.sh` | 跑错误路径，记录 stdout 与退出码 |
-| `verify.sh` | 上面三者的总驱动 |
+| `verify.sh` | 上面三者的总驱动，并先校验两侧确实是不同的二进制 |
 | `gen_help.py` | 从 HEAD 的 `main.c` 机械提取 `print_help`，生成 `src/help.cpp` |
+| `gen_vcxproj.py` | 按 `src/` 与 `tools/` 下的实际文件重新生成工程的文件清单 |
 | `rmtree.sh` | 可靠的目录删除（本机 git-bash 的 `rm -rf` 在中文/空格路径上会静默失败） |
+
+## 代码结构
+
+按关注点分开，而不是把 C 的自由函数逐个搬成成员函数：
+
+| 文件 | 职责 |
+|---|---|
+| `types.h` / `version.h` | 基础类型、枚举、上限常量、按上限截断的助手 |
+| `output.*` | 输出文件与数字格式化（唯一允许做数值格式化的地方） |
+| `keys.*` / `track.*` / `animation.*` | 模型：关键帧集合、轨道、动画与 `Model` |
+| `tag_scanner.*` | `.reanim` 的 `<tag>内容</tag>` 扫描器（纯函数） |
+| `keyframe.*` | 把 `<t>` 里的字段翻译成对 keys 的写入 |
+| `parser.*` | 两遍扫描的驱动，持有 `ParseState` |
+| `params.*` / `config.*` | 命令行与配置文件的解析 |
+| `resource.*` | `.tres` / `.tscn` 的输出（全代码唯一需要多态的地方） |
 
 ## 与原实现的对应关系
 
@@ -64,17 +80,20 @@ msbuild /tmp/r2ga_head/PVZ_reanim2godot_animation/PVZ_reanim2godot_animation.vcx
 | `Optional(T)` / `Result(T,E)` | `std::optional` / `std::expected` |
 | `unique_ptr`/`shared_ptr` 宏 | `std::unique_ptr` / `std::shared_ptr` |
 | `print`/`println`/`format` | `std::print` / `std::println` / `std::format` |
-| 手写 vtable + `VCall`/`Call` | 抽象基类 + `virtual` |
-| 8 个 `XxxKeys` 子类 | `Keys` 基类 + `template<class T, class W> KeysOf`（`W` 是值的打印策略） |
-| 8 个 `XxxTrack` 子类 | `Track` 基类 + `template<class K> TrackOf` |
+| 手写 vtable + `VCall`/`Call` | 只有 `ResourceFile`→`Tres`/`Tscn` 是真多态，用 `virtual`；其余地方不需要，也就没用 |
+| 8 个 `XxxKeys` 子类 | `KeysCommon` + `template<class T, class W> KeysOf`（`W` 是值的打印策略） |
+| 8 个 `XxxTrack` 子类 | `TrackCommon` + `template<class K> TrackOf` |
 | `ExtResourceKeys : IntKeys` | `KeysOf<i32, ExtResourceValueWriter>`，靠策略区分而不是靠继承 |
 | `char xxx[N]` + `strncpy` | `std::string` |
 | `bool xxxSpecified` + 值字段 | `std::optional<T>` |
-| 全局 `startParam` / `FPS` / `current_frame_time_num` / `anim_nums` | `RunContext` 的成员，显式传递 |
+| 全局 `startParam`/`FPS`/`current_frame_time_num`/`anim_nums` | 分成 `Params`（输入）、`ParseState`（解析游标）、`Model`（产物）三份，各自独立 |
 | `Text()` 把 `&anim` 当数组用的技巧 | 长度为 1 的 `std::span` |
-| `Tap()` 的 `-1/0/1` 三态 | `TapResult` 枚举，`std::string_view` |
-| `Keys::times_num` 手工计数 | `times.size()`（见下） |
-| `exit(ErrorCode)` | 保留（`[[noreturn]]` 的失败路径） |
+| `Tap()` 的 `-1/0/1` 三态 | `TapResult` 枚举，独立的 `tag_scanner` |
+| `IsBlendModeEnabled()` 就地改全局参数 | 纯函数 `resolve_blend_mode()`，由调用方决定是否采用 |
+| `SetX`/`SetY`/`SetSx`/`SetSy` 四个同构函数 | 一个 `set_xform(field)` |
+| `PreSetTrackTPos/Scale/Rot/Skew` 四个同构函数 | 一遍 `pre_set()` |
+| `Keys::times_num` 手工计数 | `times.size()`（见 `keys.h` 顶部说明） |
+| `exit(ErrorCode)` | 保留（失败路径仍然是直接退出，以保持退出码语义） |
 
 ## 刻意保留的"怪癖"
 

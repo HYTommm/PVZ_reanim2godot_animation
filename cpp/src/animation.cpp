@@ -1,6 +1,7 @@
 #include "animation.h"
 
 #include "params.h"
+#include "version.h"
 
 namespace r2ga {
 
@@ -41,6 +42,22 @@ void PvzAnimation::print_tracks_to_file(OutFile& out, const Params& params) cons
     }
 
     out.flush();
+}
+
+void Model::reset(int count)
+{
+    owned_.clear();
+    raw_.clear();
+    owned_.reserve(static_cast<std::size_t>(count));
+    raw_.reserve(static_cast<std::size_t>(count));
+    for (int i = 0; i < count; ++i)
+    {
+        auto anim = std::make_unique<PvzAnimation>();
+        anim->anim_name  = (i == 0) ? "all" : "null";
+        anim->anim_index = i;
+        raw_.push_back(anim.get());
+        owned_.push_back(std::move(anim));
+    }
 }
 
 }  // namespace r2ga

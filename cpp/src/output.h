@@ -8,9 +8,20 @@
 //    输入侧同理：fopen(name, "r") 会把 CRLF 读成 LF，用 std::ifstream 默认
 //    模式即可；若改成 binary，'\r' 会进入标签内容并让标签扫描器死循环。
 //
-// 2) 数字格式：下面的 fmt_* 助手与原实现的 printf 说明符一一对应，是
-//    唯一允许做数值格式化出口。集中在一处，方便一旦发现 std::format 与
-//    UCRT printf 的舍入有分歧时统一替换成 snprintf。
+// 2) 数字格式：格式说明符直接写在调用点，精度一眼可见。与原文的对照：
+//
+//       原 printf      本实现
+//       %f            {:f}        6 位小数
+//       %.1f          {:.1f}      transitions 恒为字面量 1.0
+//       %.3f          {:.3f}      Float / Vector2 / Color / Transform2D
+//       %d            {:d}        Int / BlendMode / interp / update
+//       %.6Lf         {:.6f}      length / step
+//
+//    `%.6Lf` 那处：原实现要求 long double 却传了 float/double，MSVC 的
+//    long double 就是 64 位 double，所以实际渲染等同 `%.6f`。
+//
+//    万一将来发现 std::format 与 UCRT printf 的舍入有分歧，按上表把对应
+//    说明符换成 snprintf 即可 —— 全仓库只有这张表列出的 5 种。
 
 #pragma once
 
@@ -24,28 +35,7 @@
 
 namespace r2ga {
 
-// --------------------------------------------------------------- 数字格式化
-
-/// 对应 printf 的 `%f`（6 位小数）。
-inline std::string fmt_f(double v) { return std::format("{:f}", v); }
-
-/// 对应 printf 的 `%.1f`。
-inline std::string fmt_f1(double v) { return std::format("{:.1f}", v); }
-
-/// 对应 printf 的 `%.3f`。
-inline std::string fmt_f3(double v) { return std::format("{:.3f}", v); }
-
-/// 对应 printf 的 `%d`。
-inline std::string fmt_d(int v) { return std::format("{:d}", v); }
-
-/// 对应 printf 的 `%.6Lf`。
-/// 原实现用 `%Lf`（要求 long double）但传的是 float/double；MSVC 的
-/// long double 就是 64 位 double，所以实际渲染等同于 `%.6f`。
-inline std::string fmt_f6l(double v) { return std::format("{:.6f}", v); }
-
-// ------------------------------------------------------------------- OutFile
-
-/// 一个输出文件。内容先在内存里累积，close()/析构时一次写出。
+/// 一个输出文件。内容先在内存里累积，flush()/析构时写出。
 ///
 /// 原实现是 fopen + fprintf + 零散 fflush，最终落盘字节与"攒完再写"等价；
 /// 唯一差别是进程被强杀时的部分内容，不在验收范围内。
@@ -58,14 +48,13 @@ public:
     OutFile(const OutFile&)            = delete;
     OutFile& operator=(const OutFile&) = delete;
 
-    /// 打开失败时按原实现行为直接退出（不返回）。
-    /// exit_code 取自 ErrorCode。
+    /// 打开失败时按原实现行为直接退出（不返回）。exit_code 取自 ErrorCode。
     void open(const std::string& path, int exit_code);
 
     /// 把缓冲刷到文件（不关闭）。对应原实现零散的 fflush 调用点。
     void flush();
 
-    /// 写出缓冲并关闭。
+    /// 写出剩余缓冲并关闭。
     void close();
 
     bool is_open() const { return os_.is_open(); }
@@ -81,9 +70,6 @@ public:
     {
         std::format_to(std::back_inserter(buf_), f, std::forward<Args>(args)...);
     }
-
-    /// 直接追加一个已格式化好的片段。
-    void raw(const std::string& s) { buf_.append(s); }
 
 private:
     std::string   buf_;

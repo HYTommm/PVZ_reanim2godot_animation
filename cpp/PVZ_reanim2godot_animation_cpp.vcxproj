@@ -30,11 +30,14 @@
     <ClInclude Include="src\animation.h" />
     <ClInclude Include="src\fileio.h" />
     <ClInclude Include="src\help.h" />
+    <ClInclude Include="src\keyframe.h" />
     <ClInclude Include="src\keys.h" />
     <ClInclude Include="src\output.h" />
     <ClInclude Include="src\params.h" />
+    <ClInclude Include="src\parse_state.h" />
     <ClInclude Include="src\parser.h" />
     <ClInclude Include="src\resource.h" />
+    <ClInclude Include="src\tag_scanner.h" />
     <ClInclude Include="src\track.h" />
     <ClInclude Include="src\types.h" />
     <ClInclude Include="src\version.h" />
@@ -44,19 +47,24 @@
     <ClCompile Include="src\config.cpp" />
     <ClCompile Include="src\fileio.cpp" />
     <ClCompile Include="src\help.cpp" />
+    <ClCompile Include="src\keyframe.cpp" />
     <ClCompile Include="src\keys.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\output.cpp" />
     <ClCompile Include="src\params.cpp" />
     <ClCompile Include="src\parser.cpp" />
     <ClCompile Include="src\resource.cpp" />
+    <ClCompile Include="src\tag_scanner.cpp" />
     <ClCompile Include="src\track.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="tools\run_matrix.sh" />
     <None Include="tools\diff_matrix.sh" />
-    <None Include="tools\run_errors.sh" />
     <None Include="tools\gen_help.py" />
+    <None Include="tools\gen_vcxproj.py" />
+    <None Include="tools\rmtree.sh" />
+    <None Include="tools\run_errors.sh" />
+    <None Include="tools\run_matrix.sh" />
+    <None Include="tools\verify.sh" />
     <None Include="README.md" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

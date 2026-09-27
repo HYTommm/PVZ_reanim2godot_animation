@@ -42,9 +42,7 @@ std::string get_file_name_without_ext(std::string_view whole_path)
     if (dot != std::string_view::npos)
         base = base.substr(0, dot);
 
-    if (base.size() > static_cast<std::size_t>(NAME_LENGTH - 1))
-        base = base.substr(0, NAME_LENGTH - 1);
-    return std::string(base);
+    return clamp_name(base);
 }
 
 std::string read_text_file(const std::string& path, int exit_code)

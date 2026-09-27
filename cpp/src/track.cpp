@@ -4,13 +4,13 @@
 
 namespace r2ga {
 
-void Track::print_header(OutFile& out) const
+void TrackCommon::print_header(OutFile& out) const
 {
     out.print("tracks/{}/type = \"{}\"\n", num, type);
     out.print("tracks/{}/imported = {}\n", num, imported ? "true" : "false");
     out.print("tracks/{}/enabled = {}\n", num, enabled ? "true" : "false");
     out.print("tracks/{}/path = NodePath(\"{}\")\n", num, path);
-    out.print("tracks/{}/interp = {}\n", num, static_cast<int>(interp));
+    out.print("tracks/{}/interp = {:d}\n", num, static_cast<int>(interp));
     out.print("tracks/{}/loop_wrap = {}\n", num, loop_wrap ? "true" : "false");
 }
 

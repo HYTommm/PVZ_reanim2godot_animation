@@ -1,8 +1,8 @@
 // 输出资源文件（.tres / .tscn）。
 //
 // 原实现是 File -> ResourceFile -> Tres/Tscn 三层手写虚表。
-// 这里换成真正的继承：ResourceFile 提供公共的开启/轨道输出，
-// Tres 与 Tscn 各自实现 ext_resource / set_anim，Tscn 额外实现 add_node。
+// 这里是真正的继承 —— 也是全代码里**唯一**需要多态的地方：
+// main 持有 `vector<unique_ptr<ResourceFile>>`，用同一个接口驱动两种输出。
 //
 // 输出是逐字节契约，所有空白、空行、注释行重复次数、`_fuck` 系列字面量
 // 都按原实现原样保留。
@@ -33,19 +33,16 @@ public:
     /// 所以三元表达式永远取 `res_file_name`；这里保留同样的成员语义。
     void open_output_file(const std::string& output_file_path);
 
-    /// 刷新并关闭输出文件。
-    void close() { file_.flush(); }
-
     virtual void print_ext_resource(const Params& params) = 0;
     virtual void print_set_anim(int fps)                  = 0;
 
     /// 公共实现：转给 PvzAnimation::print_tracks_to_file。
-    void print_tracks(const Params& params) { p_anim_->print_tracks_to_file(file_, params); }
+    void print_tracks(const Params& params) { p_anim_->print_tracks_to_file(out_, params); }
 
 protected:
     virtual const char* extension() const = 0;
 
-    OutFile       file_;
+    OutFile       out_;
     std::string   name_;
     PvzAnimation* p_anim_;
 };
@@ -77,7 +74,7 @@ public:
 protected:
     const char* extension() const override { return ".tscn"; }
 
-    /// 指向整个动画指针数组（下标 0..anims_num 有效）
+    /// 指向动画指针数组，长度是 anim_nums + 1（下标 0..anim_nums 有效）
     std::span<PvzAnimation*> anims_;
 };
 

@@ -13,6 +13,7 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -116,6 +117,12 @@ Result parse_args(Params& p, int argc, char** argv);
 /// 配置文件解析。失败路径全部以 exit() 结束（与原实现一致）。
 /// 只有在 `configFileSpecified && !configFileWholePath.empty()` 时才应调用。
 void parse_config(Params& p, const std::string& config_file_path);
+
+/// 按输入内容决定要不要开混合模式。
+/// 原实现是一个就地改全局参数的方法（IsBlendModeEnabled）；这里做成纯函数，
+/// 由调用方决定何时、是否采用它的结果 —— 它会改变 tracks/N 的编号，
+/// 所以必须在建轨道之前算出来。
+bool resolve_blend_mode(const Params& params, std::string_view file_text);
 
 // 诊断输出（原实现的 print_warning / print_error：带 ANSI 颜色，写 stderr）
 void print_warning(const char* fmt, ...);
