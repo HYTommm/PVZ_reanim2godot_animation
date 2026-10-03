@@ -1016,6 +1016,12 @@ int main(int argc, char* argv[])
     char* file_text = (char*)file_text_vec.data;
 
     // 读取输入文件内容
+    // 先清零再读：FileRead 在 EOF 处写入的是 0xFF 而不是终止符，而且文本模式下
+    // CRLF→LF 的翻译会让实际读入的字符数少于 FileGetSize 的字节数、尾部留下空档。
+    // 后面的 strstr / 解析都把它当以 NUL 结尾的字符串用，不清零就会读到缓冲区之外
+    // （ASan: heap-buffer-overflow READ，实测越界 5 万多字节）。
+    // reserve 的是 file_size + 1，写这一块在容量之内。
+    memset(file_text, 0, file_size + 1);
     FileRead(fp_input, file_text);
 
     SeekAnim(file_text, pvz_animations, &startParam);

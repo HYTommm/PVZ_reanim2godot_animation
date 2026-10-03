@@ -23,7 +23,16 @@ void FileClose(FILE* fp)
 
 void FileRead(FILE* input, char* file_buffer)
 {
-    for (int i = 0; (file_buffer[i] = fgetc(input)) != EOF; i++);
+    // 原实现是 `for (i = 0; (file_buffer[i] = fgetc(input)) != EOF; i++);`：
+    // 循环停下来时把 EOF(-1) 也写进了缓冲区，留下一个 0xFF 而不是终止符。
+    // 调用方都把它当以 NUL 结尾的字符串用（strstr / 解析），于是会一直读到
+    // 缓冲区之外（ASan: heap-buffer-overflow READ，实测越界 5 万多字节）。
+    // 改成读到 EOF 后显式补一个 '\0'。需要的容量仍是 file_size + 1。
+    int c;
+    int i = 0;
+    while ((c = fgetc(input)) != EOF)
+        file_buffer[i++] = (char)c;
+    file_buffer[i] = '\0';
 }
 
 size_t FileGetSize(FILE* file)
@@ -54,10 +63,16 @@ void FileGetFileNameWithoutExt(const char* fileWholePath, char* fileName)
         // 如果未找到分隔符，则整个路径就是文件名
         filename = fileWholePath;
     }
-    for (int i = 0; i < NAME_LENGTH; i++)
+    // 原来固定循环 NAME_LENGTH 次，完全不看源串长度：文件名比 NAME_LENGTH 短时
+    // 会一路读到源缓冲区之外（ASan 每次调用都报 heap-buffer-overflow）。
+    // 改成读到源串终止符即停，最后补一个终止符——结果字符串与原来逐字节相同，
+    // 区别只是不再读取源串末尾之后的字节。
+    int i = 0;
+    for (; i < NAME_LENGTH - 1 && filename[i] != '\0'; i++)
     {
         fileName[i] = filename[i] == '.' ? '\0' : filename[i];
     }
+    fileName[i] = '\0';
 }
 
 /// <summary>
