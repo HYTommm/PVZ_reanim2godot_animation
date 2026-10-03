@@ -69,6 +69,39 @@
     <ClInclude Include="Tomy\include\data_type\vector.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Tomy\include\algorithm.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\lifetime.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\optional.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\result.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\test.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\test_config.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\data_type\pool_list.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\data_type\pool_doublylist.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\data_type\list.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\data_type\hashmap.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Tomy\include\data_type\doublylist.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FileIO.c">
@@ -93,6 +126,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Tomy\src\ustring.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Tomy\src\object.c">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

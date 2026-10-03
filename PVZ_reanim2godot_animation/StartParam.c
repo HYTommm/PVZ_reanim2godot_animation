@@ -333,7 +333,7 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
             continue;
         }
 
-        println_emin(format("Unknown interpolation mode: {} ", argv[i]));
+        println(format("Unknown interpolation mode: {} ", argv[i]));
     }
 
     return Result_Success;

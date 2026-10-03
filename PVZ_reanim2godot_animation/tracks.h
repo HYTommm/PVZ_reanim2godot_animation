@@ -129,4 +129,4 @@ void PvzTracks_Delete(PvzTracks* self);
 void PvzTracks_Move(PvzTracks* dest, PvzTracks* src);
 void PvzTracks_Init(const PvzTracks* self, const R2GAStartParam* start_param);
 
-VECTOR_IMPL_EX(PvzTracks, _PvzTracks_Create, PvzTracks_Destroy, NULL, PvzTracks_Move)
+VECTOR_IMPL_EX(PvzTracks, _PvzTracks_Create, PvzTracks_Destroy, NULL, NULL)
