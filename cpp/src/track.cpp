@@ -27,6 +27,27 @@ PvzTracks::PvzTracks()
 {
 }
 
+namespace {
+
+/// rotation / skew 是角度语义：Linear / Cubic 只按数值线性插值，从 350° 转到 10°
+/// 会绕 −340° 的大圈。Godot 只有 LinearAngle(3) / CubicAngle(4) 会走最短路径，
+/// 而这两个值在动画编辑器里点不出来，所以在这里自动转换。
+/// Nearest 本就不插值，原样保留。
+///
+/// 只用于 rot / skew——**绝不能用在 transform 轨道上**：
+/// Transform2D 走角度插值那条分支会被 Godot 强转 double，值直接废掉。
+InterpolationMode angle_interpolation(InterpolationMode mode)
+{
+    switch (mode)
+    {
+    case InterpolationMode::Linear: return InterpolationMode::LinearAngle;
+    case InterpolationMode::Cubic:  return InterpolationMode::CubicAngle;
+    default:                        return mode;
+    }
+}
+
+}  // namespace
+
 void PvzTracks::init(const Params& params)
 {
     const InterpolationMode interp = params.interpolation_mode();
@@ -38,13 +59,13 @@ void PvzTracks::init(const Params& params)
     pos->interp = interp;
     pos->keys.update = update;
 
-    rot->interp = interp;
+    rot->interp = angle_interpolation(interp);
     rot->keys.update = update;
 
     scale->interp = interp;
     scale->keys.update = update;
 
-    skew->interp = interp;
+    skew->interp = angle_interpolation(interp);
     skew->keys.update = update;
 
     texture->interp = interp;

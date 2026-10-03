@@ -42,6 +42,7 @@ void print_help(std::string_view exe_name)
     std::print("{}轨道模式:{}\n", COL_HEADER, COL_RESET);
     std::print("  {}separate{}                             pos/rot/scale/skew分开轨道（默认）\n", COL_VAL, COL_RESET);
     std::print("  {}transform{}                            合并为Transform2D轨道（隐藏API）{}\n", COL_VAL, COL_RESET, COL_RESET);
+    std::print("  {}注意{}                                 Transform2D轨道与交叉淡入淡出不兼容，混合结果错误；请改用separate或Play(name, 0)硬切\n", COL_WARN, COL_RESET);
 }
 
 }  // namespace r2ga

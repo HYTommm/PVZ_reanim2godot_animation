@@ -89,11 +89,16 @@ enum class UpdateMode
     Capture    = 2,  // 捕获
 };
 
+/// 取值必须与 Godot 的 Animation::InterpolationType 一致，因为它被直接写进
+/// `tracks/N/interp = %d`。后两个是 Godot 里存在、但编辑器 UI 点不出来的隐藏值：
+/// 它们与 Linear / Cubic 的唯一区别是**角度走最短路径**（比 C 版新增的取值）。
 enum class InterpolationMode
 {
-    Nearest = 0,  // 临近
-    Linear  = 1,  // 线性
-    Cubic   = 2,  // 三次方
+    Nearest     = 0,  // 临近
+    Linear      = 1,  // 线性
+    Cubic       = 2,  // 三次方
+    LinearAngle = 3,  // 线性，角度走最短路径
+    CubicAngle  = 4,  // 三次方，角度走最短路径
 };
 
 enum class BlendMode

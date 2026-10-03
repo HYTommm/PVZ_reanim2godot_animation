@@ -1,6 +1,11 @@
-import io, re
+import io, re, sys
 
-SRC = r"C:\Users\HYTomZ\AppData\Local\Temp\r2ga_head\PVZ_reanim2godot_animation\main.c"
+# 源文件与输出都可以从命令行覆盖，默认值对应"HEAD 的临时解包目录"。
+# 基准 exe 现在由工作区的 C 版构建（见 cpp/README.md 的"验收"一节），
+# 而工作区的 main.c 已经和 HEAD 不同，所以生成时必须显式指向工作区那份：
+#     python cpp/tools/gen_help.py PVZ_reanim2godot_animation/main.c
+SRC = sys.argv[1] if len(sys.argv) > 1 else \
+    r"C:\Users\HYTomZ\AppData\Local\Temp\r2ga_head\PVZ_reanim2godot_animation\main.c"
 src = io.open(SRC, encoding="utf-8-sig").read()
 i = src.index("static void print_help")
 j = src.index("\nstatic void PrintErrorMsg", i)
@@ -149,6 +154,7 @@ for call in calls:
     tail = (", " + ", ".join(arg_out)) if arg_out else ""
     lines.append('    std::print("' + fmt_out + '"' + tail + ");")
 
-OUT = r"C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\cpp\src\help.cpp"
+OUT = sys.argv[2] if len(sys.argv) > 2 else \
+    r"C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\cpp\src\help.cpp"
 io.open(OUT, "w", encoding="utf-8", newline="\n").write(HEAD + "\n".join(lines) + "\n" + TAIL)
 print("written " + OUT + "  (%d lines)" % len(lines))

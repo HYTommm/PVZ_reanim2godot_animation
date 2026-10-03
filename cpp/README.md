@@ -37,12 +37,12 @@ bash tools/verify.sh [参考exe] [C++ exe]
 2. 对 22 个样例 × 18 组选项做逐字节文件比对；
 3. 对 15 组错误路径比对 stdout 与退出码。
 
-参考 exe 需自行从 HEAD 构建，例如：
+参考 exe 需自行构建。**注意：现在要从工作区的 C 工程构建，而不是 `git archive HEAD`**——
+角度插值自动转换（见下）是 C 与 C++ 两侧一起改的，HEAD 那份没有，拿它当基准必然不一致：
 
 ```
-git archive HEAD | tar -x -C /tmp/r2ga_head
-msbuild /tmp/r2ga_head/PVZ_reanim2godot_animation/PVZ_reanim2godot_animation.vcxproj \
-        -p:Configuration=Release -p:Platform=x64
+msbuild PVZ_reanim2godot_animation.sln -t:PVZ_reanim2godot_animation -p:Configuration=Release -p:Platform=x64
+bash cpp/tools/verify.sh x64/Release/PVZ_reanim2godot_animation.exe x64/Release/PVZ_reanim2godot_animation_cpp.exe
 ```
 
 `tools/` 下的脚本：
@@ -53,7 +53,7 @@ msbuild /tmp/r2ga_head/PVZ_reanim2godot_animation/PVZ_reanim2godot_animation.vcx
 | `diff_matrix.sh` | 逐字节比对两份矩阵输出 |
 | `run_errors.sh` | 跑错误路径，记录 stdout 与退出码 |
 | `verify.sh` | 上面三者的总驱动，并先校验两侧确实是不同的二进制 |
-| `gen_help.py` | 从 HEAD 的 `main.c` 机械提取 `print_help`，生成 `src/help.cpp` |
+| `gen_help.py` | 从 `main.c` 机械提取 `print_help`，生成 `src/help.cpp`。用法 `gen_help.py [源main.c] [输出help.cpp]`，默认值是 HEAD 的临时解包目录；由于基准现在来自工作区，生成时应显式传 `PVZ_reanim2godot_animation/main.c` |
 | `gen_vcxproj.py` | 按 `src/` 与 `tools/` 下的实际文件重新生成工程的文件清单 |
 | `rmtree.sh` | 可靠的目录删除（本机 git-bash 的 `rm -rf` 在中文/空格路径上会静默失败） |
 
@@ -95,6 +95,31 @@ msbuild /tmp/r2ga_head/PVZ_reanim2godot_animation/PVZ_reanim2godot_animation.vcx
 | `Keys::times_num` 手工计数 | `times.size()`（见 `keys.h` 顶部说明） |
 | `exit(ErrorCode)` | 保留（失败路径仍然是直接退出，以保持退出码语义） |
 
+## 与 HEAD 的有意差异
+
+### rotation / skew 自动改用角度插值
+
+`rotation` 与 `skew` 是角度语义，而 Godot 的 `INTERPOLATION_LINEAR`(1) / `CUBIC`(2)
+只按数值插值，从 350° 转到 10° 会绕 −340° 的大圈。只有 `LINEAR_ANGLE`(3) /
+`CUBIC_ANGLE`(4) 走最短路径，但这两个值在 Godot 动画编辑器的轨道面板里**点不出来**。
+
+所以 `PvzTracks::init` 对这两条轨道自动做转换（`cpp/src/track.cpp` 的
+`angle_interpolation`，C 版对应 `tracks.c` 的 `AngleInterpolation`）：
+
+```
+LINEAR  → LINEAR_ANGLE      NEAREST → 不变（本就不插值）
+CUBIC   → CUBIC_ANGLE
+```
+
+`-im` 的取值没有新增，用户不需要知道 3 / 4 的存在。两点约束：
+
+1. **只作用于 `rot` / `skew`，绝不作用于 `transform` 轨道**——`Transform2D` 走
+   角度插值那条分支会被 Godot 强转 `double`，值直接废掉，比原来的问题更糟。
+2. 因此默认模式下 `tracks/N/interp` 的**取值与 HEAD 不同**（rotation/skew 由 1 变 3），
+   `verify.sh` 的参考 exe 必须换成工作区的 C 版构建，详见"验收"一节。
+
+背景与实测见仓库根目录的 `KNOWN-ISSUE-angle-interpolation.md`。
+
 ## 刻意保留的"怪癖"
 
 这些看起来像 bug，但都是可观测行为，改动会改变输出：
@@ -126,3 +151,8 @@ msbuild /tmp/r2ga_head/PVZ_reanim2godot_animation/PVZ_reanim2godot_animation.vcx
 另外，原实现里 `Vec(PvzTracks)` 靠元素 `move` 回调转移 9 条轨道的所有权，
 并且大量 `String`/`Vec` 缓冲从不释放；在 C++ 版里这些由 `std::vector` +
 `std::unique_ptr` 与 RAII 自然消除，不再有泄漏与悬垂指针。
+
+> 补充（2026-10-03）：C 版的 `ElemMove` 回调已被删除，改为在
+> `Tomy/include/data_type/vector.h` 里约定「`ElemCopy == NULL` 表示该类型按位搬移、
+> 所有权随字节转移」——搬移后不再析构源槽位。C 侧与 C++ 侧因此仍然语义对齐。
+> 详见该文件 `ElemCopy` 的注释。
