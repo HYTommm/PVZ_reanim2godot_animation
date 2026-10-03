@@ -1,24 +1,15 @@
 ﻿#pragma once
 #include "macro.h"
-#include "print.h"
 
-void _err_print(const char* func, const char* file, int line, const char* error, const char* message);
+int _fast_print(const char* format, ...);
 
-inline void _err_print(const char* func, const char* file, const int line, const char* error, const char* message)
+INLINE void _err_print(const char* func, const char* file, const int line, const char* error, const char* message)
 {
-    //ERROR: Cannot get class 'Swf'.
-    //    at: (core / object / class_db.cpp:546)
-
     const char* err_msg = (message && *message) ? message : error;
 
-    #ifdef _FAST_PRINT_
     _fast_print(
         "ERROR: %s\n"
         "   at: %s (%s:%d)\n", err_msg, func, file, line);
-    #else
-    print_emin(format("ERROR: {}\n", err_msg));
-    print_emin(format("   at: {} ({}:{})\n", func, file, line));
-    #endif
 }
 
 /**

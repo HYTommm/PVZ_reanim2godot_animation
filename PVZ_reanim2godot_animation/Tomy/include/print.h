@@ -1,4 +1,12 @@
-﻿#pragma once
+﻿/*
+ * print.h — 泛型打印系统
+ *
+ * 基于 emincin/code (https://github.com/emincin/code/blob/main/c/print/main.c)
+ * 的原始实现改造和扩展，MIT License。
+ * 原始代码 Copyright (c) 2025 emincin.
+ */
+
+#pragma once
 
 #include <stdarg.h>
 //#include <stdbool.h>
@@ -131,7 +139,7 @@ enum
   const char* fmt = format_of(value); \
   int len = snprintf(buf, sizeof(buf), fmt, value); \
   if (len < 0) { (err) = ERR_FAIL; break; } \
-  bool ok = string_append_sn(str, buf, len); \
+  bool ok = Call(String, str, AppendN, buf, len); \
   if (!ok) { (err) = ERR_FAIL; break; } \
   (err) = ERR_OK; \
 } while (0)
@@ -147,7 +155,7 @@ enum
 
 #define SELECT_2(_1, _2, ...) _2
 
-#define print_emin(...) SELECT_2(__VA_OPT__(,) \
+#define print(...) SELECT_2(__VA_OPT__(,) \
   print_func( \
     as_print_config_ptr(LAST(__VA_ARGS__)), \
     COUNT_ARGS(__VA_ARGS__), \
@@ -155,7 +163,7 @@ enum
   ), \
   print_func(NULL, ARGS_COUNT(__VA_ARGS__)))
 
-#define println_emin(...) SELECT_2(__VA_OPT__(,) \
+#define println(...) SELECT_2(__VA_OPT__(,) \
   println_func( \
     as_print_config_ptr(LAST(__VA_ARGS__)), \
     COUNT_ARGS(__VA_ARGS__), \
@@ -188,33 +196,33 @@ typedef struct print_config_t
     bool flush;
 } PrintConfig;
 
-String* format_func(const char* fmt, int count, ...);
-void print_func(const PrintConfig* config, int count, ...);
-void println_func(const PrintConfig* config, int count, ...);
-String* set_cursor_pos(int x, int y);
-String* set_fg_idx(int idx);
-String* set_fg_rgb(int r, int g, int b);
-String* set_fg_color(Color24 color);
-String* set_bg_idx(int idx);
-String* set_bg_rgb(int r, int g, int b);
-String* set_bg_color(Color24 color);
-String* set_colors_idx(int fg_idx, int bg_idx);
-String* set_colors_rgb(int fg_r, int fg_g, int fg_b, int bg_r, int bg_g, int bg_b);
-String* set_colors_color(Color24 fg_color, Color24 bg_color);
-const char* reset_style(void);
+INLINE String* format_func(const char* fmt, int count, ...);
+INLINE void print_func(const PrintConfig* config, int count, ...);
+INLINE void println_func(const PrintConfig* config, int count, ...);
+INLINE String* set_cursor_pos(int x, int y);
+INLINE String* set_fg_idx(int idx);
+INLINE String* set_fg_rgb(int r, int g, int b);
+INLINE String* set_fg_color(Color24 color);
+INLINE String* set_bg_idx(int idx);
+INLINE String* set_bg_rgb(int r, int g, int b);
+INLINE String* set_bg_color(Color24 color);
+INLINE String* set_colors_idx(int fg_idx, int bg_idx);
+INLINE String* set_colors_rgb(int fg_r, int fg_g, int fg_b, int bg_r, int bg_g, int bg_b);
+INLINE String* set_colors_color(Color24 fg_color, Color24 bg_color);
+INLINE const char* reset_style(void);
 
 int _fast_print(const char* format, ...);
 
-inline size_t read_from_color24(String* str, Color24 color)
+INLINE size_t read_from_color24(String* str, Color24 color)
 {
     String* temp = format("{}[R:{} G:{} B:{}]{}", set_fg_color(color), color.r, color.g, color.b, reset_style());
     const size_t len = temp->size;
-    string_append_sn(str, temp->data, len);
-    string_delete(temp);
+    Call(String, str, AppendN, temp->data, len);
+    Call(String, temp, Delete);
     return len;
 }
 
-inline size_t read_from_va_list(String* str, const int type, va_list* args_ptr)
+INLINE size_t read_from_va_list(String* str, const int type, va_list* args_ptr)
 {
     switch (type)
     {
@@ -287,7 +295,7 @@ inline size_t read_from_va_list(String* str, const int type, va_list* args_ptr)
             {
                 return 1;
             }
-            [[maybe_unused]] bool ok = string_append_sn(str, arg, len);
+            [[maybe_unused]] bool ok = Call(String, str, AppendN, arg, len);
             return len;
         }
         case TYPE_ANY:
@@ -307,11 +315,7 @@ inline size_t read_from_va_list(String* str, const int type, va_list* args_ptr)
             {
                 return 1;
             }
-            [[maybe_unused]] bool ok = string_append_sn(str, arg->data, len);
-            if (type == TYPE_STRING_PTR)
-            {
-                string_delete(arg);
-            }
+            [[maybe_unused]] bool ok = Call(String, str, AppendN, arg->data, len);
             return len;
         }
         case TYPE_COLOR24:
@@ -330,7 +334,7 @@ inline size_t read_from_va_list(String* str, const int type, va_list* args_ptr)
     return 0;
 }
 
-inline int format_from_va_list(String* str, const char* fmt, const int count, va_list* args_ptr)
+INLINE int format_from_va_list(String* str, const char* fmt, const int count, va_list* args_ptr)
 {
     int arg_index = 0;
     const size_t fmt_len = strlen(fmt);
@@ -368,42 +372,43 @@ inline int format_from_va_list(String* str, const char* fmt, const int count, va
         }
         else
         {
-            string_append_sn(str, fmt + i, 1);
+            Call(String, str, AppendN, fmt + i, 1);
         }
     }
     return arg_index;
 }
 
-inline void parse_va_list(String* str, const char* sep, const int count, va_list args)
+
+INLINE void parse_va_list(String* str, const char* sep, int count, va_list args)
 {
-    const size_t sep_len = strlen(sep);
+    va_list args_copy;
+    va_copy(args_copy, args);
+    size_t sep_len = strlen(sep);
     for (int i = 0; i < count; i++)
     {
-        const int type = va_arg(args, int);
+        int type = va_arg(args_copy, int);
         if (i == 0 && (type == TYPE_STRING || type == TYPE_CONST_STRING))
         {
-            const char* fmt = va_arg(args, char*);
-            const int ret = format_from_va_list(str, fmt, count - 1, &args);
+            char* fmt = va_arg(args_copy, char*);
+            int ret = format_from_va_list(str, fmt, count - 1, &args_copy);
             i += ret;
-        }
+	}
         else
         {
-            const size_t ret = read_from_va_list(str, type, &args);
-            if (ret == 0)
-            {
-                break;
-            }
+            size_t ret = read_from_va_list(str, type, &args_copy);
+            if (ret == 0) break;
         }
         if (i < count - 1)
         {
-            [[maybe_unused]] bool ok = string_append_sn(str, sep, sep_len);
+            [[maybe_unused]] bool ok = Call(String, str, AppendN, sep, sep_len);
         }
     }
+    va_end(args_copy);
 }
 
-inline String* format_func(const char* fmt, const int count, ...)
+INLINE String* format_func(const char* fmt, const int count, ...)
 {
-    String* str = string_new(STRING_CAPACITY);
+    String* str = New(String, STRING_CAPACITY);
     va_list args;
     va_start(args, count);
     format_from_va_list(str, fmt, count, &args);
@@ -411,7 +416,7 @@ inline String* format_func(const char* fmt, const int count, ...)
     return str;
 }
 
-inline void print_func(const PrintConfig* config, int count, ...)
+INLINE void print_func(const PrintConfig* config, int count, ...)
 {
     const char* sep = SEPARATOR;
     const char* end = "";
@@ -440,9 +445,9 @@ inline void print_func(const PrintConfig* config, int count, ...)
     va_list args;
     va_start(args, count);
     String a = { 0 };
-    string_init_with_size(&a, STRING_CAPACITY);
+    Create(String, &a);
     parse_va_list(&a, sep, count, args);
-    string_append_s(&a, end);
+    Call(String, &a, Append, end);
     if (a.data)
     {
         FPRINTSN(file, a.data, a.size);
@@ -451,11 +456,11 @@ inline void print_func(const PrintConfig* config, int count, ...)
             FFLUSH(file);
         }
     }
-    string_deinit(&a);
+    Call(String, &a, Destroy);
     va_end(args);
 }
 
-inline void println_func(const PrintConfig* config, int count, ...)
+INLINE void println_func(const PrintConfig* config, int count, ...)
 {
     const char* sep = SEPARATOR;
     const char* end = END;
@@ -484,9 +489,9 @@ inline void println_func(const PrintConfig* config, int count, ...)
     va_list args;
     va_start(args, count);
     String a = { 0 };
-    string_init_with_size(&a, STRING_CAPACITY);
+    Create(String, &a);
     parse_va_list(&a, sep, count, args);
-    string_append_s(&a, end);
+    Call(String, &a, Append, end);
     if (a.data)
     {
         FPRINTSN(file, a.data, a.size);
@@ -495,70 +500,61 @@ inline void println_func(const PrintConfig* config, int count, ...)
             FFLUSH(file);
         }
     }
-    string_deinit(&a);
+    Call(String, &a, Destroy);
     va_end(args);
 }
 
-inline String* set_cursor_pos(const int x, const int y)
+INLINE String* set_cursor_pos(const int x, const int y)
 {
     return format("\033[{};{}H", y + 1, x + 1);
 }
 
-inline String* set_fg_idx(int idx)
+INLINE String* set_fg_idx(int idx)
 {
     return format("\033[38;5;{}m", idx);
 }
 
-inline String* set_fg_rgb(int r, int g, int b)
+INLINE String* set_fg_rgb(int r, int g, int b)
 {
     return format("\033[38;2;{};{};{}m", r, g, b);
 }
 
-inline String* set_fg_color(const Color24 color)
+INLINE String* set_fg_color(const Color24 color)
 {
     return set_fg_rgb(color.r, color.g, color.b);
 }
 
-inline String* set_bg_idx(int idx)
+INLINE String* set_bg_idx(int idx)
 {
     return format("\033[48;5;{}m", idx);
 }
 
-inline String* set_bg_rgb(int r, int g, int b)
+INLINE String* set_bg_rgb(int r, int g, int b)
 {
     return format("\033[48;2;{};{};{}m", r, g, b);
 }
 
-inline String* set_bg_color(const Color24 color)
+INLINE String* set_bg_color(const Color24 color)
 {
     return set_bg_rgb(color.r, color.g, color.b);
 }
 
-inline String* set_colors_idx(int fg_idx, int bg_idx)
+INLINE String* set_colors_idx(int fg_idx, int bg_idx)
 {
     return format("\033[38;5;{};48;5;{}m", fg_idx, bg_idx);
 }
 
-inline String* set_colors_rgb(int fg_r, int fg_g, int fg_b, int bg_r, int bg_g, int bg_b)
+INLINE String* set_colors_rgb(int fg_r, int fg_g, int fg_b, int bg_r, int bg_g, int bg_b)
 {
     return format("\033[38;2;{};{};{};48;2;{};{};{}m", fg_r, fg_g, fg_b, bg_r, bg_g, bg_b);
 }
 
-inline String* set_colors_color(const Color24 fg_color, const Color24 bg_color)
+INLINE String* set_colors_color(const Color24 fg_color, const Color24 bg_color)
 {
     return set_colors_rgb(fg_color.r, fg_color.g, fg_color.b, bg_color.r, bg_color.g, bg_color.b);
 }
 
-inline const char* reset_style(void)
+INLINE const char* reset_style(void)
 {
     return RESET_STYLE;
-}
-
-inline int _fast_print(const char* format, ...)
-{
-    va_list args;
-    va_start(args, format);
-    const int ret = vprintf(format, args);
-    va_end(args);
-    return ret;
 }
