@@ -1,7 +1,7 @@
-# 已知问题：角度属性会绕远路（以及 Godot 编辑器不给改）
+# 已知问题：角度属性会绕远路
 
-**影响**：`-tm separate`（默认模式）转出的动画，只要 `rotation` 跨过 ±180°
-**严重程度**：中——只在角度跨越 ±180° 的动画上出现
+**影响**：`rotation` / `skew` 轨道的插值类型为 `INTERPOLATION_LINEAR` 时，跨 ±180° 的关键帧会绕远路
+**严重程度**：低——转换器写角度时做了展开，且默认把角度轨道转成 `LINEAR_ANGLE`
 **记录日期**：2026-10-02
 
 ---
@@ -13,6 +13,10 @@
 
 于是从 350° 转到 10°，它会走 **−340°**（反向绕一大圈），而不是 +20° 的短路径。
 肉眼看就是"原地转了一圈"或"猛地甩过去"。
+
+转换器在写入角度时已经把相邻关键帧的差值压进 ±π，展开后的数值本身是连续的，
+线性插值自然走短路径。只有展开没覆盖到的地方会漏出来：实测 5277 条角度轨道里有
+7 处相邻跳变超过 180°，全部在 `interp = 1` 的轨道上。
 
 有意思的是 `-tm transform` 模式没有这个问题——`Transform2D::interpolate_with`
 内部用的是 `lerp_angle`，走短路径。**但那正是 transform 模式踩中的另一个坑**，
@@ -36,12 +40,9 @@ Godot 的 `Animation::InterpolationType`（`scene/resources/animation.h`）有**
 
 角度环绕只能靠 3 / 4 正确处理。
 
-**问题在于 Godot 的动画编辑器没给出 3 / 4 的修改入口**——轨道面板上只有
-Nearest / Linear / Cubic 三项。不看源码根本不会知道还有这两个值，更不会知道
-角度轨道需要它们。
-
-（不限于编辑器 UI：脚本里的 `Animation.track_set_interpolation_type` 是能设 3 / 4 的，
-直接改 `.tres` 文本也可以。只是编辑器里点不出来，所以大多数人不知道它存在。）
+编辑器里五项都在：轨道左侧那排图标中，插值图标自带一个下拉箭头，点开就是。
+位置不显眼，容易看成只有三项。脚本里的 `Animation.track_set_interpolation_type`
+和 `.tres` 文本的 `tracks/N/interp` 同样能设。
 
 ---
 
@@ -59,12 +60,18 @@ Nearest / Linear / Cubic 三项。不看源码根本不会知道还有这两个�
    > ...has different interpolation types for rotation between some animations
    > which may be blended together. Blending prioritizes angle interpolation...
    所以要改就把一套动画（比如某个角色的 walk / idle / eat / death）一起改。
-3. 混合时走短路径的**基准是 RESET 动画的值**（见上条警告的后半句）。
-   如果项目里有 RESET 而它不含对应的 rotation 轨道，基准可能不对——**这条尚未实测**。
+   引擎里这个标志按属性路径跨动画取或累积：**任意一个**动画用了角度插值，该属性的
+   混合就整体走角度路径。项目设置里的
+   `animation/warnings/check_angle_interpolation_type_conflicting` 只管这条警告打不打印，
+   不管行为。
+3. 混合时走短路径的**基准是 RESET 动画的值**。引擎混合角度轨道时，先把参与混合的值
+   归到 [0, 2π)，再按 RESET 的值把它们拉进 ±π 邻域——锚点不是参与混合的两条动画各自
+   的值。没有 RESET 动画时锚点是初值 0：实测 350° 会被拉到 −10°，与 10° 混合的中点
+   落在 0。
 
 ---
 
-## 转换器的处理（已实现，2026-10-03）
+## 转换器的处理
 
 不新增 `-im` 取值，而是**自动转换**：对角度属性，
 
@@ -74,23 +81,24 @@ CUBIC   → CUBIC_ANGLE
 NEAREST → 不动
 ```
 
-这样用户不需要知道 Godot 有 3 / 4 这两个隐藏值，`separate` 模式下角度也是对的，
-和"transform 模式修不了"这件事合起来，`separate` 就是完整解了。
+角度轨道在骨骼动画里占比很高（每条骨骼一条 rotation、一条 skew），逐条手改不现实。
+自动转换让 `separate` 模式下角度默认就是对的，和"transform 模式修不了 crossfade"
+这件事合起来，`separate` 就是完整解了。
 
-**改动位置**（C 与 C++ 两侧一起改，行为一致）：
+**实现位置**（C 与 C++ 两侧各一份，行为一致）：
 
 | 侧 | 位置 |
 |---|---|
-| C | `PvzReanim.h` 的 `InterpolationMode` 新增两个枚举；`tracks.c` 新增 `AngleInterpolation()`，在 `PvzTracks_Init` 里只覆盖 `rot` / `skew` |
-| C++ | `cpp/src/types.h` 的 `InterpolationMode` 新增 `LinearAngle` / `CubicAngle`；`cpp/src/track.cpp` 的 `angle_interpolation()`，在 `PvzTracks::init` 里只覆盖 `rot` / `skew` |
+| C | `PvzReanim.h` 的 `InterpolationMode` 有两个角度枚举；`tracks.c` 的 `AngleInterpolation()`，在 `PvzTracks_Init` 里只覆盖 `rot` / `skew` |
+| C++ | `cpp/src/types.h` 的 `InterpolationMode` 有 `LinearAngle` / `CubicAngle`；`cpp/src/track.cpp` 的 `angle_interpolation()`，在 `PvzTracks::init` 里只覆盖 `rot` / `skew` |
 
 **两条硬约束**：
 
 1. **只动 `rot` / `skew`，绝不动 `transform` 轨道**——理由见上文"注意事项"第 1 条。
    实测：`-tm transform` 下 transform 轨道仍为 1，未被角度化。
-2. **`tracks/N/interp` 的输出与 HEAD 不再逐字节一致**（rotation / skew 由 1 变 3）。
-   所以 `cpp/tools/verify.sh` 的参考 exe 必须换成**工作区的 C 版构建**，
-   不能再用 `git archive HEAD` 那份。已同步到 `cpp/README.md` 的"验收"一节。
+2. **`tracks/N/interp` 的输出与 HEAD 不再逐字节一致**（rotation / skew 由 1 变 3），
+   `cpp/tools/verify.sh` 的参考 exe 要用工作区的 C 版构建，不能再用 `git archive HEAD`
+   那份（见 `cpp/README.md` 的"验收"）。
 
 实测矩阵（`Zombie_walk.reanim`，`-om anim_tres`）：
 
@@ -101,4 +109,4 @@ NEAREST → 不动
 | `-im nearest` | 0 | **0** | — |
 | `-tm transform` | — | 不输出 | 1 |
 
-顺带把 `-h` 里 `-tm transform` 的警告也加上了（见 `KNOWN-ISSUE-transform-mode.md`）。
+`-h` 里 `-tm transform` 也有一条警告，指向 `KNOWN-ISSUE-transform-mode.md`。
