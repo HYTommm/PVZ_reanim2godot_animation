@@ -123,11 +123,16 @@ typedef enum UpdateMode
     UPDATE_MODE_CAPTURE    // 捕获
 }UpdateMode;
 
+// 取值必须与 Godot 的 Animation::InterpolationType 一致，因为它被直接写进
+// `tracks/N/interp = %d`。后两个是 Godot 里存在、但编辑器 UI 点不出来的隐藏值：
+// 它们与 LINEAR / CUBIC 的唯一区别是**角度走最短路径**（内部用 lerp_angle）。
 typedef enum InterpolationMode
 {
-    INTERPOLATION_MODE_NEAREST, // 临近
-    INTERPOLATION_MODE_LINEAR,  // 线性
-    INTERPOLATION_MODE_CUBIC    // 三次方
+    INTERPOLATION_MODE_NEAREST,      // 临近
+    INTERPOLATION_MODE_LINEAR,       // 线性
+    INTERPOLATION_MODE_CUBIC,        // 三次方
+    INTERPOLATION_MODE_LINEAR_ANGLE, // 线性，角度走最短路径
+    INTERPOLATION_MODE_CUBIC_ANGLE   // 三次方，角度走最短路径
 }InterpolationMode;
 
 typedef enum BlendMode
@@ -343,6 +348,14 @@ typedef struct R2GAStartParam
     /// 根节点类型
     /// </summary>
     char rootnodeType[NAME_LENGTH];
+    /// <summary>
+    /// 根节点名称是否被指定
+    /// </summary>
+    bool rootNodeNameSpecified;
+    /// <summary>
+    /// 根节点名称（默认为空，用资源名）
+    /// </summary>
+    char rootNodeName[NAME_LENGTH];
     /// <summary>
     /// 动画名称是否被指定
     /// </summary>

@@ -1,4 +1,4 @@
-#include "tracks.h"
+﻿#include "tracks.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -14,11 +14,11 @@ void Track_Create(Track* self)
 
     self->vptr = &track_vtable;
     self->num = 0;
-    string_init(&self->type);
-    string_append_s(&self->type, "value");
+    Create(String, &self->type);
+    _String_Append(&self->type, "value");
     self->imported = false;
     self->enabled = true;
-    string_init(&self->path);
+    Create(String, &self->path);
     self->interp = INTERPOLATION_MODE_LINEAR;
     self->loop_wrap = true;
 }
@@ -375,14 +375,30 @@ void PvzTracks_Move(PvzTracks* dest, PvzTracks* src)
         (track)->keys.update = (start_param)->updateMode;   \
     }while(0)
 
+// rotation / skew 是角度语义：LINEAR / CUBIC 只按数值线性插值，从 350° 转到 10°
+// 会绕 −340° 的大圈。Godot 只有 LINEAR_ANGLE(3) / CUBIC_ANGLE(4) 会走最短路径，
+// 而这两个值在动画编辑器里点不出来，所以在这里自动转换。
+// NEAREST 本就不插值，原样保留。
+static InterpolationMode AngleInterpolation(InterpolationMode mode)
+{
+    switch (mode)
+    {
+    case INTERPOLATION_MODE_LINEAR: return INTERPOLATION_MODE_LINEAR_ANGLE;
+    case INTERPOLATION_MODE_CUBIC:  return INTERPOLATION_MODE_CUBIC_ANGLE;
+    default:                        return mode;
+    }
+}
+
 void PvzTracks_Init(const PvzTracks* self, const R2GAStartParam* start_param)
 {
     INIT_TRACK(self->vis, start_param);
     self->vis->keys.update = UPDATE_MODE_CONTINUOUS;
     INIT_TRACK(self->pos, start_param);
     INIT_TRACK(self->rot, start_param);
+    self->rot->interp = AngleInterpolation(start_param->interpolationMode);
     INIT_TRACK(self->scale, start_param);
     INIT_TRACK(self->skew, start_param);
+    self->skew->interp = AngleInterpolation(start_param->interpolationMode);
     INIT_TRACK(self->texture, start_param);
     INIT_TRACK(self->alpha, start_param);
     INIT_TRACK(self->blend_mode, start_param);

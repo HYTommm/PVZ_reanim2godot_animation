@@ -13,6 +13,8 @@
 #include "ResourceFile.h"
 //#include <malloc.h>
 
+#include "tomy.h"
+
 //转换器
 
 int current_frame_time_num = 0;
@@ -162,21 +164,21 @@ void SetTrackName(PvzAnimation* anim[], const int anim_num, const char* new_cont
     //snprintf(current_tracks->blend_mode->path.data, PATH_LENGTH, "%s:material", current_tracks->name);
     //snprintf(current_anim->track_name[current_anim->current_tracks_num], NAME_LENGTH, "%s", current_tracks->name);
 
-    string_append_s(&current_tracks->vis->path, format("{}:visible", current_tracks->name)->data);
+    _String_Append(&current_tracks->vis->path, format("{}:visible", current_tracks->name)->data);
     if (startParam.trackMode == TRACK_MODE_TRANSFORM)
     {
-        string_append_s(&current_tracks->transform->path, format("{}:transform", current_tracks->name)->data);
+        _String_Append(&current_tracks->transform->path, format("{}:transform", current_tracks->name)->data);
     }
     else
     {
-        string_append_s(&current_tracks->pos->path, format("{}:position", current_tracks->name)->data);
-        string_append_s(&current_tracks->rot->path, format("{}:rotation", current_tracks->name)->data);
-        string_append_s(&current_tracks->scale->path, format("{}:scale", current_tracks->name)->data);
-        string_append_s(&current_tracks->skew->path, format("{}:skew", current_tracks->name)->data);
+        _String_Append(&current_tracks->pos->path, format("{}:position", current_tracks->name)->data);
+        _String_Append(&current_tracks->rot->path, format("{}:rotation", current_tracks->name)->data);
+        _String_Append(&current_tracks->scale->path, format("{}:scale", current_tracks->name)->data);
+        _String_Append(&current_tracks->skew->path, format("{}:skew", current_tracks->name)->data);
     }
-    string_append_s(&current_tracks->texture->path, format("{}:texture", current_tracks->name)->data);
-    string_append_s(&current_tracks->alpha->path, format("{}:self_modulate", current_tracks->name)->data);
-    string_append_s(&current_tracks->blend_mode->path, format("{}:material", current_tracks->name)->data);
+    _String_Append(&current_tracks->texture->path, format("{}:texture", current_tracks->name)->data);
+    _String_Append(&current_tracks->alpha->path, format("{}:self_modulate", current_tracks->name)->data);
+    _String_Append(&current_tracks->blend_mode->path, format("{}:material", current_tracks->name)->data);
     snprintf(current_anim->track_name[current_anim->current_tracks_num], NAME_LENGTH, "%s", current_tracks->name);
 }
 void PreSetTrackTVis([[maybe_unused]] const PvzAnimation* anim)
@@ -933,6 +935,7 @@ static void print_help(char* exe_name)
     printf(COL_HEADER "轨道模式:" COL_RESET "\n");
     printf("  " COL_VAL "separate" COL_RESET "                             " "pos/rot/scale/skew分开轨道（默认）\n");
     printf("  " COL_VAL "transform" COL_RESET "                            " "合并为Transform2D轨道（隐藏API）" COL_RESET "\n");
+    printf("  " COL_WARN "注意" COL_RESET "                                 " "Transform2D轨道与交叉淡入淡出不兼容，混合结果错误；请改用separate或Play(name, 0)硬切\n");
 }
 
 static void PrintErrorMsg(char* error_msg)

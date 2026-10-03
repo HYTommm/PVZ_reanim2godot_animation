@@ -206,6 +206,18 @@ enum
 #endif
 #endif
 
+// GCC 13 C23 模式仍用 C99 inline 语义（__GNUC_STDC_INLINE__），
+// inline 不发射外部符号。使用 static inline 确保每个 TU 有独立副本，
+// 所有取地址（vtable 初始化）的场景均正常工作。
+// 所有前向声明也必须使用 INLINE 以避免 "static follows non-static" 错误。
+#ifndef INLINE
+#if defined(_MSC_VER)
+#define INLINE inline
+#else
+#define INLINE static inline
+#endif
+#endif
+
 // In some cases [[nodiscard]] will get false positives,
 // we can prevent the warning in specific cases by preceding the call with a cast.
 #ifndef _ALLOW_DISCARD_
@@ -255,25 +267,25 @@ enum
 #define MIN_SAFE MIN_GNUC
 
 #else
-inline long long _min_ll_ll(const long long a, const long long b)
+INLINE long long _min_ll_ll(const long long a, const long long b)
 {
     return a < b ? a : b;
 }
-inline long long _min_ll_ull(const long long a, const unsigned long long b)
+INLINE long long _min_ll_ull(const long long a, const unsigned long long b)
 {
     if (a < 0) return a;
     return (unsigned long long)a < b ? a : (long long)b;
 }
-inline long long _min_ull_ll(const unsigned long long a, const long long b)
+INLINE long long _min_ull_ll(const unsigned long long a, const long long b)
 {
     if (b < 0) return b;
     return a < (unsigned long long)b ? (long long)a : b;
 }
-inline unsigned long long _min_ull_ull(const unsigned long long a, const unsigned long long b)
+INLINE unsigned long long _min_ull_ull(const unsigned long long a, const unsigned long long b)
 {
     return a < b ? a : b;
 }
-inline double _min_double(const double a, const double b)
+INLINE double _min_double(const double a, const double b)
 {
     return a < b ? a : b;
 }
@@ -313,3 +325,25 @@ inline double _min_double(const double a, const double b)
 #endif
 
 #define MIN_FAST(a, b, ...) (__VA_OPT__((__VA_ARGS__))((a) < (b)? (a): (b)))
+
+#define ITER_TYPE(container_type) CONCAT(container_type, _Iterator)
+
+#ifdef __GNUC__
+// #define foreach(container_type, elem, container)                                                    \
+//     for (int _keep_ = 1; _keep_; _keep_ = 0)                                                        \
+//         for (ITER_TYPE(container_type) _it_  = VCall(container_type, &container, begin),            \
+//                                        _end_ = VCall(container_type, &container, end);              \
+//              !VCall(ITER_TYPE(container_type), &_it_, equals, &_end_) && _keep_;                    \
+//              VCall(ITER_TYPE(container_type), &_it_, next), _keep_ = !_keep_)                       \
+//             for (auto elem = VCall(ITER_TYPE(container_type), &_it_, get); _keep_; _keep_ = !_keep_)
+#else
+
+#define foreach(container_type, elem, container)                                                    \
+    for (int _keep_ = 1; _keep_; _keep_ = 0)                                                        \
+        for (ITER_TYPE(container_type) _it_  = VCall(container_type, &container, begin),            \
+                                       _end_ = VCall(container_type, &container, end);              \
+             !VCall(ITER_TYPE(container_type), &_it_, equals, &_end_) && _keep_;                    \
+             VCall(ITER_TYPE(container_type), &_it_, next), _keep_ = !_keep_)                       \
+            for (_TYPE_OF(VCall(ITER_TYPE(container_type), &_it_, get)) elem =                      \
+                     VCall(ITER_TYPE(container_type), &_it_, get); _keep_; _keep_ = !_keep_)
+#endif

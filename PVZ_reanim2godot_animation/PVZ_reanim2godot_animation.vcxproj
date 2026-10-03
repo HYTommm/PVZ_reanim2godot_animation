@@ -35,13 +35,24 @@
     <ClInclude Include="PvzReanim.h" />
     <ClInclude Include="ResourceFile.h" />
     <ClInclude Include="StartParam.h" />
+    <ClInclude Include="Tomy\include\algorithm.h" />
     <ClInclude Include="Tomy\include\class\class_macro.h" />
     <ClInclude Include="Tomy\include\class\object_class.h" />
     <ClInclude Include="Tomy\include\data_type\data_type.h" />
+    <ClInclude Include="Tomy\include\data_type\doublylist.h" />
+    <ClInclude Include="Tomy\include\data_type\hashmap.h" />
+    <ClInclude Include="Tomy\include\data_type\list.h" />
+    <ClInclude Include="Tomy\include\data_type\pool_doublylist.h" />
+    <ClInclude Include="Tomy\include\data_type\pool_list.h" />
     <ClInclude Include="Tomy\include\data_type\vector.h" />
     <ClInclude Include="Tomy\include\error.h" />
+    <ClInclude Include="Tomy\include\lifetime.h" />
     <ClInclude Include="Tomy\include\macro.h" />
+    <ClInclude Include="Tomy\include\optional.h" />
     <ClInclude Include="Tomy\include\print.h" />
+    <ClInclude Include="Tomy\include\result.h" />
+    <ClInclude Include="Tomy\include\test.h" />
+    <ClInclude Include="Tomy\include\test_config.h" />
     <ClInclude Include="Tomy\include\tomy.h" />
     <ClInclude Include="Tomy\include\ustring.h" />
     <ClInclude Include="tracks.h" />
@@ -53,6 +64,7 @@
     <ClCompile Include="PvzAnimation.c" />
     <ClCompile Include="ResourceFile.c" />
     <ClCompile Include="StartParam.c" />
+    <ClCompile Include="Tomy\src\object.c" />
     <ClCompile Include="Tomy\src\ustring.c" />
     <ClCompile Include="tracks.c" />
   </ItemGroup>
@@ -134,6 +146,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
     <TargetName>$(ProjectName)_x86</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>$(IncludePath);$(ProjectDir)Tomy\include</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>$(IncludePath);$(ProjectDir)Tomy\include</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

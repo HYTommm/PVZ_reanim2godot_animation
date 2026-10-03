@@ -1,14 +1,29 @@
-﻿#pragma once
+﻿/*
+ * ustring.h — 动态字符串 (String)
+ *
+ * 基于 emincin/code (https://github.com/emincin/code/blob/main/c/print/main.c)
+ * 的原始 String 实现改造和扩展，MIT License。
+ * 原始代码 Copyright (c) 2025 emincin.
+ */
+
+#pragma once
 
 #include <stdint.h>
 #include "data_type/data_type.h"
+#include "class/class_macro.h"
+#include "class/object_class.h"
 
 #define STRING_CAPACITY 32
-//typedef _Bool bool;
-// String type and helpers extracted from print.h
 
-typedef struct string_t
-{
+VTABLE{
+    FROM(_Object_VTable);
+    bool (*reserve)(void* self, size_t new_capacity);
+    bool (*copy)(void* self, const void* src);
+    bool (*append_n)(void* self, const char* s, size_t n);
+}_String_VTable;
+
+CLASS String{
+    FROM(Object);
     size_t capacity;
     size_t size;
     char* data;
@@ -16,26 +31,16 @@ typedef struct string_t
 
 size_t calculate_capacity(size_t size);
 
-void string_init_with_size(String* self, size_t capacity);
+void _String_Create(String* self);
+void _String_CreateN(String* self, size_t capacity);
+void _String_Destroy(String* self);
+String* _String_New(size_t capacity);
+void _String_Delete(String* self);
+String* _String_ToString(String* self);
 
-void string_init(String* self);
-
-void string_deinit(String* self);
-
-String* string_new(size_t capacity);
-
-void string_delete(String* self);
-
-bool string_realloc(String* self, size_t new_capacity);
-
-bool string_copy(String* self, const String* src);
-
-void string_move(String* dest, String* src);
-
-bool string_insert_sn(String* self, size_t pos, const char* s, size_t n);
-
-bool string_insert_s(String* self, size_t pos, const char* s);
-
-bool string_append_sn(String* self, const char* s, size_t n);
-
-bool string_append_s(String* self, const char* s);
+bool _String_Reserve(String* self, size_t new_capacity);
+bool _String_Copy(String* self, const String* src);
+bool _String_InsertN(String* self, size_t pos, const char* s, size_t n);
+bool _String_Insert(String* self, size_t pos, const char* s);
+bool _String_AppendN(String* self, const char* s, size_t n);
+bool _String_Append(String* self, const char* s);

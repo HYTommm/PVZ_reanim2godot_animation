@@ -1,5 +1,6 @@
 ﻿#include "keys.h"
 
+#include <math.h>
 #include <stdlib.h>
 
 #include "Tomy/include/class/class_macro.h"
