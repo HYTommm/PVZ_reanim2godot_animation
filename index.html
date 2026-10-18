@@ -362,7 +362,7 @@
                     <li>专为PvZ动画转换优化，保持原始动画的精确性</li>
                     <li>简化从Flash到Godot的工作流程</li>
                     <li>开源免费，社区驱动开发</li>
-                    <li>支持批量处理，提高工作效率</li>
+                    <li>命令行选项与配置文件双模式，易于集成到批处理/自动化流程</li>
                     <li>基于 <strong>Tomy 库</strong> 实现，提供类、容器、字符串等现代C语言增强支持</li>
                 </ul>
             </div>
@@ -464,8 +464,23 @@
                 </tr>
                 <tr>
                     <td><code>-cf, --config-file &lt;文件&gt;</code></td>
-                    <td>指定配置文件路径</td>
+                    <td>指定配置文件路径（可重复，后加载的覆盖先加载的）</td>
                     <td>—</td>
+                </tr>
+                <tr>
+                    <td><code>--no-config</code></td>
+                    <td>禁用 <code>r2ga.cfg</code> 自动发现（显式 <code>-cf</code> 仍生效）</td>
+                    <td>开关</td>
+                </tr>
+                <tr>
+                    <td><code>--print-config</code></td>
+                    <td>打印最终生效配置及来源后退出</td>
+                    <td>开关</td>
+                </tr>
+                <tr>
+                    <td><code>--init-config</code></td>
+                    <td>输出带注释的配置模板后退出</td>
+                    <td>开关</td>
                 </tr>
                 <tr>
                     <td><code>-bm, --blend-mode</code></td>
@@ -656,8 +671,8 @@
 
             <div class="warning-box">
                 <h4>⚠️ Transform 模式说明</h4>
-                <p><strong>推荐使用 <code>transform</code> 模式</strong>，能有效缓解原件绕圈的问题。</p>
-                <p>但请注意：<code>transform</code> 模式使用的是 Godot 的 <strong>隐藏 API</strong>，Godot 编辑器没有开放编辑功能，<strong>存在一定的风险</strong>。请在使用前充分测试。</p>
+                <p><strong>推荐使用默认的 <code>separate</code> 模式。</strong>转换器会自动把 <code>rotation</code> / <code>skew</code> 改为角度插值，绕圈问题已经解决，不需要再用 transform 模式规避。</p>
+                <p><code>transform</code> 模式与 Godot 的<strong>交叉淡入淡出不兼容</strong>：crossfade 期间混合结果错误，只能用 <code>Play(name, 0)</code> 硬切。仅在明确不需要 crossfade、且需要更少轨道时使用。详见 <code>KNOWN-ISSUE-transform-mode.md</code>。</p>
             </div>
 
             <h3>更新模式说明</h3>
@@ -684,11 +699,23 @@
         <!-- 配置文件部分 -->
         <section id="config" class="content-section">
             <h2>配置文件</h2>
-            <p>R2Ga 支持通过 <code>-cf, --config-file</code> 选项指定配置文件，实现更精细的参数控制。</p>
-            <p>配置文件中的参数优先级低于命令行参数（即命令行参数会覆盖配置文件中的同名设置）。</p>
+            <p>R2Ga 支持通过 <code>-cf, --config-file</code> 选项指定配置文件，实现更精细的参数控制。
+               <code>-cf</code> 可以重复，按命令行顺序叠加，后加载的配置文件覆盖先加载的。</p>
+            <p>没有指定 <code>-cf</code> 时，程序会自动查找配置文件：先找<strong>输入文件所在目录</strong>的
+               <code>r2ga.cfg</code>，再找<strong>当前工作目录</strong>的 <code>r2ga.cfg</code>。
+               用 <code>--no-config</code> 可以关闭自动发现。</p>
 
             <h3>配置文件格式</h3>
-            <p>配置文件采用 <code>键 = 值</code> 格式，每行一个配置项。空行和以 <code>#</code> 开头的行会被忽略。</p>
+            <p>配置文件采用 <code>键 = 值</code> 格式，每行一条配置项；行尾的分号是可选的（旧写法保持兼容）。
+               空行和以 <code>#</code> 开头的行会被忽略，键名大小写不敏感。</p>
+            <ul>
+                <li>值可以包含空格，会一直解析到行尾；行内 <code>#</code> 之后视为注释。</li>
+                <li>值可以用单引号或双引号包住，引号内的空格和 <code>#</code> 原样保留。</li>
+                <li>多个键可以共享一个值：<code>Key1 Key2 = value</code>。</li>
+                <li>字典块：<code>UpdateModeDic = { head = Discrete, body = Continuous }</code>，
+                    块内条目用逗号或换行分隔，可以跨行书写。</li>
+                <li>未知键会给出带行号的警告并忽略，不会中止转换。</li>
+            </ul>
 
             <h3>配置项说明</h3>
             <table class="param-table">
@@ -697,6 +724,30 @@
                     <th>说明</th>
                     <th>可选值</th>
                     <th>备注</th>
+                </tr>
+                <tr>
+                    <td><code>InputFile</code></td>
+                    <td>输入文件路径</td>
+                    <td>任意路径</td>
+                    <td>可由配置替代第 1 个位置参数</td>
+                </tr>
+                <tr>
+                    <td><code>AnimGodotPath</code></td>
+                    <td>Godot 动画资源路径</td>
+                    <td>如 <code>res://anim/</code></td>
+                    <td>可由配置替代第 2 个位置参数</td>
+                </tr>
+                <tr>
+                    <td><code>ResGodotPath</code></td>
+                    <td>Godot 素材资源路径</td>
+                    <td>如 <code>res://art/</code></td>
+                    <td>可由配置替代第 3 个位置参数</td>
+                </tr>
+                <tr>
+                    <td><code>OutputDir</code></td>
+                    <td>输出目录</td>
+                    <td>任意路径</td>
+                    <td>等价于 <code>-of</code></td>
                 </tr>
                 <tr>
                     <td><code>OutputMode</code></td>
@@ -771,10 +822,10 @@
                     <td>大小写不敏感</td>
                 </tr>
                 <tr>
-                    <td><code>UpdateModeDic.&lt;轨道名&gt;</code></td>
-                    <td>为指定轨道单独设置更新模式</td>
+                    <td><code>UpdateModeDic</code></td>
+                    <td>为指定轨道单独设置更新模式（字典块）</td>
                     <td><code>Continuous</code>, <code>Discrete</code>, <code>Capture</code></td>
-                    <td>⚠️ 仅配置文件，后写覆盖</td>
+                    <td>⚠️ 仅配置文件，同名轨道后写覆盖</td>
                 </tr>
             </table>
 
@@ -785,7 +836,7 @@
                     <li><code>VisibleTrackEnabled</code> — 控制可见性轨道</li>
                     <li><code>TextureTrackEnabled</code> — 控制纹理轨道</li>
                     <li><code>AlphaTrackEnabled</code> — 控制透明度轨道</li>
-                    <li><code>UpdateModeDic.&lt;轨道名&gt;</code> — 每轨道独立更新模式</li>
+                    <li><code>UpdateModeDic</code> — 每轨道独立更新模式（字典块）</li>
                 </ul>
             </div>
 
@@ -793,8 +844,14 @@
             <div class="code-block">
                 <code>
                     <br>
-                    # R2Ga 配置文件示例<br>
+                    # R2Ga 配置文件示例（分号可选）<br>
                     # 注释行以 # 开头<br>
+                    <br>
+                    # 输入输出路径；相对路径以本文件所在目录为基准<br>
+                    # InputFile = C:/pvz/MainGame/Zombie/Zombie_walk.reanim<br>
+                    AnimGodotPath = res://anim/<br>
+                    ResGodotPath = res://art/<br>
+                    OutputDir = res://anim/<br>
                     <br>
                     OutputMode = Auto<br>
                     BlendModeEnabled = true<br>
@@ -802,23 +859,27 @@
                     TextureTrackEnabled = false<br>
                     AlphaTrackEnabled = true<br>
                     RootNodeType = Node2D<br>
-                    RootNodeName = MyZombie<br>
+                    RootNodeName = "My Zombie"<br>
                     InterpolationMode = Cubic<br>
                     UpdateMode = Continuous<br>
                     FrameMode = Inherit<br>
-                    TrackMode = Transform<br>
+                    TrackMode = Separate<br>
                     <br>
-                    # 为特定轨道指定更新模式<br>
-                    UpdateModeDic.head = Discrete<br>
-                    UpdateModeDic.body = Continuous<br>
-                    UpdateModeDic.arm = Capture<br>
+                    # 为特定轨道指定更新模式（字典块，可跨行）<br>
+                    UpdateModeDic = {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;head = Discrete,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;body = Continuous,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;arm = Capture,<br>
+                    }<br>
                 </code>
             </div>
 
             <div class="info-box">
-                <h4>配置优先级</h4>
-                <p><strong>命令行参数 > 配置文件 > 程序默认值</strong></p>
-                <p>如果在命令行和配置文件中同时指定了同一参数，以命令行参数为准。</p>
+                <h4>配置优先级与查看</h4>
+                <p><strong>命令行参数 &gt; 后加载的配置文件 &gt; 先加载的配置文件 &gt; 程序默认值</strong></p>
+                <p>在命令行和配置文件中同时指定同一参数时，以命令行参数为准。</p>
+                <p>用 <code>--print-config</code> 打印最终生效值以及来源（cli / config / default）；用
+                   <code>--init-config</code> 生成带注释的配置模板。</p>
             </div>
         </section>
 
@@ -830,8 +891,14 @@
 
                 <div class="version-item">
                     <div class="version-title">PVZ_reanim2godot_animation_v4.1 (Latest)</div>
-                    <div class="version-date">Aug 2026 - v4.1-stable</div>
+                    <div class="version-date">Oct 2026 - v4.1-dev3</div>
                     <ul>
+                        <li>配置文件语法重做：分号可选、值可含空格、支持引号、键名大小写不敏感、未知键警告</li>
+                        <li>新增配置项 <code>InputFile</code> / <code>AnimGodotPath</code> / <code>ResGodotPath</code> / <code>OutputDir</code></li>
+                        <li>新增 <code>r2ga.cfg</code> 自动发现（<code>--no-config</code> 可关闭）与多 <code>-cf</code> 叠加</li>
+                        <li>新增 <code>--print-config</code> / <code>--init-config</code></li>
+                        <li>rotation / skew 自动使用角度插值，<code>separate</code> 模式不再绕远路</li>
+                        <li>修复三处越界读（ASan）</li>
                         <li>基于 Tomy 库重构，代码更健壮</li>
                         <li>新增 <code>-rnt</code> / <code>--root-node-type</code> 参数</li>
                         <li>新增 <code>-rnn</code> / <code>--root-node-name</code> 参数</li>
@@ -843,7 +910,7 @@
                         <li>新增 <code>-cf</code> / <code>--config-file</code> 参数及配置文件支持</li>
                         <li>配置文件新增 <code>VisibleTrackEnabled</code> / <code>TextureTrackEnabled</code> / <code>AlphaTrackEnabled</code> 选项</li>
                         <li>配置文件新增 <code>UpdateModeDic.&lt;轨道名&gt;</code> 每轨道独立更新模式</li>
-                        <li>新增 <code>transform</code> 轨道模式（隐藏API），推荐使用以缓解原件绕圈问题</li>
+                        <li>新增 <code>transform</code> 轨道模式（隐藏 API）；与 crossfade 不兼容，默认仍推荐 <code>separate</code></li>
                         <li>新增 <code>cubic</code> 插值模式</li>
                         <li>新增 <code>keyframe</code> 帧模式（需配合专用JSFL脚本）</li>
                     </ul>

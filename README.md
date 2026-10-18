@@ -28,6 +28,19 @@ C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\x64\Release\PVZ_reanim2g
 C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\x64\Release\PVZ_reanim2godot_animation.exe C:\Users\HYTomZ\Pictures\pvz素材\MainGame\Zombie\Zombie_walk.reanim res://anim/ res://art/zombies auto
 
 
+## 配置文件
+
+程序支持 `r2ga.cfg`：不指定 `-cf` 时会自动查找输入文件目录和当前目录；命令行选项优先于配置文件。
+
+```
+--print-config   打印最终生效配置及来源
+--init-config    输出带注释的配置模板
+--no-config      关闭自动发现
+```
+
+完整语法与配置项见项目介绍页的「配置文件」一节。
+
+
 ## C++ 重写版
 
 `cpp/` 是转换器的 C++23 重写版，与原 C 工程并排构建，输出经验收矩阵逐字节比对一致。

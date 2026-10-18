@@ -2,10 +2,10 @@
 
 `PVZ_reanim2godot_animation`（R2Ga）的 C++ 重写。
 
-- **行为基准**：`git HEAD`（commit `40211f3`）的 C 实现。不是工作区里未提交的改动。
+- **行为基准**：同一提交里的 C 实现。两侧由 `verify.sh` 做逐字节比对；不再固定到某个历史 commit。
 - **目标**：生成的 `.tscn`/`.tres` 与控制台输出**逐字节一致**，同时把实现换成 C++ 惯用法
   （标准库容器、类模板 + 打印策略、真正的继承、RAII、`std::optional`/`std::format`/`std::print`）。
-- **原 C 工程完全保留**，未做任何修改；两者在同一个 `.sln` 里，可以并排构建与比对。
+- **原 C 工程完全保留**；两者在同一个 `.sln` 里，可以并排构建与比对。
 
 ## 构建
 
@@ -31,11 +31,12 @@ msbuild PVZ_reanim2godot_animation.sln -t:PVZ_reanim2godot_animation_cpp -p:Conf
 bash tools/verify.sh [参考exe] [C++ exe]
 ```
 
-它做三件事：
+它做四件事：
 
 1. 把参考版与 C++ 版用**同一个 exe 路径**各跑一遍（`-h` 会打印 `argv[0]`，路径必须一致）；
 2. 对 22 个样例 × 18 组选项做逐字节文件比对；
-3. 对 15 组错误路径比对 stdout 与退出码。
+3. 对 15 组错误路径比对 stdout 与退出码；
+4. 配置文件专项：新/旧语法、空格与引号、未知键、字典块、自动发现、路径项、`--no-config`、`--print-config`、`--init-config`。
 
 参考 exe 需自行构建。**注意：现在要从工作区的 C 工程构建，而不是 `git archive HEAD`**——
 角度插值自动转换（见下）是 C 与 C++ 两侧一起改的，HEAD 那份没有，拿它当基准必然不一致：
@@ -119,6 +120,18 @@ CUBIC   → CUBIC_ANGLE
    `verify.sh` 的参考 exe 必须换成工作区的 C 版构建，详见"验收"一节。
 
 背景与实测见仓库根目录的 `KNOWN-ISSUE-angle-interpolation.md`。
+
+### 配置文件语法重做
+
+原实现的配置语法是逐字符状态机，命令必须以 `;` 结束，值不能含空格。新实现改为行导向：
+
+- 行尾分号可选（旧写法兼容），值解析到行尾，支持单/双引号与行内 `#` 注释；
+- 键名大小写不敏感，未知键给出带行号的警告；
+- 新增 `InputFile` / `AnimGodotPath` / `ResGodotPath` / `OutputDir` 配置项，相对路径以配置文件所在目录为基准；
+- 未指定 `-cf` 时自动查找输入目录 / 当前目录的 `r2ga.cfg`（`--no-config` 关闭）；
+- 多个 `-cf` 按顺序叠加；新增 `--print-config` 与 `--init-config`。
+
+C 与 C++ 两份解析器保持相同行为，`verify.sh` 的配置专项会同时验证两侧输出与产物。
 
 ## 刻意保留的"怪癖"
 
