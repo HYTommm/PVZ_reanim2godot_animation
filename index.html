@@ -411,6 +411,7 @@
         <nav>
             <a href="#overview">概览</a>
             <a href="#usage">使用</a>
+            <a class="sub" href="#batch">批量处理</a>
             <a href="#options">命令行参数</a>
             <a href="#modes">模式说明</a>
             <a class="sub" href="#output-modes">输出模式</a>
@@ -503,6 +504,77 @@
 
             <h3>最小示例</h3>
             <pre><code>PVZ_reanim2godot_animation.exe zombie_walk.reanim res://anim/ res://art/ -om auto</code></pre>
+
+            <h3 id="batch">批量处理</h3>
+            <p>
+                当前版本每次只接受一个 <code>.reanim</code> 输入；批量转换通过脚本循环调用。
+                下面的 PowerShell 示例会递归处理目录，并按相对目录结构输出，避免不同子目录下的
+                同名文件互相覆盖。
+            </p>
+            <pre><code>$src = "C:\pvz\reanim"
+$out = "C:\godot\project\anim"
+$exe = "C:\tools\PVZ_reanim2godot_animation.exe"
+$cfg = "C:\godot\project\r2ga.cfg"
+
+Get-ChildItem -Path $src -Recurse -Filter *.reanim | ForEach-Object {
+    $relDir = $_.DirectoryName.Substring($src.Length).TrimStart('\')
+    if ($relDir) {
+        $dstDir = Join-Path $out $relDir
+        $animPath = "res://anim/" + ($relDir -replace '\\', '/') + "/"
+    } else {
+        $dstDir = $out
+        $animPath = "res://anim/"
+    }
+
+    New-Item -ItemType Directory -Force -Path $dstDir | Out-Null
+    &amp; $exe $_.FullName $animPath "res://art/" -cf $cfg -of ($dstDir + "\")
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "FAILED: $($_.FullName)"
+    }
+}</code></pre>
+            <p>说明：</p>
+            <ul>
+                <li>
+                    <code>-of</code> 指定磁盘上的输出目录；<code>$animPath</code> 是写进资源文件的
+                    Godot 路径（<code>res://...</code>）。两者需要与项目的实际目录结构对应。
+                </li>
+                <li>
+                    <code>r2ga.cfg</code> 可放置公共选项（输出模式、插值、排除轨道等）；
+                    命令行显式传入的值优先于配置文件。
+                </li>
+                <li>脚本会先创建输出目录；程序本身不会自动创建不存在的目录。</li>
+                <li>失败项通过 <code>$LASTEXITCODE</code> 检测，示例以警告形式输出。</li>
+                <li>
+                    如果所有输出都放在同一目录，可省略目录结构处理；但不同目录下的同名
+                    <code>.reanim</code> 会产生同名输出并互相覆盖。
+                </li>
+            </ul>
+
+            <p>CMD（所有输出到同一目录）：</p>
+            <pre><code>for /r "C:\pvz\reanim" %%F in (*.reanim) do (
+    "C:\tools\PVZ_reanim2godot_animation.exe" "%%F" "res://anim/" "res://art/" -cf "C:\godot\project\r2ga.cfg" -of "C:\godot\project\anim\"
+    if errorlevel 1 echo FAILED: %%F
+)</code></pre>
+
+            <p>Git Bash（保持相对目录结构）：</p>
+            <pre><code>SRC="/c/pvz/reanim"
+OUT="/c/godot/project/anim"
+EXE="/c/tools/PVZ_reanim2godot_animation.exe"
+CFG="/c/godot/project/r2ga.cfg"
+
+find "$SRC" -type f -iname '*.reanim' -print0 |
+while IFS= read -r -d '' f; do
+    rel="${f#"$SRC"/}"
+    rel_dir=$(dirname "$rel")
+    mkdir -p "$OUT/$rel_dir"
+    anim_path="res://anim/$rel_dir/"
+    [ "$rel_dir" = "." ] &amp;&amp; anim_path="res://anim/"
+
+    "$EXE" "$(cygpath -m "$f")" "$anim_path" "res://art/" \
+        -cf "$(cygpath -m "$CFG")" -of "$(cygpath -m "$OUT/$rel_dir")/"
+    [ $? -ne 0 ] &amp;&amp; echo "FAILED: $f"
+done</code></pre>
 
             <h3>操作步骤</h3>
             <ol>
