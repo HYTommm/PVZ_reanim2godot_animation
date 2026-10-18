@@ -19,6 +19,16 @@ CPP_EXE="${2:-$REPO_ROOT/x64/Release/PVZ_reanim2godot_animation_cpp.exe}"
 [ -f "$REF_EXE" ] || { echo "找不到参考 exe: $REF_EXE" >&2; exit 1; }
 [ -f "$CPP_EXE" ] || { echo "找不到 C++ exe: $CPP_EXE（先构建 cpp 工程）" >&2; exit 1; }
 
+# 专项测试会切换工作目录，先把 exe 路径固定成绝对路径
+case "$REF_EXE" in
+    /*|[A-Za-z]:/*) ;;
+    *) REF_EXE="$(cd "$(dirname "$REF_EXE")" && pwd)/$(basename "$REF_EXE")" ;;
+esac
+case "$CPP_EXE" in
+    /*|[A-Za-z]:/*) ;;
+    *) CPP_EXE="$(cd "$(dirname "$CPP_EXE")" && pwd)/$(basename "$CPP_EXE")" ;;
+esac
+
 RUN_BIN="$REPO_ROOT/cpp/.verify/bin/PVZ_reanim2godot_animation.exe"
 WORK="$REPO_ROOT/cpp/.verify/work"
 mkdir -p "$(dirname "$RUN_BIN")" "$WORK"
@@ -120,6 +130,102 @@ if [ "$err_fail" -eq 0 ]; then
 else
     echo ">>> 错误路径有 $err_fail 处差异 <<<"
     fail=1
+fi
+
+echo
+echo "===== 3) 配置文件专项 ====="
+CFG_ROOT="$WORK/config-special"
+rm -rf "$CFG_ROOT"
+mkdir -p "$CFG_ROOT"
+
+to_win() { cygpath -w "$1" 2>/dev/null || printf '%s' "$1"; }
+
+sample_bash=$(find "$REF_M/02_tscn_by_anim/input" -name '*.reanim' | sort | head -1)
+if [ -z "$sample_bash" ]; then
+    echo "  [跳过] 找不到样例"
+else
+    sample_win=$(to_win "$sample_bash")
+    cfg_fail=0
+
+    run_conf() {
+        local name="$1"; shift
+        local r="$CFG_ROOT/$name/ref" c="$CFG_ROOT/$name/cpp"
+        mkdir -p "$r" "$c"
+        ( cd "$r" && "$REF_EXE" "$@" > stdout.log 2>&1 )
+        local rcode=$?
+        ( cd "$c" && "$CPP_EXE" "$@" > stdout.log 2>&1 )
+        local ccode=$?
+        grep -v '^debug: OutputFiles:name--' "$r/stdout.log" > "$r/stdout.filtered" || true
+        grep -v '^debug: OutputFiles:name--' "$c/stdout.log" > "$c/stdout.filtered" || true
+        if [ "$rcode" != "$ccode" ] || ! cmp -s "$r/stdout.filtered" "$c/stdout.filtered"; then
+            echo "  [差异] $name (退出码 $rcode/$ccode)"
+            diff -u "$r/stdout.filtered" "$c/stdout.filtered" | head -10
+            cfg_fail=1
+            return
+        fi
+        if ! diff -r --exclude='stdout.log' --exclude='stdout.filtered' "$r" "$c" >/dev/null; then
+            echo "  [差异] $name 产物"
+            cfg_fail=1
+            return
+        fi
+        echo "  [$name] OK"
+    }
+
+    # 3.1 新语法：无分号、值含空格与 #、引号、未知键、字典块
+    cat > "$CFG_ROOT/new-syntax.cfg" <<EOF
+OutputMode = TscnByAnim
+RootNodeName = "Config # Node"
+InterpolationMode = cubic
+UnknownKey = 1
+UpdateModeDic = {
+    head = Discrete,
+    body = Capture,
+}
+EOF
+    run_conf new-syntax "$sample_win" res://anim/ res://art/ \
+        -cf "$(to_win "$CFG_ROOT/new-syntax.cfg")" -of out
+    if ! grep -rq 'name="Config # Node"' "$CFG_ROOT/new-syntax/ref"; then
+        echo "  [失败] new-syntax 的配置没有生效"
+        cfg_fail=1
+    fi
+
+    # 3.2 自动发现：输入目录下的 r2ga.cfg
+    mkdir -p "$CFG_ROOT/auto"
+    cp "$sample_bash" "$CFG_ROOT/auto/"
+    printf 'RootNodeName = AutoDiscovered\n' > "$CFG_ROOT/auto/r2ga.cfg"
+    auto_input=$(to_win "$CFG_ROOT/auto/$(basename "$sample_bash")")
+    run_conf auto-discovery "$auto_input" res://anim/ res://art/ --print-config
+
+    # 3.3 路径项进配置，位置参数全部省略
+    cat > "$CFG_ROOT/paths.cfg" <<EOF
+InputFile = $sample_win
+AnimGodotPath = res://anim/
+ResGodotPath = res://art/
+RootNodeName = Paths
+EOF
+    run_conf paths -cf "$(to_win "$CFG_ROOT/paths.cfg")" --print-config
+    run_conf paths-convert -cf "$(to_win "$CFG_ROOT/paths.cfg")" -of out
+
+    # 3.4 --no-config 关闭自动发现
+    run_conf no-config "$auto_input" res://anim/ res://art/ --print-config --no-config
+
+    # 3.5 旧的分号语法保持兼容
+    cat > "$CFG_ROOT/old-syntax.cfg" <<'EOF'
+OutputMode = TscnByAnim;
+RootNodeName = OldSemi;
+EOF
+    run_conf old-syntax "$sample_win" res://anim/ res://art/ \
+        -cf "$(to_win "$CFG_ROOT/old-syntax.cfg")" -of out
+
+    # 3.6 配置模板
+    run_conf init-config --init-config
+
+    if [ "$cfg_fail" -eq 0 ]; then
+        echo ">>> 配置文件专项全部一致 <<<"
+    else
+        echo ">>> 配置文件专项存在差异 <<<"
+        fail=1
+    fi
 fi
 
 echo

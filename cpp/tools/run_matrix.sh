@@ -61,6 +61,7 @@ CASES=(
     "18_config_cli_override|-cf CONFIG -im nearest -fm inherit"
 )
 
+# 分号可选：下面大部分命令依赖换行结束，最后一条字典块仍用分号，两种写法都覆盖
 CONFIG_BODY='# R2Ga 测试配置
 OutputMode = TscnByAnim
 BlendModeEnabled = true
@@ -68,7 +69,7 @@ VisibleTrackEnabled = true
 TextureTrackEnabled = false
 AlphaTrackEnabled = true
 RootNodeType = Node2D
-RootNodeName = ConfigNode
+RootNodeName = Config Node
 AnimName = ConfigAnim
 InterpolationMode = Cubic
 UpdateMode = Discrete
@@ -77,7 +78,7 @@ TrackMode = Transform
 UpdateModeDic = {
     .Head = Capture,
     Vis = Continuous,
-    "Tail" = Discrete,
+    Tail = Discrete,
 };
 '
 
