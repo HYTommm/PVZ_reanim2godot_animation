@@ -28,6 +28,17 @@ C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\x64\Release\PVZ_reanim2g
 C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\x64\Release\PVZ_reanim2godot_animation.exe C:\Users\HYTomZ\Pictures\pvz素材\MainGame\Zombie\Zombie_walk.reanim res://anim/ res://art/zombies auto
 
 
+## C++ 重写版
+
+`cpp/` 是转换器的 C++23 重写版，与原 C 工程并排构建，输出经验收矩阵逐字节比对一致。
+
+```
+msbuild PVZ_reanim2godot_animation.sln -p:Configuration=Release -p:Platform=x64
+```
+
+两个工程共用同一个解决方案；构建、验收与代码结构见 [`cpp/README.md`](cpp/README.md)。
+
+
 ## QQ群
 
 群名：Godot交流群
