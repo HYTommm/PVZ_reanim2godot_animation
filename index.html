@@ -1,1149 +1,1150 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>R2Ga - PvZ Reanim到Godot动画转换器</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>R2Ga 文档 — PvZ Reanim 到 Godot 动画转换器</title>
+<meta name="description" content="R2Ga：将植物大战僵尸 .reanim 动画转换为 Godot 动画资源的命令行工具。">
+<style>
+    :root {
+        --text: #1f2328;
+        --muted: #59636e;
+        --border: #d1d9e0;
+        --border-strong: #b7c0c8;
+        --bg: #ffffff;
+        --bg-subtle: #f6f8fa;
+        --accent: #0969da;
+        --warn-border: #bf8700;
+        --warn-bg: #fff8c5;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    html {
+        font-size: 16px;
+    }
+
+    body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans",
+                     "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+        font-size: 0.95rem;
+        line-height: 1.7;
+    }
+
+    a {
+        color: var(--accent);
+        text-decoration: none;
+    }
+
+    a:hover {
+        text-decoration: underline;
+    }
+
+    h1, h2, h3, h4 {
+        line-height: 1.3;
+        font-weight: 600;
+    }
+
+    h1 {
+        margin: 0 0 0.4rem;
+        font-size: 2rem;
+        letter-spacing: -0.02em;
+    }
+
+    h2 {
+        margin: 2.75rem 0 1rem;
+        padding-bottom: 0.4rem;
+        border-bottom: 1px solid var(--border);
+        font-size: 1.35rem;
+    }
+
+    h3 {
+        margin: 1.8rem 0 0.6rem;
+        font-size: 1.05rem;
+    }
+
+    h4 {
+        margin: 1.2rem 0 0.4rem;
+        font-size: 0.95rem;
+    }
+
+    p, ul, ol {
+        margin: 0.6rem 0;
+    }
+
+    ul, ol {
+        padding-left: 1.5rem;
+    }
+
+    li {
+        margin: 0.25rem 0;
+    }
+
+    code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        font-size: 0.88em;
+        background: var(--bg-subtle);
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        padding: 0.1em 0.3em;
+    }
+
+    pre {
+        margin: 0.8rem 0;
+        padding: 0.85rem 1rem;
+        background: var(--bg-subtle);
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        overflow-x: auto;
+        line-height: 1.55;
+    }
+
+    pre code {
+        background: none;
+        border: 0;
+        padding: 0;
+        font-size: 0.86rem;
+        white-space: pre;
+    }
+
+    .page-header {
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-subtle);
+    }
+
+    .container {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 0 1.5rem;
+    }
+
+    .header-inner {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 1rem;
+        padding-top: 2rem;
+        padding-bottom: 1.6rem;
+    }
+
+    .kicker {
+        margin: 0 0 0.25rem;
+        color: var(--muted);
+        font-size: 0.8rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .lead {
+        margin: 0;
+        color: var(--muted);
+        font-size: 1rem;
+    }
+
+    .header-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+        color: var(--muted);
+        font-size: 0.85rem;
+    }
+
+    .header-meta a {
+        color: var(--text);
+    }
+
+    .layout {
+        display: grid;
+        grid-template-columns: 210px minmax(0, 1fr);
+        gap: 3rem;
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 2rem 1.5rem 5rem;
+    }
+
+    .sidebar {
+        position: sticky;
+        top: 1.5rem;
+        align-self: start;
+        font-size: 0.85rem;
+        line-height: 1.5;
+    }
+
+    .sidebar-title {
+        margin: 0 0 0.6rem;
+        color: var(--muted);
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .sidebar nav a {
+        display: block;
+        padding: 0.22rem 0;
+        color: var(--muted);
+    }
+
+    .sidebar nav a:hover {
+        color: var(--text);
+        text-decoration: none;
+    }
+
+    .sidebar nav .sub {
+        padding-left: 0.75rem;
+    }
+
+    main {
+        min-width: 0;
+    }
+
+    .section-intro {
+        color: var(--muted);
+        margin-bottom: 1rem;
+    }
+
+    .table-wrap {
+        overflow-x: auto;
+        margin: 0.8rem 0 1.2rem;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.88rem;
+    }
+
+    th, td {
+        border: 1px solid var(--border);
+        padding: 0.45rem 0.65rem;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    th {
+        background: var(--bg-subtle);
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    td code {
+        white-space: nowrap;
+    }
+
+    .note, .warning {
+        margin: 1rem 0;
+        padding: 0.7rem 1rem;
+        border-left: 3px solid var(--border-strong);
+        background: var(--bg-subtle);
+        font-size: 0.9rem;
+    }
+
+    .warning {
+        border-left-color: var(--warn-border);
+        background: var(--warn-bg);
+    }
+
+    .note p:first-child, .warning p:first-child,
+    .note ul:first-child, .warning ul:first-child {
+        margin-top: 0;
+    }
+
+    .note p:last-child, .warning p:last-child,
+    .note ul:last-child, .warning ul:last-child {
+        margin-bottom: 0;
+    }
+
+    .version {
+        margin: 1.4rem 0;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .version:last-child {
+        border-bottom: 0;
+    }
+
+    .version h3 {
+        margin: 0;
+        font-size: 1rem;
+    }
+
+    .version-meta {
+        margin: 0.15rem 0 0.5rem;
+        color: var(--muted);
+        font-size: 0.82rem;
+    }
+
+    .contact-list {
+        display: grid;
+        grid-template-columns: 10rem minmax(0, 1fr);
+        gap: 0.35rem 1rem;
+        margin: 0.8rem 0;
+        font-size: 0.9rem;
+    }
+
+    .contact-list dt {
+        color: var(--muted);
+    }
+
+    .contact-list dd {
+        margin: 0;
+    }
+
+    .page-footer {
+        border-top: 1px solid var(--border);
+        background: var(--bg-subtle);
+        color: var(--muted);
+        font-size: 0.8rem;
+    }
+
+    .page-footer .container {
+        padding-top: 1.5rem;
+        padding-bottom: 1.5rem;
+    }
+
+    .page-footer p {
+        margin: 0.25rem 0;
+    }
+
+    @media (max-width: 900px) {
+        .layout {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            padding-top: 1.25rem;
         }
 
-        body {
-            font-family: 'Arial', sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background-color: #f5f5f5;
+        .sidebar {
+            position: static;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar nav {
             display: flex;
-            min-height: 100vh;
+            flex-wrap: wrap;
+            gap: 0.15rem 1rem;
         }
 
-        nav {
-            width: 250px;
-            background-color: #3a5320;
-            color: white;
-            padding: 20px 0;
-            position: sticky;
-            top: 0;
-            height: 100vh;
-            overflow-y: auto;
-            flex-shrink: 0;
+        .sidebar nav .sub {
+            padding-left: 0;
         }
 
-        .nav-header {
-            padding: 0 20px 20px;
-            border-bottom: 1px solid #4a6b22;
-            margin-bottom: 20px;
+        .header-inner {
+            align-items: flex-start;
         }
+    }
 
-            .nav-header h2 {
-                margin: 0;
-                color: white;
-            }
-
-        .nav-menu {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-            .nav-menu li a {
-                display: block;
-                padding: 10px 20px;
-                color: #e0e0e0;
-                text-decoration: none;
-                transition: all 0.3s;
-            }
-
-                .nav-menu li a:hover {
-                    background-color: #4a6b22;
-                    color: white;
-                }
-
-                .nav-menu li a.active {
-                    background-color: #8bc34a;
-                    color: white;
-                    font-weight: bold;
-                }
-
-        main {
-            flex: 1;
-            padding: 20px;
-            min-width: 0;
-        }
-
-        .content-section {
+    @media print {
+        .sidebar, .page-header .header-meta {
             display: none;
-            background-color: white;
-            padding: 25px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
         }
 
-            .content-section.active {
-                display: block;
-            }
-
-            .content-section ul {
-                list-style-position: outside;
-                margin-left: 1.4em;
-                padding-left: 0;
-                padding-right: 0;
-            }
-
-                .content-section ul li {
-                    margin-left: 0;
-                    padding-left: 0;
-                    padding-right: 0;
-                    text-indent: 0;
-                }
-
-            .content-section ol {
-                list-style-position: inside;
-                margin-left: 0;
-                padding-left: 0;
-                padding-right: 0;
-            }
-
-                .content-section ol li {
-                    margin-left: 0;
-                    padding-left: 0.3em;
-                    padding-right: 0;
-                }
-
-        header {
-            background-color: #4a6b22;
-            color: white;
-            padding: 20px;
-            border-radius: 5px;
-            margin-bottom: 30px;
-            text-align: center;
+        .layout {
+            display: block;
+            max-width: none;
+            padding: 0;
         }
 
-        h1 {
-            margin: 0;
-            font-size: 2.5em;
+        a {
+            color: inherit;
         }
-
-        h2 {
-            color: #4a6b22;
-            border-bottom: 2px solid #8bc34a;
-            padding-bottom: 5px;
-            margin-top: 20px;
-        }
-
-        h3 {
-            margin: 15px 0 10px;
-        }
-
-        .feature-box {
-            background-color: #f1f8e9;
-            padding: 15px;
-            border-left: 4px solid #8bc34a;
-            margin: 20px 0;
-            border-radius: 0 5px 5px 0;
-        }
-
-            .feature-box ul {
-                list-style-position: outside;
-                margin-left: 1.4em;
-                padding-left: 0;
-            }
-
-                .feature-box ul li {
-                    padding-left: 0;
-                    text-indent: 0;
-                }
-
-        .warning-box {
-            background-color: #fff8e1;
-            padding: 15px;
-            border-left: 4px solid #ffc107;
-            margin: 20px 0;
-            border-radius: 0 5px 5px 0;
-        }
-
-        .danger-box {
-            background-color: #ffebee;
-            padding: 15px;
-            border-left: 4px solid #f44336;
-            margin: 20px 0;
-            border-radius: 0 5px 5px 0;
-        }
-
-        .info-box {
-            background-color: #e3f2fd;
-            padding: 15px;
-            border-left: 4px solid #2196f3;
-            margin: 20px 0;
-            border-radius: 0 5px 5px 0;
-        }
-
-        code {
-            background-color: #f0f0f0;
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-        }
-
-        .code-block {
-            background-color: #f5f5f5;
-            padding: 10px 15px;
-            border-radius: 5px;
-            overflow-x: auto;
-            margin: 15px 0;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            word-break: break-all;
-        }
-
-        .download-btn {
-            display: inline-block;
-            background-color: #8bc34a;
-            color: white;
-            padding: 10px 20px;
-            text-decoration: none;
-            border-radius: 5px;
-            font-weight: bold;
-            margin-top: 10px;
-            margin-right: 10px;
-            transition: background-color 0.3s;
-        }
-
-            .download-btn:hover {
-                background-color: #7cb342;
-            }
-
-        footer {
-            text-align: center;
-            margin-top: 40px;
-            color: #7f8c8d;
-            font-size: 0.9em;
-        }
-
-        .mode-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-
-            .mode-table th,
-            .mode-table td {
-                border: 1px solid #ddd;
-                padding: 8px;
-                text-align: left;
-            }
-
-            .mode-table th {
-                background-color: #f2f2f2;
-            }
-
-            .mode-table tr:nth-child(even) {
-                background-color: #f9f9f9;
-            }
-
-        .version-history {
-            margin: 20px 0;
-        }
-
-        .version-item {
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .version-title {
-            font-weight: bold;
-            color: #4a6b22;
-            margin-bottom: 5px;
-        }
-
-        .version-date {
-            color: #7f8c8d;
-            font-size: 0.9em;
-            margin-bottom: 5px;
-        }
-
-        .contact-info {
-            margin: 15px 0;
-        }
-
-        .contact-item {
-            margin-bottom: 10px;
-        }
-
-        .contact-label {
-            font-weight: bold;
-            display: inline-block;
-            width: 150px;
-        }
-
-        .param-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
-            font-size: 0.95em;
-        }
-
-            .param-table th,
-            .param-table td {
-                border: 1px solid #ddd;
-                padding: 6px 10px;
-                text-align: left;
-            }
-
-            .param-table th {
-                background-color: #e8f5e9;
-            }
-
-            .param-table tr:nth-child(even) {
-                background-color: #f9f9f9;
-            }
-
-        @media (max-width: 768px) {
-            body {
-                flex-direction: column;
-            }
-
-            nav {
-                width: 100%;
-                height: auto;
-                position: relative;
-            }
-
-            main {
-                padding: 15px;
-            }
-
-            .contact-label {
-                width: 100px;
-            }
-        }
-    </style>
+    }
+</style>
 </head>
 <body>
-    <!-- 导航栏 -->
-    <nav>
-        <div class="nav-header">
-            <h2>R2Ga 导航</h2>
+
+<header class="page-header">
+    <div class="container header-inner">
+        <div>
+            <p class="kicker">Documentation</p>
+            <h1>R2Ga</h1>
+            <p class="lead">植物大战僵尸 <code>.reanim</code> 到 Godot 动画资源的转换器</p>
         </div>
-        <ul class="nav-menu">
-            <li><a href="#intro" class="active" data-section="intro">前言</a></li>
-            <li><a href="#features" data-section="features">功能特点</a></li>
-            <li><a href="#usage" data-section="usage">使用指南</a></li>
-            <li><a href="#config" data-section="config">配置文件</a></li>
-            <li><a href="#versions" data-section="versions">版本历史</a></li>
-            <li><a href="#resources" data-section="resources">资源下载</a></li>
-            <li><a href="#contact" data-section="contact">联系我们</a></li>
-        </ul>
-    </nav>
+        <div class="header-meta">
+            <span>版本 4.1-dev3</span>
+            <a href="https://github.com/HYTommm/PVZ_reanim2godot_animation">GitHub</a>
+            <a href="https://github.com/HYTommm/PVZ_reanim2godot_animation/releases/latest">下载</a>
+        </div>
+    </div>
+</header>
 
-    <!-- 主内容区 -->
+<div class="layout">
+    <aside class="sidebar">
+        <p class="sidebar-title">目录</p>
+        <nav>
+            <a href="#overview">概览</a>
+            <a href="#usage">使用</a>
+            <a href="#options">命令行参数</a>
+            <a href="#modes">模式说明</a>
+            <a class="sub" href="#output-modes">输出模式</a>
+            <a class="sub" href="#interpolation">插值与帧模式</a>
+            <a class="sub" href="#track-mode">轨道模式</a>
+            <a class="sub" href="#update-mode">更新模式</a>
+            <a href="#config">配置文件</a>
+            <a class="sub" href="#config-syntax">语法</a>
+            <a class="sub" href="#exclude-tracks">排除轨道</a>
+            <a class="sub" href="#config-items">配置项</a>
+            <a class="sub" href="#config-example">示例</a>
+            <a class="sub" href="#config-priority">优先级</a>
+            <a href="#versions">版本历史</a>
+            <a href="#download">下载与安装</a>
+            <a href="#contact">反馈与贡献</a>
+        </nav>
+    </aside>
+
     <main>
-        <!-- 前言部分 -->
-        <section id="intro" class="content-section active">
-            <header>
-                <h1>R2Ga (PvZ Reanim to Godot Animation)</h1>
-                <p>将植物大战僵尸的Reanim格式转换为Godot引擎动画的专业工具</p>
-                <p style="margin-top: 8px; font-size: 0.9em; opacity: 0.9;">当前版本: <strong>v4.1</strong> | 基于 Tomy 库</p>
-            </header>
 
-            <h2>关于R2Ga</h2>
-            <p>R2Ga 是一个专门用于将植物大战僵尸(PvZ)的Flash动画特殊导出格式(<strong>.reanim</strong>)转换为Godot引擎兼容动画资源的工具。</p>
-            <p>本工具旨在帮助游戏开发者将经典的植物大战僵尸动画资源快速、高效地转换到现代游戏引擎Godot中，保留原始动画的精髓同时获得更好的性能和灵活性。</p>
+        <section id="overview">
+            <h2>概览</h2>
+            <p class="section-intro">
+                R2Ga 将植物大战僵尸的 <code>.reanim</code> 动画转换为 Godot 的 <code>.tres</code> /
+                <code>.tscn</code> 资源，并自动建立动画与贴图的关联。
+            </p>
 
-            <div class="feature-box">
-                <h3>为什么选择R2Ga?</h3>
-                <ul>
-                    <li>专为PvZ动画转换优化，保持原始动画的精确性</li>
-                    <li>简化从Flash到Godot的工作流程</li>
-                    <li>开源免费，社区驱动开发</li>
-                    <li>命令行选项与配置文件双模式，易于集成到批处理/自动化流程</li>
-                    <li>基于 <strong>Tomy 库</strong> 实现，提供类、容器、字符串等现代C语言增强支持</li>
-                </ul>
-            </div>
-        </section>
-
-        <!-- 功能特点部分 -->
-        <section id="features" class="content-section">
-            <h2>功能特点</h2>
-
-            <div class="feature-box">
-                <h3>核心功能</h3>
-                <ul>
-                    <li><strong>精准转换</strong>: 专为PvZ的Reanim格式优化，确保动画转换的准确性</li>
-                    <li><strong>多模式支持</strong>: 提供三种输出模式适应不同开发需求</li>
-                    <li><strong>高效处理</strong>: 快速处理大量动画文件</li>
-                    <li><strong>资源自动关联</strong>: 自动处理动画与素材的关联关系</li>
-                    <li><strong>开源自由</strong>: 遵循GPL 3.0协议，完全免费</li>
-                    <li><strong>免拼场景功能</strong>: 简化场景设置流程</li>
-                    <li><strong>灵活的轨道控制</strong>: 支持可见性、纹理、透明度等轨道的独立开关</li>
-                    <li><strong>每轨道更新模式</strong>: 通过配置文件为不同轨道单独指定更新模式</li>
-                </ul>
-            </div>
-
-            <h3>技术优势</h3>
-            <p>R2Ga v4.0+ 采用 <strong>Tomy 库</strong> 重构，具有以下技术优势：</p>
+            <h3>主要特性</h3>
             <ul>
-                <li>基于Tomy库的现代化C语言实现，代码更健壮</li>
-                <li>低内存占用，高性能处理</li>
-                <li>精确解析Reanim二进制格式</li>
-                <li>生成优化的Godot动画资源</li>
-                <li>支持命令行操作与配置文件双模式，易于集成到自动化流程</li>
-                <li>支持多种插值模式、帧模式、轨道模式、更新模式</li>
+                <li>为 PvZ Reanim 格式设计，保持原始动画的数值与时间精度</li>
+                <li>支持 <code>auto</code>、<code>tscn_by_anim</code>、<code>anim_tres</code> 三种输出模式</li>
+                <li>自动生成场景与动画资源之间的引用，无需手动拼装</li>
+                <li>可通过配置文件控制可见性、纹理、透明度轨道，并按轨道设置更新模式</li>
+                <li>支持按动画、轨道、属性排除输出</li>
+                <li>命令行与配置文件双入口，便于集成到自动化流程</li>
+                <li>开源，遵循 GPL 3.0</li>
             </ul>
 
-            <div class="info-box">
-                <h4>关于 Tomy 库</h4>
-                <p>Tomy 是一个C语言增强库，提供了类、容器（动态数组、哈希表等）、字符串等现代编程范式支持。R2Ga v4.0 起基于 Tomy 库重构，大幅提升了代码的可维护性和扩展性。</p>
+            <h3>实现说明</h3>
+            <p>
+                自 v4.0 起，工程使用 <strong>Tomy</strong> 库重构。Tomy 提供类、动态数组、哈希表、
+                字符串等基础设施，用于替代手写容器与裸指针管理。转换器的解析与输出逻辑与原始
+                C 实现保持行为一致；仓库中的 <code>cpp/</code> 目录是同一算法的 C++ 重写版，
+                通过验收脚本与 C 版逐字节比对。
+            </p>
+
+            <div class="note">
+                <p>本文档对应 v4.1-dev3。历史版本的参数或行为可能与此不同。</p>
             </div>
         </section>
 
-        <!-- 使用指南部分 -->
-        <section id="usage" class="content-section">
-            <h2>使用指南</h2>
+        <section id="usage">
+            <h2>使用</h2>
 
-            <!-- 视频教程按钮 -->
-            <div style="margin: 20px 0; text-align: center;">
-                <a href="https://www.bilibili.com/video/BV1s3ZbY3E9L/"
-                   class="download-btn"
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   style="display: inline-flex; align-items: center; gap: 8px;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polygon points="23 7 16 12 23 17 23 7"></polygon>
-                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                    </svg>
-                    点击观看视频教程
-                </a>
+            <h3>基本调用</h3>
+            <pre><code>PVZ_reanim2godot_animation.exe &lt;输入文件&gt; &lt;动画路径&gt; &lt;资源路径&gt; [选项]</code></pre>
+
+            <h3>位置参数</h3>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>参数</th>
+                        <th>说明</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><code>&lt;输入文件&gt;</code></td>
+                        <td><code>.reanim</code> 文件路径</td>
+                    </tr>
+                    <tr>
+                        <td><code>&lt;动画路径&gt;</code></td>
+                        <td>Godot 动画资源输出路径，例如 <code>res://anim/abc/</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>&lt;资源路径&gt;</code></td>
+                        <td>Godot 贴图资源路径，例如 <code>res://art/abc/</code></td>
+                    </tr>
+                    </tbody>
+                </table>
             </div>
 
-            <h3>基本命令格式</h3>
-            <div class="code-block"><code>PVZ_reanim2godot_animation.exe &lt;输入文件&gt; &lt;动画路径&gt; &lt;资源路径&gt; [选项]</code></div>
+            <p>
+                三个位置参数必须按顺序书写，可以省略末尾部分，由配置文件中的
+                <code>InputFile</code>、<code>AnimGodotPath</code>、<code>ResGodotPath</code> 补齐。
+                三项最终必须齐全，否则程序报告参数错误。恰好三个位置参数且不带任何选项时，
+                仍按旧行为判定为参数错误。
+            </p>
 
-            <h3>必需参数</h3>
-            <table class="param-table">
-                <tr>
-                    <th>参数</th>
-                    <th>说明</th>
-                </tr>
-                <tr>
-                    <td><code>&lt;输入文件&gt;</code></td>
-                    <td>输入文件路径 (.reanim格式)</td>
-                </tr>
-                <tr>
-                    <td><code>&lt;动画路径&gt;</code></td>
-                    <td>Godot动画资源输出路径 (如: <code>res://anim/abc/</code>)</td>
-                </tr>
-                <tr>
-                    <td><code>&lt;资源路径&gt;</code></td>
-                    <td>Godot资源文件路径 (如: <code>res://art/abc/</code>)</td>
-                </tr>
-            </table>
+            <h3>最小示例</h3>
+            <pre><code>PVZ_reanim2godot_animation.exe zombie_walk.reanim res://anim/ res://art/ -om auto</code></pre>
 
-            <h3>可选选项</h3>
-            <table class="param-table">
-                <tr>
-                    <th>选项</th>
-                    <th>说明</th>
-                    <th>可选值</th>
-                </tr>
-                <tr>
-                    <td><code>-of, --output-file &lt;文件&gt;</code></td>
-                    <td>指定输出文件路径</td>
-                    <td>默认与输入文件同名</td>
-                </tr>
-                <tr>
-                    <td><code>-om, --output-mode &lt;模式&gt;</code></td>
-                    <td>设置输出模式</td>
-                    <td><code>auto</code> (默认), <code>tscn_by_anim</code>, <code>anim_tres</code></td>
-                </tr>
-                <tr>
-                    <td><code>-cf, --config-file &lt;文件&gt;</code></td>
-                    <td>指定配置文件路径（可重复，后加载的覆盖先加载的）</td>
-                    <td>—</td>
-                </tr>
-                <tr>
-                    <td><code>--print-config</code></td>
-                    <td>打印最终生效配置及来源后退出</td>
-                    <td>开关</td>
-                </tr>
-                <tr>
-                    <td><code>--init-config</code></td>
-                    <td>输出带注释的配置模板后退出</td>
-                    <td>开关</td>
-                </tr>
-                <tr>
-                    <td><code>-bm, --blend-mode</code></td>
-                    <td>开启混合模式 (默认关闭)</td>
-                    <td>开关</td>
-                </tr>
-                <tr>
-                    <td><code>-nbm, --no-blend-mode</code></td>
-                    <td>强制关闭混合模式</td>
-                    <td>开关</td>
-                </tr>
-                <tr>
-                    <td><code>-rnt, --root-node-type &lt;类型&gt;</code></td>
-                    <td>指定根节点类型</td>
-                    <td>如 <code>Node2D</code>, <code>Sprite</code> 等</td>
-                </tr>
-                <tr>
-                    <td><code>-rnn, --root-node-name &lt;名称&gt;</code></td>
-                    <td>指定根节点名称</td>
-                    <td>—</td>
-                </tr>
-                <tr>
-                    <td><code>-an, --anim-name &lt;名称&gt;</code></td>
-                    <td>指定动画名称 (单动画输出时)</td>
-                    <td>—</td>
-                </tr>
-                <tr>
-                    <td><code>-im, --interpolation-mode &lt;模式&gt;</code></td>
-                    <td>设置插值模式</td>
-                    <td><code>nearest</code>, <code>linear</code> (默认), <code>cubic</code></td>
-                </tr>
-                <tr>
-                    <td><code>-um, --update-mode &lt;模式&gt;</code></td>
-                    <td>设置更新模式</td>
-                    <td><code>continuous</code>, <code>discrete</code>, <code>capture</code></td>
-                </tr>
-                <tr>
-                    <td><code>-fm, --frame-mode &lt;模式&gt;</code></td>
-                    <td>设置帧模式</td>
-                    <td><code>inherit</code> (默认), <code>keyframe</code></td>
-                </tr>
-                <tr>
-                    <td><code>-tm, --track-mode &lt;模式&gt;</code></td>
-                    <td>设置轨道模式</td>
-                    <td><code>separate</code> (默认), <code>transform</code></td>
-                </tr>
-                <tr>
-                    <td><code>-h, --help</code></td>
-                    <td>显示帮助信息</td>
-                    <td>—</td>
-                </tr>
-            </table>
-
-            <h3>使用示例</h3>
-            <div class="code-block"><code>PVZ_reanim2godot_animation.exe zombie.reanim res://animations/ res://assets/textures/ -om auto</code></div>
-            <div class="code-block"><code>PVZ_reanim2godot_animation.exe zombie.reanim res://anim/ res://art/ -im cubic -tm transform -bm</code></div>
-            <div class="code-block"><code>PVZ_reanim2godot_animation.exe zombie.reanim res://anim/ res://art/ -cf config.txt -rnt Node2D -rnn Zombie</code></div>
-
-            <h3>详细步骤</h3>
+            <h3>操作步骤</h3>
             <ol>
-                <li>准备好 <code>.reanim</code> 文件和对应的素材图片</li>
-                <li>确定Godot项目中存放动画和素材的路径</li>
-                <li>根据需求选择合适的转换模式及选项</li>
-                <li>运行转换命令</li>
-                <li>在Godot中导入生成的资源</li>
-                <li>测试动画效果，确保转换无误</li>
+                <li>准备 <code>.reanim</code> 文件及其引用的贴图。</li>
+                <li>确定动画与素材在 Godot 项目中的目标路径。</li>
+                <li>选择输出模式与需要的选项。</li>
+                <li>运行转换命令。</li>
+                <li>在 Godot 中导入生成的资源并检查动画。</li>
             </ol>
 
-            <h3>输出模式说明</h3>
-            <table class="mode-table">
-                <tr>
-                    <th>模式</th>
-                    <th>描述</th>
-                    <th>适用场景</th>
-                </tr>
-                <tr>
-                    <td><code>auto</code> (默认)</td>
-                    <td>输出一个tscn文件和多个tres文件，并自动关联</td>
-                    <td><strong>推荐大多数情况使用</strong>，确保不会缺少任何资源</td>
-                </tr>
-                <tr>
-                    <td><code>tscn_by_anim</code></td>
-                    <td>输出一个tscn文件，包含所有动画资源</td>
-                    <td>当reanim文件只包含一个动画且不需要额外资源时</td>
-                </tr>
-                <tr>
-                    <td><code>anim_tres</code></td>
-                    <td>输出多个tres文件，每个tres文件包含一个动画资源</td>
-                    <td>已有场景文件，只需要动画资源时</td>
-                </tr>
-            </table>
-
-            <div class="warning-box">
-                <h4>模式选择建议</h4>
-                <ul>
-                    <li><strong>推荐无脑选 auto</strong>，因为 <code>auto</code> 模式输出的目标文件只会多不会少。只有在特定需求下才选择其他模式。</li>
-                    <li>如果Reanim文件里只有一个动画，且不想有多余的动画文件产生，可选择 <code>tscn_by_anim</code></li>
-                    <li>如果原先已经有场景文件了，且动画自己分割过，可选择 <code>anim_tres</code></li>
-                </ul>
-            </div>
-
-            <h3>模式对比示例</h3>
-            <p>以下是一个动画转换后不同模式输出的文件结构示例：</p>
-            <div class="code-block">
-                <code>
-                    # auto模式输入<br>
-                    reanim/<br>
-                    └─ zombie.reanim<br>
-                    # auto模式输出<br>
-                    animations/<br>
-                    ├─ zombie_walk.tres<br>
-                    ├─ zombie_idle.tres<br>
-                    └─ zombie.tscn<br>
-                    <br>
-                    # tscn_by_anim模式输入<br>
-                    reanim<br>
-                    └─ zombie.reanim<br>
-                    # tscn_by_anim模式输出<br>
-                    animations/<br>
-                    └─ zombie.tscn<br>
-                    <br>
-                    # anim_tres模式输入<br>
-                    reanim/<br>
-                    └─ zombie_walk.reanim<br>
-                    # anim_tres模式输出<br>
-                    animations/<br>
-                    └─ zombie_walk.tres<br>
-                </code>
-            </div>
-
-            <h3>插值模式说明</h3>
-            <table class="param-table">
-                <tr>
-                    <th>模式</th>
-                    <th>说明</th>
-                </tr>
-                <tr>
-                    <td><code>nearest</code></td>
-                    <td>最近邻插值 — 无平滑过渡，适合像素风格</td>
-                </tr>
-                <tr>
-                    <td><code>linear</code> (默认)</td>
-                    <td>线性插值 — 平滑过渡，适合大多数场景</td>
-                </tr>
-                <tr>
-                    <td><code>cubic</code></td>
-                    <td>三次方插值 — 更平滑的曲线过渡</td>
-                </tr>
-            </table>
-
-            <h3>帧模式说明</h3>
-            <table class="param-table">
-                <tr>
-                    <th>模式</th>
-                    <th>说明</th>
-                </tr>
-                <tr>
-                    <td><code>inherit</code> (默认)</td>
-                    <td>空字段继承上一帧的值</td>
-                </tr>
-                <tr>
-                    <td><code>keyframe</code></td>
-                    <td>空字段留空，由引擎插值</td>
-                </tr>
-            </table>
-
-            <div class="danger-box">
-                <h4>⚠️ 关键帧模式警告</h4>
-                <p><strong>关键帧模式 (<code>keyframe</code>) 是一种特殊模式，需要与作者魔改过的 JSFL 导出脚本配合使用，否则可能起反作用，导致动画异常。</strong></p>
-                <p>如无特殊需求，请使用默认的 <code>inherit</code> 模式。</p>
-            </div>
-
-            <h3>轨道模式说明</h3>
-            <table class="param-table">
-                <tr>
-                    <th>模式</th>
-                    <th>说明</th>
-                </tr>
-                <tr>
-                    <td><code>separate</code> (默认)</td>
-                    <td>位置/旋转/缩放/倾斜 分开为独立轨道</td>
-                </tr>
-                <tr>
-                    <td><code>transform</code></td>
-                    <td>合并为 Transform2D 轨道</td>
-                </tr>
-            </table>
-
-            <div class="warning-box">
-                <h4>⚠️ Transform 模式说明</h4>
-                <p><strong>推荐使用默认的 <code>separate</code> 模式。</strong>转换器会自动把 <code>rotation</code> / <code>skew</code> 改为角度插值，绕圈问题已经解决，不需要再用 transform 模式规避。</p>
-                <p><code>transform</code> 模式与 Godot 的<strong>交叉淡入淡出不兼容</strong>：crossfade 期间混合结果错误，只能用 <code>Play(name, 0)</code> 硬切。仅在明确不需要 crossfade、且需要更少轨道时使用。详见 <code>KNOWN-ISSUE-transform-mode.md</code>。</p>
-            </div>
-
-            <h3>更新模式说明</h3>
-            <table class="param-table">
-                <tr>
-                    <th>模式</th>
-                    <th>说明</th>
-                </tr>
-                <tr>
-                    <td><code>continuous</code></td>
-                    <td>连续更新 — 每帧更新动画</td>
-                </tr>
-                <tr>
-                    <td><code>discrete</code></td>
-                    <td>离散更新 — 仅在关键帧处更新</td>
-                </tr>
-                <tr>
-                    <td><code>capture</code></td>
-                    <td>捕获模式 — 捕获当前状态</td>
-                </tr>
-            </table>
+            <p>
+                视频教程：
+                <a href="https://www.bilibili.com/video/BV1s3ZbY3E9L/" target="_blank" rel="noopener noreferrer">Bilibili</a>
+            </p>
         </section>
 
-        <!-- 配置文件部分 -->
-        <section id="config" class="content-section">
-            <h2>配置文件</h2>
-            <p>R2Ga 通过 <code>-cf, --config-file</code> 选项显式指定配置文件，实现更精细的参数控制。
-               <code>-cf</code> 可以重复，按命令行顺序叠加，后加载的配置文件覆盖先加载的。
-               未指定 <code>-cf</code> 时不会读取任何配置文件。</p>
+        <section id="options">
+            <h2>命令行参数</h2>
 
-            <h3>配置文件格式</h3>
-            <p>配置文件采用 <code>键 = 值</code> 格式，每行一条配置项；行尾的分号是可选的（旧写法保持兼容）。
-               空行和以 <code>#</code> 开头的行会被忽略，键名大小写不敏感。</p>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>选项</th>
+                        <th>说明</th>
+                        <th>取值</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><code>-of, --output-file</code></td>
+                        <td>指定输出目录</td>
+                        <td>默认与输入文件相同目录</td>
+                    </tr>
+                    <tr>
+                        <td><code>-om, --output-mode</code></td>
+                        <td>设置输出模式</td>
+                        <td><code>auto</code>（默认）、<code>tscn_by_anim</code>、<code>anim_tres</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>-cf, --config-file</code></td>
+                        <td>指定配置文件，可重复，后加载的覆盖先加载的</td>
+                        <td>配置文件路径</td>
+                    </tr>
+                    <tr>
+                        <td><code>--print-config</code></td>
+                        <td>打印最终生效配置及其来源后退出</td>
+                        <td>开关</td>
+                    </tr>
+                    <tr>
+                        <td><code>--init-config</code></td>
+                        <td>输出带注释的配置模板后退出</td>
+                        <td>开关</td>
+                    </tr>
+                    <tr>
+                        <td><code>-bm, --blend-mode</code></td>
+                        <td>开启混合模式，输出 <code>:material</code> 轨道</td>
+                        <td>开关</td>
+                    </tr>
+                    <tr>
+                        <td><code>-nbm, --no-blend-mode</code></td>
+                        <td>强制关闭混合模式</td>
+                        <td>开关</td>
+                    </tr>
+                    <tr>
+                        <td><code>-rnt, --root-node-type</code></td>
+                        <td>指定根节点类型</td>
+                        <td>例如 <code>Node2D</code>、<code>Sprite2D</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>-rnn, --root-node-name</code></td>
+                        <td>指定根节点名称</td>
+                        <td>任意字符串</td>
+                    </tr>
+                    <tr>
+                        <td><code>-an, --anim-name</code></td>
+                        <td>指定动画名称（单动画输出时）</td>
+                        <td>任意字符串</td>
+                    </tr>
+                    <tr>
+                        <td><code>-im, --interpolation-mode</code></td>
+                        <td>设置插值模式</td>
+                        <td><code>nearest</code>、<code>linear</code>（默认）、<code>cubic</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>-um, --update-mode</code></td>
+                        <td>设置更新模式</td>
+                        <td><code>continuous</code>（默认）、<code>discrete</code>、<code>capture</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>-fm, --frame-mode</code></td>
+                        <td>设置帧模式</td>
+                        <td><code>inherit</code>（默认）、<code>keyframe</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>-tm, --track-mode</code></td>
+                        <td>设置轨道模式</td>
+                        <td><code>separate</code>（默认）、<code>transform</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>-h, --help</code></td>
+                        <td>显示帮助信息</td>
+                        <td>—</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="modes">
+            <h2>模式说明</h2>
+
+            <h3 id="output-modes">输出模式</h3>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>模式</th>
+                        <th>输出</th>
+                        <th>适用场景</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><code>auto</code>（默认）</td>
+                        <td>一个 <code>.tscn</code> 与多个 <code>.tres</code>，并自动建立关联</td>
+                        <td>推荐；输出文件最完整</td>
+                    </tr>
+                    <tr>
+                        <td><code>tscn_by_anim</code></td>
+                        <td>一个 <code>.tscn</code>，包含全部动画资源</td>
+                        <td>输入只有一个动画，且不需要额外的动画文件</td>
+                    </tr>
+                    <tr>
+                        <td><code>anim_tres</code></td>
+                        <td>多个 <code>.tres</code>，每个文件包含一个动画</td>
+                        <td>已有场景，只需要动画资源</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p>以 <code>zombie.reanim</code>（包含 walk / idle 两个动画）为例：</p>
+            <pre><code>auto
+  输入:  zombie.reanim
+  输出:  zombie_walk.tres
+         zombie_idle.tres
+         zombie.tscn
+
+tscn_by_anim
+  输入:  zombie.reanim
+  输出:  zombie.tscn
+
+anim_tres
+  输入:  zombie_walk.reanim
+  输出:  zombie_walk.tres</code></pre>
+
+            <h3 id="interpolation">插值模式</h3>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>模式</th>
+                        <th>说明</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><code>nearest</code></td>
+                        <td>最近邻插值，无平滑过渡</td>
+                    </tr>
+                    <tr>
+                        <td><code>linear</code></td>
+                        <td>线性插值</td>
+                    </tr>
+                    <tr>
+                        <td><code>cubic</code></td>
+                        <td>三次插值</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p>
+                <code>rotation</code> 与 <code>skew</code> 是角度属性，转换器会自动把它们的
+                <code>LINEAR</code> / <code>CUBIC</code> 映射为 Godot 的
+                <code>LINEAR_ANGLE</code> / <code>CUBIC_ANGLE</code>，避免跨 ±180° 时绕远路。
+            </p>
+
+            <h3>帧模式</h3>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>模式</th>
+                        <th>说明</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><code>inherit</code></td>
+                        <td>空字段继承上一帧的值</td>
+                    </tr>
+                    <tr>
+                        <td><code>keyframe</code></td>
+                        <td>空字段留空，由引擎插值</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="warning">
+                <p>
+                    <code>keyframe</code> 需要配合定制的 JSFL 导出脚本使用；使用普通导出的
+                    <code>.reanim</code> 时可能导致动画异常。无特殊需求时请使用默认的
+                    <code>inherit</code>。
+                </p>
+            </div>
+
+            <h3 id="track-mode">轨道模式</h3>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>模式</th>
+                        <th>说明</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><code>separate</code></td>
+                        <td>位置、旋转、缩放、倾斜分别输出为独立轨道</td>
+                    </tr>
+                    <tr>
+                        <td><code>transform</code></td>
+                        <td>合并为单条 <code>Transform2D</code> 轨道</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="warning">
+                <p>
+                    推荐使用默认的 <code>separate</code>。<code>transform</code> 模式与 Godot 的
+                    交叉淡入淡出不兼容：crossfade 期间会得到错误的混合姿态，只能用
+                    <code>Play(name, 0)</code> 硬切。仅在明确不需要 crossfade 且需要减少轨道数时使用。
+                </p>
+                <p>背景和复现方法见仓库中的 <code>KNOWN-ISSUE-transform-mode.md</code>。</p>
+            </div>
+
+            <h3 id="update-mode">更新模式</h3>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>模式</th>
+                        <th>说明</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><code>continuous</code></td>
+                        <td>每一帧更新动画</td>
+                    </tr>
+                    <tr>
+                        <td><code>discrete</code></td>
+                        <td>仅在关键帧处更新</td>
+                    </tr>
+                    <tr>
+                        <td><code>capture</code></td>
+                        <td>捕获当前状态</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="config">
+            <h2>配置文件</h2>
+            <p class="section-intro">
+                配置文件通过 <code>-cf</code> 显式指定；未指定时不会读取任何配置文件。
+                <code>-cf</code> 可以重复，按命令行顺序叠加，后加载的配置文件覆盖先加载的。
+            </p>
+
+            <h3 id="config-syntax">语法</h3>
             <ul>
-                <li>值可以包含空格，会一直解析到行尾；行内 <code>#</code> 之后视为注释。</li>
-                <li>值可以用单引号或双引号包住，引号内的空格和 <code>#</code> 原样保留。</li>
+                <li>每行一条 <code>键 = 值</code>；行尾分号可选。</li>
+                <li>空行和以 <code>#</code> 开头的行会被忽略；行内 <code>#</code> 之后也视为注释。</li>
+                <li>值解析到行尾，可以包含空格；可以用单引号或双引号包住。</li>
+                <li>键名大小写不敏感。</li>
                 <li>多个键可以共享一个值：<code>Key1 Key2 = value</code>。</li>
-                <li>字典块：<code>UpdateModeDic = { head = Discrete, body = Continuous }</code>，
-                    块内条目用逗号或换行分隔，可以跨行书写。</li>
-                <li>未知键会给出带行号的警告并忽略，不会中止转换。</li>
+                <li>字典块：<code>UpdateModeDic = { head = Discrete, body = Continuous }</code>。</li>
+                <li>未知键会给出带行号的警告并忽略，转换继续。</li>
             </ul>
 
-            <h3>排除轨道（ExcludeTracks）</h3>
+            <h3 id="exclude-tracks">排除轨道</h3>
             <p>格式：<code>ExcludeTracks[.动画模式] = 轨道模式[:属性列表]</code></p>
             <ul>
-                <li>动画模式可以写内部名（<code>walk</code>）、带前缀名（<code>anim_walk</code>）或输出资源名（<code>Zombie_walk</code>），支持 <code>*</code> 与 <code>?</code>；省略动画模式表示所有动画。</li>
-                <li>没有冒号 = 排除整条轨道；有冒号 = 只排除列出的属性，其他属性照常输出。</li>
-                <li>属性：<code>visible</code>、<code>position</code>、<code>rotation</code>、<code>scale</code>、<code>skew</code>、<code>transform</code>、<code>texture</code>、<code>self_modulate</code>（别名 <code>alpha</code>）、<code>all</code>；多个属性用 <code>|</code> 分隔。</li>
-                <li>动画名与轨道名大小写不敏感，均支持通配符；多个 <code>-cf</code> 的规则累加，命中的规则取并集。</li>
-                <li>被排除的轨道不输出，也不占用 <code>tracks/N</code> 编号；当所有动画都不再使用某部件时，tscn 中不再生成对应节点。</li>
-                <li><code>transform</code> 模式下写 <code>position</code> / <code>rotation</code> / <code>scale</code> / <code>skew</code> 会警告并忽略；<code>separate</code> 模式下写 <code>transform</code> 同理。</li>
+                <li>
+                    动画模式可以写内部名（<code>walk</code>）、带前缀名（<code>anim_walk</code>）
+                    或输出资源名（<code>Zombie_walk</code>）；省略动画模式表示所有动画。
+                </li>
+                <li>没有冒号表示排除整条轨道；有冒号表示只排除列出的属性。</li>
+                <li>
+                    属性：<code>visible</code>、<code>position</code>、<code>rotation</code>、
+                    <code>scale</code>、<code>skew</code>、<code>transform</code>、
+                    <code>texture</code>、<code>self_modulate</code>（别名 <code>alpha</code>）、
+                    <code>all</code>。多个属性用 <code>|</code> 分隔。
+                </li>
+                <li>动画名与轨道名大小写不敏感，均支持 <code>*</code> 与 <code>?</code>。</li>
+                <li>多个 <code>-cf</code> 的规则累加；命中的规则取并集。</li>
+                <li>被排除的轨道不输出，也不占用 <code>tracks/N</code> 编号。</li>
+                <li>当所有动画都不再使用某个部件时，<code>.tscn</code> 中不再生成对应节点。</li>
+                <li>
+                    <code>transform</code> 模式下写 <code>position</code> / <code>rotation</code> /
+                    <code>scale</code> / <code>skew</code> 会警告并忽略；<code>separate</code> 模式下写
+                    <code>transform</code> 同理。
+                </li>
                 <li>没有命中任何轨道的规则会输出警告。</li>
-                <li><code>:material</code> 轨道会随整条轨道排除一起跳过，暂不支持单独按属性排除。</li>
+                <li><code>:material</code> 轨道随整条轨道排除一起跳过，暂不支持单独按属性排除。</li>
             </ul>
-            <div class="code-block">
-                <code>
-                    # 所有动画：整条排除 leaf<br>
-                    ExcludeTracks = leaf<br>
-                    <br>
-                    # 所有动画：只排除 leaf 的 visible 和 texture<br>
-                    ExcludeTracks = leaf:visible|texture<br>
-                    <br>
-                    # 仅 walk 动画：整条排除 arm；leaf 只排除 self_modulate<br>
-                    ExcludeTracks.walk = arm, leaf:self_modulate<br>
-                    <br>
-                    # 动画名与轨道名支持通配符<br>
-                    ExcludeTracks.Zombie_* = eff_*<br>
-                </code>
+            <pre><code># 所有动画：整条排除 leaf
+ExcludeTracks = leaf
+
+# 所有动画：只排除 leaf 的 visible 和 texture
+ExcludeTracks = leaf:visible|texture
+
+# 仅 walk 动画：整条排除 arm；leaf 只排除 self_modulate
+ExcludeTracks.walk = arm, leaf:self_modulate
+
+# 动画名与轨道名支持通配符
+ExcludeTracks.Zombie_* = eff_*</code></pre>
+
+            <h3 id="config-items">配置项</h3>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>配置项</th>
+                        <th>说明</th>
+                        <th>取值</th>
+                        <th>备注</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><code>InputFile</code></td>
+                        <td>输入文件路径</td>
+                        <td>路径</td>
+                        <td>可替代第 1 个位置参数</td>
+                    </tr>
+                    <tr>
+                        <td><code>AnimGodotPath</code></td>
+                        <td>Godot 动画资源路径</td>
+                        <td>如 <code>res://anim/</code></td>
+                        <td>可替代第 2 个位置参数</td>
+                    </tr>
+                    <tr>
+                        <td><code>ResGodotPath</code></td>
+                        <td>Godot 素材资源路径</td>
+                        <td>如 <code>res://art/</code></td>
+                        <td>可替代第 3 个位置参数</td>
+                    </tr>
+                    <tr>
+                        <td><code>OutputDir</code></td>
+                        <td>输出目录</td>
+                        <td>路径</td>
+                        <td>等价于 <code>-of</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>OutputMode</code></td>
+                        <td>输出模式</td>
+                        <td><code>Auto</code>、<code>TscnByAnim</code>、<code>AnimTres</code></td>
+                        <td>大小写不敏感</td>
+                    </tr>
+                    <tr>
+                        <td><code>BlendModeEnabled</code></td>
+                        <td>是否启用混合模式</td>
+                        <td><code>true</code>/<code>1</code>、<code>false</code>/<code>0</code></td>
+                        <td>默认关闭</td>
+                    </tr>
+                    <tr>
+                        <td><code>VisibleTrackEnabled</code></td>
+                        <td>是否输出可见性轨道</td>
+                        <td><code>true</code>/<code>false</code></td>
+                        <td>仅配置文件</td>
+                    </tr>
+                    <tr>
+                        <td><code>TextureTrackEnabled</code></td>
+                        <td>是否输出纹理轨道</td>
+                        <td><code>true</code>/<code>false</code></td>
+                        <td>仅配置文件</td>
+                    </tr>
+                    <tr>
+                        <td><code>AlphaTrackEnabled</code></td>
+                        <td>是否输出透明度轨道</td>
+                        <td><code>true</code>/<code>false</code></td>
+                        <td>仅配置文件</td>
+                    </tr>
+                    <tr>
+                        <td><code>RootNodeType</code></td>
+                        <td>根节点类型</td>
+                        <td>Godot 节点类型</td>
+                        <td>默认 <code>Node2D</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>RootNodeName</code></td>
+                        <td>根节点名称</td>
+                        <td>字符串</td>
+                        <td>未指定时使用资源名</td>
+                    </tr>
+                    <tr>
+                        <td><code>AnimName</code></td>
+                        <td>动画名称</td>
+                        <td>字符串</td>
+                        <td>—</td>
+                    </tr>
+                    <tr>
+                        <td><code>InterpolationMode</code></td>
+                        <td>插值模式</td>
+                        <td><code>Nearest</code>、<code>Linear</code>、<code>Cubic</code></td>
+                        <td>大小写不敏感</td>
+                    </tr>
+                    <tr>
+                        <td><code>UpdateMode</code></td>
+                        <td>全局更新模式</td>
+                        <td><code>Continuous</code>、<code>Discrete</code>、<code>Capture</code></td>
+                        <td>大小写不敏感</td>
+                    </tr>
+                    <tr>
+                        <td><code>FrameMode</code></td>
+                        <td>帧模式</td>
+                        <td><code>Inherit</code>、<code>Keyframe</code></td>
+                        <td>大小写不敏感</td>
+                    </tr>
+                    <tr>
+                        <td><code>TrackMode</code></td>
+                        <td>轨道模式</td>
+                        <td><code>Separate</code>、<code>Transform</code></td>
+                        <td>大小写不敏感</td>
+                    </tr>
+                    <tr>
+                        <td><code>UpdateModeDic</code></td>
+                        <td>按轨道设置更新模式</td>
+                        <td>字典块</td>
+                        <td>同名轨道后写覆盖</td>
+                    </tr>
+                    <tr>
+                        <td><code>ExcludeTracks</code></td>
+                        <td>排除轨道或属性（所有动画）</td>
+                        <td>见「排除轨道」</td>
+                        <td>仅配置文件</td>
+                    </tr>
+                    <tr>
+                        <td><code>ExcludeTracks.&lt;动画模式&gt;</code></td>
+                        <td>只排除指定动画中的轨道或属性</td>
+                        <td>见「排除轨道」</td>
+                        <td>动画名支持通配符</td>
+                    </tr>
+                    </tbody>
+                </table>
             </div>
 
-            <h3>配置项说明</h3>
-            <table class="param-table">
-                <tr>
-                    <th>配置项</th>
-                    <th>说明</th>
-                    <th>可选值</th>
-                    <th>备注</th>
-                </tr>
-                <tr>
-                    <td><code>InputFile</code></td>
-                    <td>输入文件路径</td>
-                    <td>任意路径</td>
-                    <td>可由配置替代第 1 个位置参数</td>
-                </tr>
-                <tr>
-                    <td><code>AnimGodotPath</code></td>
-                    <td>Godot 动画资源路径</td>
-                    <td>如 <code>res://anim/</code></td>
-                    <td>可由配置替代第 2 个位置参数</td>
-                </tr>
-                <tr>
-                    <td><code>ResGodotPath</code></td>
-                    <td>Godot 素材资源路径</td>
-                    <td>如 <code>res://art/</code></td>
-                    <td>可由配置替代第 3 个位置参数</td>
-                </tr>
-                <tr>
-                    <td><code>OutputDir</code></td>
-                    <td>输出目录</td>
-                    <td>任意路径</td>
-                    <td>等价于 <code>-of</code></td>
-                </tr>
-                <tr>
-                    <td><code>OutputMode</code></td>
-                    <td>输出模式</td>
-                    <td><code>Auto</code> (默认), <code>TscnByAnim</code>, <code>AnimTres</code></td>
-                    <td>大小写不敏感</td>
-                </tr>
-                <tr>
-                    <td><code>BlendModeEnabled</code></td>
-                    <td>是否启用混合模式</td>
-                    <td><code>true</code>/<code>1</code> 或 <code>false</code>/<code>0</code></td>
-                    <td>默认关闭</td>
-                </tr>
-                <tr>
-                    <td><code>VisibleTrackEnabled</code></td>
-                    <td>是否启用可见性轨道</td>
-                    <td><code>true</code>/<code>1</code> 或 <code>false</code>/<code>0</code></td>
-                    <td>⚠️ 仅配置文件</td>
-                </tr>
-                <tr>
-                    <td><code>TextureTrackEnabled</code></td>
-                    <td>是否启用纹理轨道</td>
-                    <td><code>true</code>/<code>1</code> 或 <code>false</code>/<code>0</code></td>
-                    <td>⚠️ 仅配置文件</td>
-                </tr>
-                <tr>
-                    <td><code>AlphaTrackEnabled</code></td>
-                    <td>是否启用透明度轨道</td>
-                    <td><code>true</code>/<code>1</code> 或 <code>false</code>/<code>0</code></td>
-                    <td>⚠️ 仅配置文件</td>
-                </tr>
-                <tr>
-                    <td><code>RootNodeType</code></td>
-                    <td>根节点类型</td>
-                    <td>任意Godot节点类型</td>
-                    <td>如 <code>Node2D</code></td>
-                </tr>
-                <tr>
-                    <td><code>RootNodeName</code></td>
-                    <td>根节点名称</td>
-                    <td>任意字符串</td>
-                    <td>—</td>
-                </tr>
-                <tr>
-                    <td><code>AnimName</code></td>
-                    <td>动画名称</td>
-                    <td>任意字符串</td>
-                    <td>—</td>
-                </tr>
-                <tr>
-                    <td><code>InterpolationMode</code></td>
-                    <td>插值模式</td>
-                    <td><code>Nearest</code>, <code>Linear</code> (默认), <code>Cubic</code></td>
-                    <td>大小写不敏感</td>
-                </tr>
-                <tr>
-                    <td><code>UpdateMode</code></td>
-                    <td>全局更新模式</td>
-                    <td><code>Continuous</code> (默认), <code>Discrete</code>, <code>Capture</code></td>
-                    <td>大小写不敏感</td>
-                </tr>
-                <tr>
-                    <td><code>FrameMode</code></td>
-                    <td>帧模式</td>
-                    <td><code>Inherit</code> (默认), <code>Keyframe</code></td>
-                    <td>大小写不敏感</td>
-                </tr>
-                <tr>
-                    <td><code>TrackMode</code></td>
-                    <td>轨道模式</td>
-                    <td><code>Separate</code> (默认), <code>Transform</code></td>
-                    <td>大小写不敏感</td>
-                </tr>
-                <tr>
-                    <td><code>UpdateModeDic</code></td>
-                    <td>为指定轨道单独设置更新模式（字典块）</td>
-                    <td><code>Continuous</code>, <code>Discrete</code>, <code>Capture</code></td>
-                    <td>⚠️ 仅配置文件，同名轨道后写覆盖</td>
-                </tr>
-                <tr>
-                    <td><code>ExcludeTracks</code></td>
-                    <td>排除指定轨道或属性（所有动画）</td>
-                    <td>见「排除轨道」一节</td>
-                    <td>⚠️ 仅配置文件</td>
-                </tr>
-                <tr>
-                    <td><code>ExcludeTracks.&lt;动画模式&gt;</code></td>
-                    <td>只排除指定动画中的轨道或属性</td>
-                    <td>见「排除轨道」一节</td>
-                    <td>⚠️ 仅配置文件，动画名支持通配符</td>
-                </tr>
-            </table>
+            <p>以下配置项只能写在配置文件中，命令行没有对应选项：</p>
+            <ul>
+                <li><code>VisibleTrackEnabled</code></li>
+                <li><code>TextureTrackEnabled</code></li>
+                <li><code>AlphaTrackEnabled</code></li>
+                <li><code>UpdateModeDic</code></li>
+                <li><code>ExcludeTracks</code></li>
+                <li><code>ExcludeTracks.&lt;动画模式&gt;</code></li>
+            </ul>
 
-            <div class="warning-box">
-                <h4>配置文件专用选项</h4>
-                <p>以下选项 <strong>只能</strong> 在配置文件中设置，命令行没有对应参数：</p>
-                <ul>
-                    <li><code>VisibleTrackEnabled</code> — 控制可见性轨道</li>
-                    <li><code>TextureTrackEnabled</code> — 控制纹理轨道</li>
-                    <li><code>AlphaTrackEnabled</code> — 控制透明度轨道</li>
-                    <li><code>UpdateModeDic</code> — 每轨道独立更新模式（字典块）</li>
-                </ul>
-            </div>
+            <h3 id="config-example">示例</h3>
+            <pre><code># 输入输出路径；相对路径以本文件所在目录为基准
+# InputFile = C:/pvz/MainGame/Zombie/Zombie_walk.reanim
+AnimGodotPath = res://anim/
+ResGodotPath = res://art/
+OutputDir = res://anim/
 
-            <h3>配置文件示例</h3>
-            <div class="code-block">
-                <code>
-                    <br>
-                    # R2Ga 配置文件示例（分号可选）<br>
-                    # 注释行以 # 开头<br>
-                    <br>
-                    # 输入输出路径；相对路径以本文件所在目录为基准<br>
-                    # InputFile = C:/pvz/MainGame/Zombie/Zombie_walk.reanim<br>
-                    AnimGodotPath = res://anim/<br>
-                    ResGodotPath = res://art/<br>
-                    OutputDir = res://anim/<br>
-                    <br>
-                    OutputMode = Auto<br>
-                    BlendModeEnabled = true<br>
-                    VisibleTrackEnabled = true<br>
-                    TextureTrackEnabled = false<br>
-                    AlphaTrackEnabled = true<br>
-                    RootNodeType = Node2D<br>
-                    RootNodeName = "My Zombie"<br>
-                    InterpolationMode = Cubic<br>
-                    UpdateMode = Continuous<br>
-                    FrameMode = Inherit<br>
-                    TrackMode = Separate<br>
-                    <br>
-                    # 为特定轨道指定更新模式（字典块，可跨行）<br>
-                    UpdateModeDic = {<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;head = Discrete,<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;body = Continuous,<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;arm = Capture,<br>
-                    }<br>
-                    <br>
-                    # 排除轨道：所有动画的 leaf 只去掉 visible；walk 动画整条排除 arm<br>
-                    ExcludeTracks = leaf:visible<br>
-                    ExcludeTracks.walk = arm<br>
-                </code>
-            </div>
+# 模式
+OutputMode = Auto
+BlendModeEnabled = true
+VisibleTrackEnabled = true
+TextureTrackEnabled = false
+AlphaTrackEnabled = true
+RootNodeType = Node2D
+RootNodeName = "My Zombie"
+InterpolationMode = Cubic
+UpdateMode = Continuous
+FrameMode = Inherit
+TrackMode = Separate
 
-            <div class="info-box">
-                <h4>配置优先级与查看</h4>
-                <p><strong>命令行参数 &gt; 后加载的配置文件 &gt; 先加载的配置文件 &gt; 程序默认值</strong></p>
-                <p>在命令行和配置文件中同时指定同一参数时，以命令行参数为准。</p>
-                <p>用 <code>--print-config</code> 打印最终生效值以及来源（cli / config / default）；用
-                   <code>--init-config</code> 生成带注释的配置模板。</p>
-            </div>
+# 按轨道设置更新模式
+UpdateModeDic = {
+    head = Discrete,
+    body = Continuous,
+    arm = Capture,
+}
+
+# 排除轨道：所有动画的 leaf 只去掉 visible；walk 动画整条排除 arm
+ExcludeTracks = leaf:visible
+ExcludeTracks.walk = arm</code></pre>
+
+            <h3 id="config-priority">优先级与查看</h3>
+            <p><strong>命令行参数 &gt; 后加载的配置文件 &gt; 先加载的配置文件 &gt; 程序默认值</strong></p>
+            <p>
+                <code>--print-config</code> 输出最终生效值及来源
+                （<code>cli</code> / <code>config</code> / <code>default</code>）；
+                <code>--init-config</code> 输出带注释的配置模板。
+            </p>
         </section>
 
-        <!-- 版本历史部分 -->
-        <section id="versions" class="content-section">
+        <section id="versions">
             <h2>版本历史</h2>
 
-            <div class="version-history">
-
-                <div class="version-item">
-                    <div class="version-title">PVZ_reanim2godot_animation_v4.1 (Latest)</div>
-                    <div class="version-date">Oct 2026 - v4.1-dev3</div>
-                    <ul>
-                        <li>配置文件语法重做：分号可选、值可含空格、支持引号、键名大小写不敏感、未知键警告</li>
-                        <li>新增配置项 <code>InputFile</code> / <code>AnimGodotPath</code> / <code>ResGodotPath</code> / <code>OutputDir</code></li>
-                        <li>多个 <code>-cf</code> 按顺序叠加，后加载的覆盖先加载的</li>
-                        <li>新增 <code>--print-config</code> / <code>--init-config</code></li>
-                        <li>新增 <code>ExcludeTracks</code>：按动画、轨道、属性排除输出，支持通配符</li>
-                        <li>恢复 blend_mode 的 <code>:material</code> 轨道输出（4.0 曾误删），编号恢复连续</li>
-                        <li>rotation / skew 自动使用角度插值，<code>separate</code> 模式不再绕远路</li>
-                        <li>修复三处越界读（ASan）</li>
-                        <li>基于 Tomy 库重构，代码更健壮</li>
-                        <li>新增 <code>-rnt</code> / <code>--root-node-type</code> 参数</li>
-                        <li>新增 <code>-rnn</code> / <code>--root-node-name</code> 参数</li>
-                        <li>新增 <code>-an</code> / <code>--anim-name</code> 参数</li>
-                        <li>新增 <code>-um</code> / <code>--update-mode</code> 参数 (continuous/discrete/capture)</li>
-                        <li>新增 <code>-fm</code> / <code>--frame-mode</code> 参数 (inherit/keyframe)</li>
-                        <li>新增 <code>-tm</code> / <code>--track-mode</code> 参数 (separate/transform)</li>
-                        <li>新增 <code>-of</code> / <code>--output-file</code> 参数</li>
-                        <li>新增 <code>-cf</code> / <code>--config-file</code> 参数及配置文件支持</li>
-                        <li>配置文件新增 <code>VisibleTrackEnabled</code> / <code>TextureTrackEnabled</code> / <code>AlphaTrackEnabled</code> 选项</li>
-                        <li>配置文件新增 <code>UpdateModeDic.&lt;轨道名&gt;</code> 每轨道独立更新模式</li>
-                        <li>新增 <code>transform</code> 轨道模式（隐藏 API）；与 crossfade 不兼容，默认仍推荐 <code>separate</code></li>
-                        <li>新增 <code>cubic</code> 插值模式</li>
-                        <li>新增 <code>keyframe</code> 帧模式（需配合专用JSFL脚本）</li>
-                    </ul>
-                </div>
-
-                <div class="version-item">
-                    <div class="version-title">PVZ_reanim2godot_animation_v3.1</div>
-                    <div class="version-date">Apr 1 - v3.1-stable</div>
-                    <ul>
-                        <li>加入透明度支持</li>
-                    </ul>
-                </div>
-
-                <div class="version-item">
-                    <div class="version-title">PVZ_reanim2godot_animation_v3.0</div>
-                    <div class="version-date">Mar 25 - v3.0-stable</div>
-                    <ul>
-                        <li>自动分割动画</li>
-                        <li>场景文件与动画文件自动关联</li>
-                        <li>新增对blendmode的支持</li>
-                        <li>优化对空轨道的处理</li>
-                        <li>将tscn模式改为tscn_by_anim模式</li>
-                    </ul>
-                </div>
-
-                <div class="version-item">
-                    <div class="version-title">PVZ_reanim2godot_animation_v2.2</div>
-                    <div class="version-date">Jan 30 - v2.2-stable</div>
-                    <ul>
-                        <li>做了模式区分</li>
-                    </ul>
-                </div>
-
-                <div class="version-item">
-                    <div class="version-title">PVZ_reanim2godot_animation_v2.0</div>
-                    <div class="version-date">Jan 20 - v2.0-stable</div>
-                    <ul>
-                        <li>添加了免拼场景功能</li>
-                        <li>修复优化了读取方式</li>
-                    </ul>
-                </div>
-
-                <div class="version-item">
-                    <div class="version-title">PVZ_reanim2godot_animation_v1.1</div>
-                    <div class="version-date">Dec 28, 2024 - 1.1-stable</div>
-                    <ul>
-                        <li>修复了大量bug</li>
-                    </ul>
-                </div>
-
-                <div class="version-item">
-                    <div class="version-title">PVZ_reanim2godot_animation_v1.0</div>
-                    <div class="version-date">Dec 26, 2024 - 1.0-stable</div>
-                    <ul>
-                        <li>初始版本</li>
-                        <li>尽管做了极大努力，但仍可能会有各种bug</li>
-                        <li>请不要直接在项目中使用，应测试过后确认无误后再使用</li>
-                    </ul>
-                </div>
-            </div>
-        </section>
-
-        <!-- 资源下载部分 -->
-        <section id="resources" class="content-section">
-            <h2>资源下载</h2>
-
-            <p>R2Ga是开源项目，遵循GPL 3.0协议，您可以自由使用和修改。</p>
-
-            <a href="https://github.com/HYTommm/PVZ_reanim2godot_animation" class="download-btn">访问GitHub仓库</a>
-            <a href="https://github.com/HYTommm/PVZ_reanim2godot_animation/releases/latest" class="download-btn">下载最新版本</a>
-
-            <h3>安装说明</h3>
-            <ol>
-                <li>下载对应平台的预编译版本</li>
-                <li>解压到任意目录</li>
-                <li>通过命令行调用工具</li>
-                <li>确保Godot项目目录结构正确设置</li>
-            </ol>
-
-            <div class="warning-box">
-                <h4>注意事项</h4>
-                <p>本项目迭代较快，请使用最新版本</p>
-                <p><strong>请注意数据备份！本工具不保证数据安全！</strong></p>
-                <p>若遇到bug，请在GitHub上提交issue，我们会尽快修复。</p>
-            </div>
-
-            <div class="danger-box">
-                <h4>⚠️ 风险提示</h4>
+            <div class="version">
+                <h3>v4.1-dev3</h3>
+                <p class="version-meta">2026-10</p>
                 <ul>
-                    <li><strong>transform 轨道模式</strong> 使用的是 Godot 隐藏 API，存在一定风险，请充分测试后再用于正式项目</li>
-                    <li><strong>keyframe 帧模式</strong> 需要配合作者魔改的 JSFL 导出脚本使用，否则可能导致动画异常</li>
+                    <li>配置文件语法重做：分号可选、值可含空格、支持引号、键名大小写不敏感、未知键警告</li>
+                    <li>新增配置项 <code>InputFile</code> / <code>AnimGodotPath</code> / <code>ResGodotPath</code> / <code>OutputDir</code></li>
+                    <li>多个 <code>-cf</code> 按顺序叠加</li>
+                    <li>新增 <code>--print-config</code> / <code>--init-config</code></li>
+                    <li>新增 <code>ExcludeTracks</code>：按动画、轨道、属性排除输出，支持通配符</li>
+                    <li>恢复 blend_mode 的 <code>:material</code> 轨道输出，编号恢复连续</li>
+                    <li><code>rotation</code> / <code>skew</code> 自动使用角度插值</li>
+                    <li>修复三处越界读（ASan）</li>
+                </ul>
+            </div>
+
+            <div class="version">
+                <h3>v4.0</h3>
+                <p class="version-meta">v4.0-stable</p>
+                <ul>
+                    <li>基于 Tomy 库重构</li>
+                    <li>新增 <code>-rnt</code> / <code>-rnn</code> / <code>-an</code> / <code>-um</code> / <code>-fm</code> / <code>-tm</code> / <code>-of</code> / <code>-cf</code> 参数</li>
+                    <li>新增 <code>transform</code> 轨道模式、<code>cubic</code> 插值模式、<code>keyframe</code> 帧模式</li>
+                    <li>引入配置文件与 <code>VisibleTrackEnabled</code> / <code>TextureTrackEnabled</code> / <code>AlphaTrackEnabled</code> 开关</li>
+                </ul>
+            </div>
+
+            <div class="version">
+                <h3>v3.1</h3>
+                <p class="version-meta">v3.1-stable</p>
+                <ul>
+                    <li>加入透明度支持</li>
+                </ul>
+            </div>
+
+            <div class="version">
+                <h3>v3.0</h3>
+                <p class="version-meta">v3.0-stable</p>
+                <ul>
+                    <li>自动分割动画</li>
+                    <li>场景文件与动画文件自动关联</li>
+                    <li>新增 blend mode 支持</li>
+                    <li>优化空轨道处理</li>
+                    <li><code>tscn</code> 模式更名为 <code>tscn_by_anim</code></li>
+                </ul>
+            </div>
+
+            <div class="version">
+                <h3>v2.2</h3>
+                <p class="version-meta">v2.2-stable</p>
+                <ul>
+                    <li>区分输出模式</li>
+                </ul>
+            </div>
+
+            <div class="version">
+                <h3>v2.0</h3>
+                <p class="version-meta">v2.0-stable</p>
+                <ul>
+                    <li>加入免拼场景功能</li>
+                    <li>优化读取流程</li>
+                </ul>
+            </div>
+
+            <div class="version">
+                <h3>v1.1</h3>
+                <p class="version-meta">2024-12-28 · v1.1-stable</p>
+                <ul>
+                    <li>修复若干问题</li>
+                </ul>
+            </div>
+
+            <div class="version">
+                <h3>v1.0</h3>
+                <p class="version-meta">2024-12-26 · v1.0-stable</p>
+                <ul>
+                    <li>初始版本</li>
                 </ul>
             </div>
         </section>
 
-        <!-- 联系我们部分 -->
-        <section id="contact" class="content-section">
-            <h2>联系我们</h2>
+        <section id="download">
+            <h2>下载与安装</h2>
 
-            <div class="contact-info">
-                <div class="contact-item">
-                    <span class="contact-label">作者:</span>
-                    HYTOMZ (<a href="https://github.com/HYTommm">GitHub主页</a>)
-                </div>
-                <div class="contact-item">
-                    <span class="contact-label">思路提供/测试:</span>
-                    Furau (<a href="https://github.com/E72UJ">GitHub主页</a>)
-                </div>
-                <div class="contact-item">
-                    <span class="contact-label">QQ群:</span>
-                    1018028780
-                </div>
-                <div class="contact-item">
-                    <span class="contact-label">邮箱:</span>
-                    <a href="mailto:3146776307@qq.com">3146776307@qq.com</a>
-                </div>
+            <p>
+                项目遵循 GPL 3.0：
+                <a href="https://github.com/HYTommm/PVZ_reanim2godot_animation">GitHub 仓库</a>
+                ·
+                <a href="https://github.com/HYTommm/PVZ_reanim2godot_animation/releases/latest">最新版本</a>
+            </p>
+
+            <h3>安装步骤</h3>
+            <ol>
+                <li>从 Releases 下载预编译版本。</li>
+                <li>解压到任意目录。</li>
+                <li>通过命令行调用程序。</li>
+                <li>确保 Godot 项目中的动画与素材路径正确。</li>
+            </ol>
+
+            <div class="note">
+                <p>项目迭代较快，请使用最新版本。转换前请备份项目资源。</p>
             </div>
 
-            <h3>问题反馈</h3>
-            <p>如果您在使用过程中遇到任何问题，请通过以下方式反馈：</p>
+            <h3>已知风险</h3>
             <ul>
-                <li>在GitHub仓库提交Issue</li>
-                <li>加入QQ群讨论</li>
+                <li>
+                    <code>transform</code> 轨道模式使用 Godot 的隐藏 API，且与 crossfade 不兼容；
+                    正式项目中使用前需充分测试。
+                </li>
+                <li>
+                    <code>keyframe</code> 帧模式依赖定制的 JSFL 导出脚本，否则可能导致动画异常。
+                </li>
+            </ul>
+        </section>
+
+        <section id="contact">
+            <h2>反馈与贡献</h2>
+
+            <dl class="contact-list">
+                <dt>作者</dt>
+                <dd>HYTOMZ（<a href="https://github.com/HYTommm">GitHub</a>）</dd>
+                <dt>思路提供 / 测试</dt>
+                <dd>Furau（<a href="https://github.com/E72UJ">GitHub</a>）</dd>
+                <dt>QQ 群</dt>
+                <dd>1018028780</dd>
+                <dt>邮箱</dt>
+                <dd><a href="mailto:3146776307@qq.com">3146776307@qq.com</a></dd>
+            </dl>
+
+            <h3>问题反馈</h3>
+            <ul>
+                <li>在 GitHub 仓库提交 Issue</li>
+                <li>加入 QQ 群讨论</li>
                 <li>发送邮件说明问题</li>
             </ul>
 
-            <h3>贡献指南</h3>
-            <p>欢迎贡献代码或文档！请遵循以下步骤：</p>
+            <h3>贡献</h3>
             <ol>
-                <li>Fork项目仓库</li>
-                <li>创建特性分支 (git checkout -b feature/your-feature)</li>
-                <li>提交更改 (git commit -am 'Add some feature')</li>
-                <li>推送到分支 (git push origin feature/your-feature)</li>
-                <li>创建Pull Request</li>
+                <li>Fork 仓库</li>
+                <li>创建特性分支：<code>git checkout -b feature/your-feature</code></li>
+                <li>提交更改：<code>git commit -am "Add some feature"</code></li>
+                <li>推送分支：<code>git push origin feature/your-feature</code></li>
+                <li>创建 Pull Request</li>
             </ol>
         </section>
 
-        <footer>
-            <p>R2Ga (PvZ Reanim to Godot Animation) © 2023-2026 - 遵循GPL 3.0开源协议</p>
-            <p>项目仓库: <a href="https://github.com/HYTommm/PVZ_reanim2godot_animation">https://github.com/HYTommm/PVZ_reanim2godot_animation</a></p>
-            <p>植物大战僵尸是PopCap Games的注册商标 | Godot是Godot Engine的商标</p>
-        </footer>
     </main>
+</div>
 
-    <script>
-        // 切换内容部分的显示
-        document.querySelectorAll('.nav-menu a').forEach(link => {
-            link.addEventListener('click', function (e) {
-                e.preventDefault();
+<footer class="page-footer">
+    <div class="container">
+        <p>R2Ga (PvZ Reanim to Godot Animation) © 2023–2026 · GPL 3.0</p>
+        <p>
+            仓库：
+            <a href="https://github.com/HYTommm/PVZ_reanim2godot_animation">github.com/HYTommm/PVZ_reanim2godot_animation</a>
+        </p>
+        <p>植物大战僵尸是 PopCap Games 的注册商标；Godot 是 Godot Engine 的商标。</p>
+    </div>
+</footer>
 
-                // 更新导航栏active状态
-                document.querySelectorAll('.nav-menu a').forEach(a => a.classList.remove('active'));
-                this.classList.add('active');
-
-                // 隐藏所有内容部分
-                document.querySelectorAll('.content-section').forEach(section => {
-                    section.classList.remove('active');
-                });
-
-                // 显示选中的内容部分
-                const sectionId = this.getAttribute('data-section');
-                document.getElementById(sectionId).classList.add('active');
-
-                // 更新URL哈希
-                window.location.hash = '#${sectionId}';
-
-                // 滚动到顶部
-                window.scrollTo(0, 0);
-            });
-        });
-
-        // 初始化显示正确的内容部分
-        function initContent() {
-            const hash = window.location.hash.substring(1) || 'intro';
-            const navLink = document.querySelector('.nav-menu a[data-section="${hash}"]');
-
-            if (navLink) {
-                document.querySelectorAll('.nav-menu a').forEach(a => a.classList.remove('active'));
-                navLink.classList.add('active');
-
-                document.querySelectorAll('.content-section').forEach(section => {
-                    section.classList.remove('active');
-                });
-
-                const target = document.getElementById(hash);
-                if (target) target.classList.add('active');
-            }
-        }
-
-        // 页面加载时初始化
-        window.addEventListener('load', initContent);
-
-        // 哈希变化时更新显示
-        window.addEventListener('hashchange', initContent);
-    </script>
 </body>
 </html>
