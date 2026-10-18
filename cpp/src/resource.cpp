@@ -1,6 +1,7 @@
 #include "resource.h"
 
 #include <cstdio>
+#include <print>
 
 #include "version.h"
 
@@ -64,7 +65,7 @@ void ResourceFile::open_output_file(const std::string& output_file_path)
     name_ = clamp_name(output_file_path + (name_.empty() ? p_anim_->res_file_name : name_)
                        + extension());
 
-    std::printf("debug: OutputFiles:name--%s\n", name_.c_str());
+    std::print("debug: OutputFiles:name--{}\n", name_);
     out_.open(name_, ErrorCode_CannotOpenOutputFile);
 }
 
@@ -114,7 +115,7 @@ void Tscn::print_ext_resource(const Params& params)
         // 原实现：if (self->p_anim->anim_index != 0) printf("animation index: %d\n", ...)
         // p_anim 恒为 anims[0]，其 anim_index 恒为 0，所以这一行永远不打印。
         if (p_anim_->anim_index != 0)
-            std::printf("animation index: %d\n", p_anim_->anim_index);
+            std::print("animation index: {}\n", p_anim_->anim_index);
 
         // anims_ 的长度是 anim_nums + 1，所以 i 取 1..anim_nums
         // （与原实现的 i <= anims_num 一致）

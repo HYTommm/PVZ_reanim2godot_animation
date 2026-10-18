@@ -8,9 +8,8 @@
 //     （所以 `tscn` 模式与 `auto` 模式行为完全相同）
 //   - 退出码 1 / 0 与各 ErrorCode
 //
-// 输出约定：stdout 一律用 std::print；stderr 上的两处错误信息沿用 fprintf，
-// 因为它们就是原实现 fprintf(stderr, ...) 的直译，且 print_warning/print_error
-// 需要 varargs 转发。
+// 输出约定：所有控制台输出统一使用 std::print；stderr 上的诊断信息用
+// std::print(stderr, ...)，格式串使用 {} 占位符。
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>

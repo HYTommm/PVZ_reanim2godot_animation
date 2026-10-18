@@ -1,7 +1,6 @@
 #include "params.h"
 
 #include <algorithm>
-#include <cstdarg>
 #include <cstdio>
 #include <print>
 #include <string_view>
@@ -27,26 +26,6 @@ void mark_key(std::vector<std::string>& keys, std::string_view key)
 constexpr int MAX_CONFIG_FILES = 8;
 
 }  // namespace
-
-void print_warning(const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    std::fprintf(stderr, "%s", COL_WARN);
-    std::vfprintf(stderr, fmt, args);
-    std::fprintf(stderr, "%s", COL_RESET);
-    va_end(args);
-}
-
-void print_error(const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    std::fprintf(stderr, "%s", COL_ERR);
-    std::vfprintf(stderr, fmt, args);
-    std::fprintf(stderr, "%s", COL_RESET);
-    va_end(args);
-}
 
 std::optional<OutputMode> parse_output_mode(std::string_view s, bool allow_camel)
 {
@@ -216,7 +195,7 @@ Result parse_args(Params& p, int argc, char** argv)
             if (i + 1 >= argc) return Result::Failed;
             if (static_cast<int>(p.configFiles.size()) >= MAX_CONFIG_FILES)
             {
-                print_warning("Warning: too many config files, '%s' ignored.\n", argv[i + 1]);
+                print_warning("Warning: too many config files, '{}' ignored.\n", argv[i + 1]);
             }
             else
             {

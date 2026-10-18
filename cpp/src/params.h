@@ -11,13 +11,17 @@
 
 #pragma once
 
+#include <cstdio>
+#include <format>
 #include <optional>
+#include <print>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
 #include "types.h"
+#include "version.h"
 
 namespace r2ga {
 
@@ -148,8 +152,18 @@ void print_config_template();
 /// 所以必须在建轨道之前算出来。
 bool resolve_blend_mode(const Params& params, std::string_view file_text);
 
-// 诊断输出（原实现的 print_warning / print_error：带 ANSI 颜色，写 stderr）
-void print_warning(const char* fmt, ...);
-void print_error(const char* fmt, ...);
+// 诊断输出（原实现的 print_warning / print_error：带 ANSI 颜色，写 stderr）。
+// 统一走 std::format + std::print；格式串用 {} 而不是 printf 的 %s/%d。
+template <class... Args>
+void print_warning(std::format_string<Args...> fmt, Args&&... args)
+{
+    std::print(stderr, "{}{}{}", COL_WARN, std::format(fmt, std::forward<Args>(args)...), COL_RESET);
+}
+
+template <class... Args>
+void print_error(std::format_string<Args...> fmt, Args&&... args)
+{
+    std::print(stderr, "{}{}{}", COL_ERR, std::format(fmt, std::forward<Args>(args)...), COL_RESET);
+}
 
 }  // namespace r2ga

@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iterator>
+#include <print>
 
 #include "version.h"
 
@@ -51,7 +52,7 @@ std::string read_text_file(const std::string& path, int exit_code)
     std::ifstream in(path, std::ios::in);
     if (!in.is_open())
     {
-        std::fprintf(stderr, "%s = NULL return code = %d\n", path.c_str(), exit_code);
+        std::print(stderr, "{} = NULL return code = {}\n", path, exit_code);
         std::exit(exit_code);
     }
 

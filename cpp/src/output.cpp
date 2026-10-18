@@ -2,6 +2,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <print>
 
 namespace r2ga {
 
@@ -13,7 +14,7 @@ void OutFile::open(const std::string& path, int exit_code)
     if (!os_.is_open())
     {
         // 原实现：fprintf(stderr, "%s = NULL return code = %d\n", filename, exit_code); exit(exit_code);
-        std::fprintf(stderr, "%s = NULL return code = %d\n", path.c_str(), exit_code);
+        std::print(stderr, "{} = NULL return code = {}\n", path, exit_code);
         std::exit(exit_code);
     }
 }

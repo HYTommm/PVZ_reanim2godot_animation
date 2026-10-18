@@ -123,7 +123,7 @@ std::string parse_config_value(std::string_view raw, int line, const std::string
         if (close != std::string::npos)
             return buf.substr(1, close - 1);
 
-        print_warning("Warning (line %d): unterminated quote in value for '%s'.\n", line, key.c_str());
+        print_warning("Warning (line {}): unterminated quote in value for '{}'.\n", line, key.c_str());
         std::string rest = buf.substr(1);
         trim_in_place(rest);
         return rest;
@@ -247,7 +247,7 @@ void parse_dict_entries(std::string_view block, int start_line, const std::strin
 
         if (subkey.empty())
         {
-            print_warning("Warning (line %d): dict block entry without a key, ignored.\n", entry_line);
+            print_warning("Warning (line {}): dict block entry without a key, ignored.\n", entry_line);
             continue;
         }
 
@@ -321,7 +321,7 @@ std::vector<ConfigEntry> parse_config_text(const std::string& content)
 
         if (eq == std::string::npos)
         {
-            print_warning("Warning (line %d): missing '='; line ignored.\n", line_number);
+            print_warning("Warning (line {}): missing '='; line ignored.\n", line_number);
             ++li;
             continue;
         }
@@ -350,7 +350,7 @@ std::vector<ConfigEntry> parse_config_text(const std::string& content)
 
         if (keys.empty())
         {
-            print_warning("Warning (line %d): missing key before '='; line ignored.\n", line_number);
+            print_warning("Warning (line {}): missing key before '='; line ignored.\n", line_number);
             ++li;
             continue;
         }
@@ -370,7 +370,7 @@ std::vector<ConfigEntry> parse_config_text(const std::string& content)
             }
             if (close == std::string::npos)
             {
-                print_warning("Warning (line %d): unmatched '{' in dict block.\n", line_number);
+                print_warning("Warning (line {}): unmatched '{' in dict block.\n", line_number);
             }
             else
             {
@@ -419,7 +419,7 @@ void apply_config_entry(Params& p, const ConfigEntry& e)
         if (const auto v = parse_output_mode(value, true))
             p.outputMode = *v;
         else
-            print_error("Warning (line %d): Invalid value for OutputMode\n", e.line);
+            print_error("Warning (line {}): Invalid value for OutputMode\n", e.line);
         return;
     }
 
@@ -432,7 +432,7 @@ void apply_config_entry(Params& p, const ConfigEntry& e)
             p.blendMode = v;
         else
         {
-            print_error("Warning (line %d): Invalid value for BlendModeEnabled\n", e.line);
+            print_error("Warning (line {}): Invalid value for BlendModeEnabled\n", e.line);
             p.blendMode = p.blend_mode();  // 与原实现一致：非法值也视为"已显式指定"
         }
         return;
@@ -447,7 +447,7 @@ void apply_config_entry(Params& p, const ConfigEntry& e)
             p.visibleTrackEnabled = v;
         else
         {
-            print_error("Warning (line %d): Invalid value for VisibleEnabled\n", e.line);
+            print_error("Warning (line {}): Invalid value for VisibleEnabled\n", e.line);
             p.visibleTrackEnabled = p.visible_track();
         }
         return;
@@ -462,7 +462,7 @@ void apply_config_entry(Params& p, const ConfigEntry& e)
             p.textureTrackEnabled = v;
         else
         {
-            print_error("Warning (line %d): Invalid value for TextureEnabled\n", e.line);
+            print_error("Warning (line {}): Invalid value for TextureEnabled\n", e.line);
             p.textureTrackEnabled = p.texture_track();
         }
         return;
@@ -477,7 +477,7 @@ void apply_config_entry(Params& p, const ConfigEntry& e)
             p.alphaTrackEnabled = v;
         else
         {
-            print_error("Warning (line %d): Invalid value for AlphaEnabled\n", e.line);
+            print_error("Warning (line {}): Invalid value for AlphaEnabled\n", e.line);
             p.alphaTrackEnabled = p.alpha_track();
         }
         return;
@@ -489,7 +489,7 @@ void apply_config_entry(Params& p, const ConfigEntry& e)
         if (blocked_by_cli(p, "RootNodeType")) return;
         if (value.empty())
         {
-            print_warning("Warning (line %d): RootNodeType is empty, using default type 'Node2D'.\n", e.line);
+            print_warning("Warning (line {}): RootNodeType is empty, using default type 'Node2D'.\n", e.line);
             return;
         }
         p.rootNodeType = clamp_name(value);
@@ -502,7 +502,7 @@ void apply_config_entry(Params& p, const ConfigEntry& e)
         if (blocked_by_cli(p, "RootNodeName")) return;
         if (value.empty())
         {
-            print_warning("Warning (line %d): RootNodeName is empty, will use resource name.\n", e.line);
+            print_warning("Warning (line {}): RootNodeName is empty, will use resource name.\n", e.line);
             return;
         }
         p.rootNodeName = clamp_name(value);
@@ -515,7 +515,7 @@ void apply_config_entry(Params& p, const ConfigEntry& e)
         if (blocked_by_cli(p, "AnimName")) return;
         if (value.empty())
         {
-            print_warning("Warning (line %d): AnimName is empty, using default name.\n", e.line);
+            print_warning("Warning (line {}): AnimName is empty, using default name.\n", e.line);
             return;
         }
         p.animName = clamp_name(value);
@@ -528,7 +528,7 @@ void apply_config_entry(Params& p, const ConfigEntry& e)
         if (blocked_by_cli(p, "InputFile")) return;
         if (value.empty())
         {
-            print_warning("Warning (line %d): InputFile is empty, ignored.\n", e.line);
+            print_warning("Warning (line {}): InputFile is empty, ignored.\n", e.line);
             return;
         }
         p.inputFileWholePath = clamp_path(resolve_config_path(p, value));
@@ -541,7 +541,7 @@ void apply_config_entry(Params& p, const ConfigEntry& e)
         if (blocked_by_cli(p, "AnimGodotPath")) return;
         if (value.empty())
         {
-            print_warning("Warning (line %d): AnimGodotPath is empty, ignored.\n", e.line);
+            print_warning("Warning (line {}): AnimGodotPath is empty, ignored.\n", e.line);
             return;
         }
         p.animOutputGodotPath = clamp_path(resolve_config_path(p, value));
@@ -554,7 +554,7 @@ void apply_config_entry(Params& p, const ConfigEntry& e)
         if (blocked_by_cli(p, "ResGodotPath")) return;
         if (value.empty())
         {
-            print_warning("Warning (line %d): ResGodotPath is empty, ignored.\n", e.line);
+            print_warning("Warning (line {}): ResGodotPath is empty, ignored.\n", e.line);
             return;
         }
         p.resourceGodotPath = clamp_path(resolve_config_path(p, value));
@@ -567,7 +567,7 @@ void apply_config_entry(Params& p, const ConfigEntry& e)
         if (blocked_by_cli(p, "OutputDir")) return;
         if (value.empty())
         {
-            print_warning("Warning (line %d): OutputDir is empty, ignored.\n", e.line);
+            print_warning("Warning (line {}): OutputDir is empty, ignored.\n", e.line);
             return;
         }
         p.outputFileWholePath = clamp_path(resolve_config_path(p, value));
@@ -583,7 +583,7 @@ void apply_config_entry(Params& p, const ConfigEntry& e)
         const auto mode = parse_update_mode(value, true);
         if (!mode)
         {
-            print_error("Warning (line %d): Invalid value '%s' for UpdateModeDic entry '%s'\n",
+            print_error("Warning (line {}): Invalid value '{}' for UpdateModeDic entry '{}'\n",
                         e.line, value.c_str(), track_name.c_str());
             return;
         }
@@ -612,7 +612,7 @@ void apply_config_entry(Params& p, const ConfigEntry& e)
         if (const auto v = parse_interpolation_mode(value, true))
             p.interpolationMode = *v;
         else
-            print_error("Warning (line %d): Invalid value for InterpolationMode\n", e.line);
+            print_error("Warning (line {}): Invalid value for InterpolationMode\n", e.line);
         return;
     }
 
@@ -623,7 +623,7 @@ void apply_config_entry(Params& p, const ConfigEntry& e)
         if (const auto v = parse_update_mode(value, true))
             p.updateMode = *v;
         else
-            print_error("Warning (line %d): Invalid value for UpdateMode\n", e.line);
+            print_error("Warning (line {}): Invalid value for UpdateMode\n", e.line);
         return;
     }
 
@@ -634,7 +634,7 @@ void apply_config_entry(Params& p, const ConfigEntry& e)
         if (const auto v = parse_frame_mode(value, true))
             p.frameMode = *v;
         else
-            print_error("Warning (line %d): Invalid value for FrameMode\n", e.line);
+            print_error("Warning (line {}): Invalid value for FrameMode\n", e.line);
         return;
     }
 
@@ -645,11 +645,11 @@ void apply_config_entry(Params& p, const ConfigEntry& e)
         if (const auto v = parse_track_mode(value, true))
             p.trackMode = *v;
         else
-            print_error("Warning (line %d): Invalid value for TrackMode\n", e.line);
+            print_error("Warning (line {}): Invalid value for TrackMode\n", e.line);
         return;
     }
 
-    print_warning("Warning (line %d): unknown config key '%s', ignored.\n", e.line, key.c_str());
+    print_warning("Warning (line {}): unknown config key '{}', ignored.\n", e.line, key.c_str());
 }
 
 const char* source_of(const Params& p, std::string_view key)
@@ -733,47 +733,48 @@ void parse_config(Params& p, const std::string& config_file_path)
 void print_effective_config(const Params& p)
 {
     if (p.configFiles.empty())
-        std::printf("[config] file = (none)\n");
+        std::print("[config] file = (none)\n");
     else
     {
         for (std::size_t i = 0; i < p.configFiles.size(); ++i)
-            std::printf("[config] file = %s\n", p.configFiles[i].c_str());
+            std::print("[config] file = {}\n", p.configFiles[i].c_str());
     }
 
-    std::printf("[config] InputFile = %s (%s)\n", p.inputFileWholePath.c_str(), source_of(p, "InputFile"));
-    std::printf("[config] AnimGodotPath = %s (%s)\n", p.animOutputGodotPath.c_str(), source_of(p, "AnimGodotPath"));
-    std::printf("[config] ResGodotPath = %s (%s)\n", p.resourceGodotPath.c_str(), source_of(p, "ResGodotPath"));
-    std::printf("[config] OutputDir = %s (%s)\n",
+    std::print("[config] InputFile = {} ({})\n", p.inputFileWholePath.c_str(), source_of(p, "InputFile"));
+    std::print("[config] AnimGodotPath = {} ({})\n", p.animOutputGodotPath.c_str(), source_of(p, "AnimGodotPath"));
+    std::print("[config] ResGodotPath = {} ({})\n", p.resourceGodotPath.c_str(), source_of(p, "ResGodotPath"));
+    std::print("[config] OutputDir = {} ({})\n",
                 p.outputFileSpecified ? p.outputFileWholePath.c_str() : "", source_of(p, "OutputDir"));
-    std::printf("[config] OutputMode = %s (%s)\n", output_mode_name(p.output_mode()), source_of(p, "OutputMode"));
-    std::printf("[config] InterpolationMode = %s (%s)\n",
+    std::print("[config] OutputMode = {} ({})\n", output_mode_name(p.output_mode()), source_of(p, "OutputMode"));
+    std::print("[config] InterpolationMode = {} ({})\n",
                 interpolation_mode_name(p.interpolation_mode()), source_of(p, "InterpolationMode"));
-    std::printf("[config] UpdateMode = %s (%s)\n", update_mode_name(p.update_mode()), source_of(p, "UpdateMode"));
-    std::printf("[config] FrameMode = %s (%s)\n", frame_mode_name(p.frame_mode()), source_of(p, "FrameMode"));
-    std::printf("[config] TrackMode = %s (%s)\n", track_mode_name(p.track_mode()), source_of(p, "TrackMode"));
-    std::printf("[config] BlendModeEnabled = %s (%s)\n", p.blend_mode() ? "true" : "false",
+    std::print("[config] UpdateMode = {} ({})\n", update_mode_name(p.update_mode()), source_of(p, "UpdateMode"));
+    std::print("[config] FrameMode = {} ({})\n", frame_mode_name(p.frame_mode()), source_of(p, "FrameMode"));
+    std::print("[config] TrackMode = {} ({})\n", track_mode_name(p.track_mode()), source_of(p, "TrackMode"));
+    std::print("[config] BlendModeEnabled = {} ({})\n", p.blend_mode() ? "true" : "false",
                 source_of(p, "BlendModeEnabled"));
-    std::printf("[config] VisibleTrackEnabled = %s (%s)\n", p.visible_track() ? "true" : "false",
+    std::print("[config] VisibleTrackEnabled = {} ({})\n", p.visible_track() ? "true" : "false",
                 source_of(p, "VisibleTrackEnabled"));
-    std::printf("[config] TextureTrackEnabled = %s (%s)\n", p.texture_track() ? "true" : "false",
+    std::print("[config] TextureTrackEnabled = {} ({})\n", p.texture_track() ? "true" : "false",
                 source_of(p, "TextureTrackEnabled"));
-    std::printf("[config] AlphaTrackEnabled = %s (%s)\n", p.alpha_track() ? "true" : "false",
+    std::print("[config] AlphaTrackEnabled = {} ({})\n", p.alpha_track() ? "true" : "false",
                 source_of(p, "AlphaTrackEnabled"));
-    std::printf("[config] RootNodeType = %s (%s)\n", p.root_node_type().c_str(), source_of(p, "RootNodeType"));
-    std::printf("[config] RootNodeName = %s (%s)\n", p.root_node_name().c_str(), source_of(p, "RootNodeName"));
-    std::printf("[config] AnimName = %s (%s)\n", p.anim_name().c_str(), source_of(p, "AnimName"));
+    std::print("[config] RootNodeType = {} ({})\n", p.root_node_type().c_str(), source_of(p, "RootNodeType"));
+    std::print("[config] RootNodeName = {} ({})\n", p.root_node_name().c_str(), source_of(p, "RootNodeName"));
+    std::print("[config] AnimName = {} ({})\n", p.anim_name().c_str(), source_of(p, "AnimName"));
 
     for (const auto& [name, mode] : p.updateModeDic)
     {
         const std::string full_key = "UpdateModeDic." + name;
-        std::printf("[config] %s = %s (%s)\n", full_key.c_str(), update_mode_name(mode),
+        std::print("[config] {} = {} ({})\n", full_key.c_str(), update_mode_name(mode),
                     source_of(p, full_key));
     }
 }
 
 void print_config_template()
 {
-    std::fputs(
+    std::print(
+        "{}",
         "# R2Ga configuration template\n"
         "# Command-line options override values in this file.\n"
         "# A trailing ';' is optional. Keys are case-insensitive.\n"
@@ -807,8 +808,7 @@ void print_config_template()
         "# UpdateModeDic = {\n"
         "#     head = Discrete,\n"
         "#     body = Continuous,\n"
-        "# };\n",
-        stdout);
+        "# };\n");
 }
 
 }  // namespace r2ga
