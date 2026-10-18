@@ -19,3 +19,18 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv);
 /// <param name="configFileWholePath"> 配置文件全路径 </param>
 /// <returns></returns>
 Result StartParamSetFromConfig(R2GAStartParam* param, const char* configFileWholePath);
+
+/// <summary> 未显式指定 -cf 时，查找输入目录 / 当前目录下的 r2ga.cfg </summary>
+Result StartParamFindConfig(R2GAStartParam* param);
+
+/// <summary> 配置应用后重新计算派生路径 </summary>
+void StartParamFinalize(R2GAStartParam* param);
+
+/// <summary> 校验三项必需路径是否齐全 </summary>
+Result StartParamValidate(const R2GAStartParam* param);
+
+/// <summary> 打印最终生效配置（--print-config） </summary>
+void StartParamPrintEffectiveConfig(const R2GAStartParam* param);
+
+/// <summary> 打印配置模板（--init-config） </summary>
+void StartParamPrintConfigTemplate(void);

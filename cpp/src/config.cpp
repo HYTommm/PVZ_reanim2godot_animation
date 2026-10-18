@@ -1,20 +1,19 @@
 // 配置文件解析。
 //
-// 原实现不是 INI，而是一门自定义语法，逐字符状态机实现：
+// 语法（分号可选）：
+//     # 注释
+//     key = value
+//     key = value;
+//     k1 k2 = value                     ; 多个键共享同一个值
+//     key = { .sub1 = v1, sub2 = v2 };  ; 展平成 key.sub1 / key.sub2
 //
-//     # 注释（到行尾）
-//     key = value;                        // 分号终结
-//     k1 k2 k3 = value;                   // 多个 key 共享一个 value（特性，不是 bug）
-//     key = { .sub1 = v1, sub2 = v2 };    // 字典块，展平成 "key.sub1" = v1
+// 值一直取到行尾或分号，首尾空白会被去掉；可以用单/双引号包住含空格的值。
+// 行内 # 之后的内容视为注释（引号内除外）。键名大小写不敏感。
 //
-// 这里按原实现逐条移植，包括：
-//   - 未知 key 静默忽略
-//   - 非法取值只打错误、不改变返回值
-//   - 解析失败一律 exit()，不是返回错误
-//   - 数组末尾写一条 "EndOfFile" = "0" 作为哨兵
-//
-// 状态机的转移条件与循环结构保持原样，方便逐行对照。
+// 命令行显式指定的项永远优先于配置文件；多个配置文件按命令行顺序叠加，
+// 后加载的覆盖先加载的。
 
+#include <algorithm>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
@@ -29,321 +28,691 @@
 namespace r2ga {
 namespace {
 
-/// 模拟 FILE* 的光标（原实现用 fgetc/ungetc/rewind）。
-struct TextCursor
-{
-    std::string_view text;
-    std::size_t      pos = 0;
-
-    int  getc()               { return pos < text.size() ? static_cast<unsigned char>(text[pos++]) : EOF; }
-    void ungetc()             { if (pos > 0) --pos; }
-    void rewind()             { pos = 0; }
-};
-
 struct ConfigEntry
 {
     std::string key;
     std::string value;
+    int         line = 0;
 };
 
-/// 模拟 fgets(line, 4096, file)：最多读 4095 个字符，遇到 '\n' 即止（含）。
-/// 返回 false 表示已到文件尾且没有读到任何内容。
-bool read_line(TextCursor& cur, std::string& line)
+std::string_view trim_view(std::string_view s)
 {
-    line.clear();
-    while (line.size() < 4095)
+    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front())))
+        s.remove_prefix(1);
+    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back())))
+        s.remove_suffix(1);
+    return s;
+}
+
+void trim_in_place(std::string& s)
+{
+    const std::string_view v = trim_view(s);
+    s.assign(v);
+}
+
+bool iequals(std::string_view a, std::string_view b)
+{
+    if (a.size() != b.size())
+        return false;
+    for (std::size_t i = 0; i < a.size(); ++i)
     {
-        const int c = cur.getc();
-        if (c == EOF)
-            return !line.empty();
-        line.push_back(static_cast<char>(c));
-        if (c == '\n')
-            break;
+        if (std::tolower(static_cast<unsigned char>(a[i])) !=
+            std::tolower(static_cast<unsigned char>(b[i])))
+            return false;
     }
     return true;
 }
 
-/// 原实现的 WarnMissingSemicolons：正式解析前先扫描一遍，对疑似漏写分号的行给出警告。
-/// 做完会把光标 rewind 回起点。
-void warn_missing_semicolons(TextCursor& cur)
+bool istarts_with(std::string_view s, std::string_view prefix)
 {
-    cur.rewind();
-
-    int         line_num = 0;
-    std::string prev_line_stripped;
-    int         prev_line_num = 0;
-    std::string line;
-
-    while (read_line(cur, line))
+    if (s.size() < prefix.size())
+        return false;
+    for (std::size_t i = 0; i < prefix.size(); ++i)
     {
-        ++line_num;
-
-        // 移除行内注释
-        const std::size_t hash = line.find('#');
-        if (hash != std::string::npos)
-            line.resize(hash);
-
-        // 去除尾部空白
-        while (!line.empty() && std::isspace(static_cast<unsigned char>(line.back())))
-            line.pop_back();
-
-        // 空行或纯注释行，重置跟踪
-        if (line.empty())
-        {
-            prev_line_stripped.clear();
-            prev_line_num = 0;
-            continue;
-        }
-
-        // 定位第一个非空白字符
-        std::size_t start_pos = 0;
-        while (start_pos < line.size() && std::isspace(static_cast<unsigned char>(line[start_pos])))
-            ++start_pos;
-        if (start_pos == line.size() || line[start_pos] == '#')
-        {
-            prev_line_stripped.clear();
-            prev_line_num = 0;
-            continue;
-        }
-
-        // 本行以非空白开头，检查上一行是否缺少分号
-        if (start_pos == 0 && prev_line_num > 0 && !prev_line_stripped.empty())
-        {
-            const char prev_last = prev_line_stripped.back();
-            if (prev_last != ';' && prev_last != '=' && prev_last != '{' && line[start_pos] != '=')
-            {
-                print_warning("Warning (line %d): line starts with '%c...' but previous line (line %d) does not end with ';' or '='. A semicolon may be missing.\n",
-                              line_num, line[start_pos], prev_line_num);
-            }
-        }
-
-        // 检测未闭合的 '{'（多行字典块），跳过其内容
-        if (line.find('{') != std::string::npos && line.find('}') == std::string::npos)
-        {
-            int brace_depth = 1;
-            int ch;
-            while (brace_depth > 0 && (ch = cur.getc()) != EOF)
-            {
-                if (ch == '\n') ++line_num;
-                if (ch == '{') ++brace_depth;
-                else if (ch == '}') --brace_depth;
-            }
-            // 消费尾部 ';'
-            while ((ch = cur.getc()) != EOF && ch != ';')
-            {
-                if (ch == '\n') ++line_num;
-            }
-            prev_line_stripped.clear();
-            prev_line_num = 0;
-            continue;
-        }
-
-        // 保存当前行供下一轮检查
-        prev_line_stripped = line;
-        prev_line_num = line_num;
+        if (std::tolower(static_cast<unsigned char>(s[i])) !=
+            std::tolower(static_cast<unsigned char>(prefix[i])))
+            return false;
     }
-
-    cur.rewind();
+    return true;
 }
 
-/// 对应 ReadConfigFile。成功返回 true；失败时调用方需要 exit(ErrorCode_CannotReadConfigFile)。
-bool read_config_file(TextCursor& cur, std::vector<ConfigEntry>& out, int max_entries)
+bool is_absolute_path(std::string_view p)
 {
-    int param_count = 0;
-    int line_number = 1;
-    int ch;
+    if (p.empty())
+        return false;
+    if (p[0] == '/' || p[0] == '\\')
+        return true;
+    if (std::isalpha(static_cast<unsigned char>(p[0])) && p.size() > 1 && p[1] == ':')
+        return true;
+    return istarts_with(p, "res://");
+}
 
-    // 原实现是 char tokens[MAX_TOKENS][NAME_LENGTH]
-    std::string tokens[MAX_TOKENS];
-    int token_count = 0;
-    int token_pos   = 0;
+std::string resolve_config_path(const Params& p, std::string_view value)
+{
+    if (value.empty() || is_absolute_path(value))
+        return std::string(value);
+    if (p.configFileDir.empty())
+        return std::string(value);
 
-    while ((ch = cur.getc()) != EOF && param_count < max_entries)
+    const char last = p.configFileDir.back();
+    const char* sep = (last == '/' || last == '\\') ? "" : "\\";
+    return p.configFileDir + sep + std::string(value);
+}
+
+void mark_config_key(Params& p, std::string_view key)
+{
+    const auto it = std::find(p.configSpecifiedKeys.begin(), p.configSpecifiedKeys.end(), key);
+    if (it == p.configSpecifiedKeys.end())
+        p.configSpecifiedKeys.emplace_back(key);
+}
+
+bool blocked_by_cli(const Params& p, std::string_view key)
+{
+    return std::find(p.cliSpecifiedKeys.begin(), p.cliSpecifiedKeys.end(), key) != p.cliSpecifiedKeys.end();
+}
+
+std::string parse_config_value(std::string_view raw, int line, const std::string& key)
+{
+    std::string buf(raw);
+    trim_in_place(buf);
+
+    if (!buf.empty() && (buf[0] == '"' || buf[0] == '\''))
     {
-        // 跳过空白字符（同时追踪行号）
-        if (ch == '\n') { ++line_number; continue; }
-        if (std::isspace(ch)) continue;
+        const char quote = buf[0];
+        const std::size_t close = buf.find(quote, 1);
+        if (close != std::string::npos)
+            return buf.substr(1, close - 1);
 
-        // 以 '#' 开头的注释，跳到行尾
-        if (ch == '#')
+        print_warning("Warning (line %d): unterminated quote in value for '%s'.\n", line, key.c_str());
+        std::string rest = buf.substr(1);
+        trim_in_place(rest);
+        return rest;
+    }
+
+    const std::size_t hash = buf.find('#');
+    if (hash != std::string::npos)
+    {
+        buf.resize(hash);
+        trim_in_place(buf);
+    }
+
+    if (!buf.empty() && buf.back() == ';')
+    {
+        buf.pop_back();
+        trim_in_place(buf);
+    }
+
+    return buf;
+}
+
+/// 在字符串中查找引号外的 '}'，返回位置（未找到返回 npos）
+std::size_t find_close_brace(std::string_view s)
+{
+    bool in_quote = false;
+    char quote    = '\0';
+    for (std::size_t i = 0; i < s.size(); ++i)
+    {
+        const char c = s[i];
+        if (in_quote)
         {
-            while ((ch = cur.getc()) != EOF && ch != '\n')
-                ;
-            if (ch == '\n') ++line_number;
+            if (c == quote) in_quote = false;
+        }
+        else if (c == '"' || c == '\'')
+        {
+            in_quote = true;
+            quote = c;
+        }
+        else if (c == '}')
+        {
+            return i;
+        }
+    }
+    return std::string_view::npos;
+}
+
+void parse_dict_entries(std::string_view block, int start_line, const std::string& prefix,
+                        std::vector<ConfigEntry>& out)
+{
+    int line = start_line;
+    std::size_t i = 0;
+
+    while (i < block.size())
+    {
+        while (i < block.size() && (std::isspace(static_cast<unsigned char>(block[i])) ||
+                                    block[i] == ',' || block[i] == ';'))
+        {
+            if (block[i] == '\n') ++line;
+            ++i;
+        }
+        if (i >= block.size())
+            break;
+        if (block[i] == '#')
+        {
+            while (i < block.size() && block[i] != '\n') ++i;
             continue;
         }
 
-        if (ch == '=')
+        const int entry_line = line;
+
+        if (block[i] == '.')
+            ++i;
+
+        std::string subkey;
+        while (i < block.size() && block[i] != '=' &&
+               !std::isspace(static_cast<unsigned char>(block[i])) &&
+               block[i] != ',' && block[i] != '}')
         {
-            // token 解析结束
-            token_count++;
-            token_pos = 0;
-            if (token_count >= MAX_TOKENS)
+            subkey.push_back(block[i++]);
+        }
+
+        while (i < block.size() && (std::isspace(static_cast<unsigned char>(block[i])) || block[i] == '='))
+        {
+            if (block[i] == '\n') ++line;
+            ++i;
+        }
+
+        std::string raw;
+        bool in_quote = false;
+        char quote    = '\0';
+        while (i < block.size())
+        {
+            const char c = block[i];
+            if (in_quote)
             {
-                print_error("Error: Too many tokens in one command\n");
-                return false;
-            }
-
-            // 看下一个非空白字符是不是 '{'
-            int peek_ch;
-            while ((peek_ch = cur.getc()) != EOF && std::isspace(peek_ch))
-            {
-                if (peek_ch == '\n') ++line_number;
-            }
-
-            if (peek_ch == '{')
-            {
-                // ---- 字典块：key = { a = 1, b = 2 }; ----
-                const std::string& prefix = tokens[0];
-                std::string entry_key;
-                std::string entry_value;
-                bool        expect_comma = false;
-
-                while ((peek_ch = cur.getc()) != EOF)
-                {
-                    if (peek_ch == '\n') { ++line_number; continue; }
-                    if (std::isspace(peek_ch)) continue;
-                    if (peek_ch == '}') break;
-                    if (peek_ch == ',') { expect_comma = false; continue; }
-
-                    // 检测遗漏逗号（条目粘连）
-                    if (expect_comma)
-                    {
-                        print_warning("Warning (line %d): Missing comma between entries in dict block.\n", line_number);
-                        expect_comma = false;
-                    }
-
-                    // 读取条目键名（跳过前导点号）
-                    entry_key.clear();
-                    if (peek_ch == '.')
-                    {
-                        peek_ch = cur.getc();
-                        if (peek_ch == '\n') ++line_number;
-                    }
-                    entry_key.push_back(static_cast<char>(peek_ch));
-                    while ((peek_ch = cur.getc()) != EOF && !std::isspace(peek_ch) && peek_ch != '=')
-                    {
-                        if (entry_key.size() < static_cast<std::size_t>(NAME_LENGTH - 1))
-                            entry_key.push_back(static_cast<char>(peek_ch));
-                    }
-
-                    // 跳过空白和等号，定位到值
-                    while (peek_ch != EOF && (std::isspace(peek_ch) || peek_ch == '='))
-                    {
-                        if (peek_ch == '\n') ++line_number;
-                        peek_ch = cur.getc();
-                    }
-
-                    // 读取条目值
-                    entry_value.clear();
-                    entry_value.push_back(static_cast<char>(peek_ch));
-                    while ((peek_ch = cur.getc()) != EOF && !std::isspace(peek_ch) && peek_ch != ',' && peek_ch != '}')
-                    {
-                        if (entry_value.size() < static_cast<std::size_t>(NAME_LENGTH - 1))
-                            entry_value.push_back(static_cast<char>(peek_ch));
-                    }
-                    if (peek_ch == '\n') ++line_number;
-
-                    // 构造完整键名 "前缀.键"
-                    std::string full_key = prefix;
-                    full_key.push_back('.');
-                    full_key.append(entry_key);
-
-                    // 字典键查重（只警告，后写照常追加，由消费者决定覆盖）
-                    for (const ConfigEntry& existing : out)
-                    {
-                        if (existing.key == full_key)
-                        {
-                            print_warning("Warning (line %d): Duplicate key '%s' in dict block, later value will overwrite the earlier one.\n",
-                                          line_number, full_key.c_str());
-                            break;
-                        }
-                    }
-
-                    if (param_count < max_entries)
-                    {
-                        out.push_back(ConfigEntry{full_key, entry_value});
-                        ++param_count;
-                    }
-
-                    if (peek_ch == '}') break;
-                    if (peek_ch != ',')
-                        expect_comma = true;
-                }
-
-                // 检测花括号未闭合
-                if (peek_ch != '}')
-                {
-                    print_warning("Warning (line %d): Unmatched '{' in dict block, missing closing '}' before end of file.\n", line_number);
-                }
-
-                // 跳过块结尾的分号
-                while ((peek_ch = cur.getc()) != EOF && peek_ch != ';')
-                {
-                    if (peek_ch == '\n') ++line_number;
-                }
-
-                // 重置状态
-                token_count = 0;
-                token_pos   = 0;
-                tokens[0].clear();
+                if (c == quote) in_quote = false;
+                raw.push_back(c);
+                ++i;
                 continue;
             }
-
-            if (peek_ch != EOF)
-                cur.ungetc();
+            if (c == '"' || c == '\'')
+            {
+                in_quote = true;
+                quote = c;
+                raw.push_back(c);
+                ++i;
+                continue;
+            }
+            if (c == ',' || c == '\n' || c == '\r')
+                break;
+            if (c == '#')
+            {
+                while (i < block.size() && block[i] != '\n') ++i;
+                break;
+            }
+            raw.push_back(c);
+            ++i;
         }
-        else if (ch == ';')
+
+        while (i < block.size() && block[i] != ',' && block[i] != '\n') ++i;
+
+        if (subkey.empty())
         {
-            // 一条命令结束
-            ++token_count;
-            token_pos = 0;
-
-            if (token_count < 2)
-            {
-                print_error("Error: Not enough tokens in one command\n");
-                return false;
-            }
-
-            // 最后一个 token 是值，前面的都是键（多个键共享同一个值）
-            const std::string& value = tokens[token_count - 1];
-            for (int i = 0; i < token_count - 1; ++i)
-            {
-                if (param_count < max_entries)
-                {
-                    out.push_back(ConfigEntry{tokens[i], value});
-                    ++param_count;
-                }
-            }
-
-            token_count = 0;
-            token_pos   = 0;
-            tokens[0].clear();
+            print_warning("Warning (line %d): dict block entry without a key, ignored.\n", entry_line);
+            continue;
         }
+
+        const std::string value = parse_config_value(raw, entry_line, subkey);
+        out.push_back(ConfigEntry{prefix + "." + subkey, value, entry_line});
+    }
+}
+
+std::vector<ConfigEntry> parse_config_text(const std::string& content)
+{
+    std::vector<ConfigEntry> entries;
+
+    // 按行拆分；去掉首行可能存在的 UTF-8 BOM
+    std::size_t pos = 0;
+    int line_number = 0;
+    std::vector<std::string> lines;
+    while (pos <= content.size())
+    {
+        const std::size_t nl = content.find('\n', pos);
+        std::string line = (nl == std::string::npos) ? content.substr(pos) : content.substr(pos, nl - pos);
+        if (!line.empty() && line.back() == '\r')
+            line.pop_back();
+        lines.push_back(std::move(line));
+        if (nl == std::string::npos)
+            break;
+        pos = nl + 1;
+    }
+
+    if (!lines.empty() && lines[0].size() >= 3 &&
+        static_cast<unsigned char>(lines[0][0]) == 0xEF &&
+        static_cast<unsigned char>(lines[0][1]) == 0xBB &&
+        static_cast<unsigned char>(lines[0][2]) == 0xBF)
+    {
+        lines[0].erase(0, 3);
+    }
+
+    std::size_t li = 0;
+    while (li < lines.size())
+    {
+        line_number = static_cast<int>(li) + 1;
+        std::string line = lines[li];
+        const std::string_view trimmed = trim_view(line);
+        if (trimmed.empty() || trimmed.front() == '#')
+        {
+            ++li;
+            continue;
+        }
+
+        // 找引号外的第一个 '='
+        std::size_t eq = std::string::npos;
+        bool in_quote = false;
+        char quote    = '\0';
+        for (std::size_t i = 0; i < trimmed.size(); ++i)
+        {
+            const char c = trimmed[i];
+            if (in_quote)
+            {
+                if (c == quote) in_quote = false;
+            }
+            else if (c == '"' || c == '\'')
+            {
+                in_quote = true;
+                quote = c;
+            }
+            else if (c == '=')
+            {
+                eq = i;
+                break;
+            }
+        }
+
+        if (eq == std::string::npos)
+        {
+            print_warning("Warning (line %d): missing '='; line ignored.\n", line_number);
+            ++li;
+            continue;
+        }
+
+        std::string left(trimmed.substr(0, eq));
+        std::string right(trimmed.substr(eq + 1));
+        trim_in_place(left);
+        trim_in_place(right);
+
+        // 左侧按空白拆成多个键
+        std::vector<std::string> keys;
+        std::size_t start = 0;
+        while (start < left.size())
+        {
+            while (start < left.size() && std::isspace(static_cast<unsigned char>(left[start])))
+                ++start;
+            const std::size_t end = left.find_first_of(" \t", start);
+            if (end == std::string::npos)
+            {
+                keys.push_back(left.substr(start));
+                break;
+            }
+            keys.push_back(left.substr(start, end - start));
+            start = end;
+        }
+
+        if (keys.empty())
+        {
+            print_warning("Warning (line %d): missing key before '='; line ignored.\n", line_number);
+            ++li;
+            continue;
+        }
+
+        // 字典块
+        if (!right.empty() && right[0] == '{')
+        {
+            std::string block = right.substr(1);
+            const int block_line = line_number;
+            std::size_t close = find_close_brace(block);
+            while (close == std::string::npos && li + 1 < lines.size())
+            {
+                ++li;
+                block += '\n';
+                block += lines[li];
+                close = find_close_brace(block);
+            }
+            if (close == std::string::npos)
+            {
+                print_warning("Warning (line %d): unmatched '{' in dict block.\n", line_number);
+            }
+            else
+            {
+                block.resize(close);
+            }
+
+            parse_dict_entries(block, block_line, keys[0], entries);
+            ++li;
+            continue;
+        }
+
+        const std::string value = parse_config_value(right, line_number, keys[0]);
+        for (const std::string& key : keys)
+            entries.push_back(ConfigEntry{key, value, line_number});
+
+        ++li;
+    }
+
+    return entries;
+}
+
+bool parse_bool_value(const std::string& value, bool& out)
+{
+    if (iequals(value, "1") || iequals(value, "true"))
+    {
+        out = true;
+        return true;
+    }
+    if (iequals(value, "0") || iequals(value, "false"))
+    {
+        out = false;
+        return true;
+    }
+    return false;
+}
+
+void apply_config_entry(Params& p, const ConfigEntry& e)
+{
+    const std::string& key   = e.key;
+    const std::string& value = e.value;
+
+    if (iequals(key, "OutputMode"))
+    {
+        mark_config_key(p, "OutputMode");
+        if (blocked_by_cli(p, "OutputMode")) return;
+        if (const auto v = parse_output_mode(value, true))
+            p.outputMode = *v;
+        else
+            print_error("Warning (line %d): Invalid value for OutputMode\n", e.line);
+        return;
+    }
+
+    if (iequals(key, "BlendModeEnabled"))
+    {
+        mark_config_key(p, "BlendModeEnabled");
+        if (blocked_by_cli(p, "BlendModeEnabled")) return;
+        bool v = false;
+        if (parse_bool_value(value, v))
+            p.blendMode = v;
         else
         {
-            // 其他字符，写入当前 token
-            // 原实现是按 token_pos 下标逐字符覆盖写，所以本 token 的第一个字符
-            // 处必须重头开始，不能把上一轮留下的内容接在后面。
-            if (token_pos == 0)
-                tokens[token_count].clear();
-            tokens[token_count].push_back(static_cast<char>(ch));
-            ++token_pos;
-            if (token_pos >= NAME_LENGTH)
+            print_error("Warning (line %d): Invalid value for BlendModeEnabled\n", e.line);
+            p.blendMode = p.blend_mode();  // 与原实现一致：非法值也视为"已显式指定"
+        }
+        return;
+    }
+
+    if (iequals(key, "VisibleTrackEnabled"))
+    {
+        mark_config_key(p, "VisibleTrackEnabled");
+        if (blocked_by_cli(p, "VisibleTrackEnabled")) return;
+        bool v = false;
+        if (parse_bool_value(value, v))
+            p.visibleTrackEnabled = v;
+        else
+        {
+            print_error("Warning (line %d): Invalid value for VisibleEnabled\n", e.line);
+            p.visibleTrackEnabled = p.visible_track();
+        }
+        return;
+    }
+
+    if (iequals(key, "TextureTrackEnabled"))
+    {
+        mark_config_key(p, "TextureTrackEnabled");
+        if (blocked_by_cli(p, "TextureTrackEnabled")) return;
+        bool v = false;
+        if (parse_bool_value(value, v))
+            p.textureTrackEnabled = v;
+        else
+        {
+            print_error("Warning (line %d): Invalid value for TextureEnabled\n", e.line);
+            p.textureTrackEnabled = p.texture_track();
+        }
+        return;
+    }
+
+    if (iequals(key, "AlphaTrackEnabled"))
+    {
+        mark_config_key(p, "AlphaTrackEnabled");
+        if (blocked_by_cli(p, "AlphaTrackEnabled")) return;
+        bool v = false;
+        if (parse_bool_value(value, v))
+            p.alphaTrackEnabled = v;
+        else
+        {
+            print_error("Warning (line %d): Invalid value for AlphaEnabled\n", e.line);
+            p.alphaTrackEnabled = p.alpha_track();
+        }
+        return;
+    }
+
+    if (iequals(key, "RootNodeType"))
+    {
+        mark_config_key(p, "RootNodeType");
+        if (blocked_by_cli(p, "RootNodeType")) return;
+        if (value.empty())
+        {
+            print_warning("Warning (line %d): RootNodeType is empty, using default type 'Node2D'.\n", e.line);
+            return;
+        }
+        p.rootNodeType = clamp_name(value);
+        return;
+    }
+
+    if (iequals(key, "RootNodeName"))
+    {
+        mark_config_key(p, "RootNodeName");
+        if (blocked_by_cli(p, "RootNodeName")) return;
+        if (value.empty())
+        {
+            print_warning("Warning (line %d): RootNodeName is empty, will use resource name.\n", e.line);
+            return;
+        }
+        p.rootNodeName = clamp_name(value);
+        return;
+    }
+
+    if (iequals(key, "AnimName"))
+    {
+        mark_config_key(p, "AnimName");
+        if (blocked_by_cli(p, "AnimName")) return;
+        if (value.empty())
+        {
+            print_warning("Warning (line %d): AnimName is empty, using default name.\n", e.line);
+            return;
+        }
+        p.animName = clamp_name(value);
+        return;
+    }
+
+    if (iequals(key, "InputFile"))
+    {
+        mark_config_key(p, "InputFile");
+        if (blocked_by_cli(p, "InputFile")) return;
+        if (value.empty())
+        {
+            print_warning("Warning (line %d): InputFile is empty, ignored.\n", e.line);
+            return;
+        }
+        p.inputFileWholePath = clamp_path(resolve_config_path(p, value));
+        return;
+    }
+
+    if (iequals(key, "AnimGodotPath"))
+    {
+        mark_config_key(p, "AnimGodotPath");
+        if (blocked_by_cli(p, "AnimGodotPath")) return;
+        if (value.empty())
+        {
+            print_warning("Warning (line %d): AnimGodotPath is empty, ignored.\n", e.line);
+            return;
+        }
+        p.animOutputGodotPath = clamp_path(resolve_config_path(p, value));
+        return;
+    }
+
+    if (iequals(key, "ResGodotPath"))
+    {
+        mark_config_key(p, "ResGodotPath");
+        if (blocked_by_cli(p, "ResGodotPath")) return;
+        if (value.empty())
+        {
+            print_warning("Warning (line %d): ResGodotPath is empty, ignored.\n", e.line);
+            return;
+        }
+        p.resourceGodotPath = clamp_path(resolve_config_path(p, value));
+        return;
+    }
+
+    if (iequals(key, "OutputDir"))
+    {
+        mark_config_key(p, "OutputDir");
+        if (blocked_by_cli(p, "OutputDir")) return;
+        if (value.empty())
+        {
+            print_warning("Warning (line %d): OutputDir is empty, ignored.\n", e.line);
+            return;
+        }
+        p.outputFileWholePath = clamp_path(resolve_config_path(p, value));
+        p.outputFileSpecified = true;
+        return;
+    }
+
+    if (istarts_with(key, "UpdateModeDic."))
+    {
+        const std::string track_name = key.substr(14);
+        mark_config_key(p, key);
+
+        const auto mode = parse_update_mode(value, true);
+        if (!mode)
+        {
+            print_error("Warning (line %d): Invalid value '%s' for UpdateModeDic entry '%s'\n",
+                        e.line, value.c_str(), track_name.c_str());
+            return;
+        }
+
+        bool found = false;
+        for (auto& [name, existing] : p.updateModeDic)
+        {
+            if (name == track_name)
             {
-                print_error("Error: Token too long\n");
-                return false;
+                existing = *mode;
+                found = true;
+                break;
             }
         }
+        if (!found && p.updateModeDic.size() < static_cast<std::size_t>(MAX_TRACKS_NUM))
+            p.updateModeDic.emplace_back(track_name, *mode);
+
+        p.updateModeDicSpecified = true;
+        return;
     }
 
-    // 结束哨兵
-    if (param_count <= max_entries)
+    if (iequals(key, "InterpolationMode"))
     {
-        out.push_back(ConfigEntry{"EndOfFile", "0"});
+        mark_config_key(p, "InterpolationMode");
+        if (blocked_by_cli(p, "InterpolationMode")) return;
+        if (const auto v = parse_interpolation_mode(value, true))
+            p.interpolationMode = *v;
+        else
+            print_error("Warning (line %d): Invalid value for InterpolationMode\n", e.line);
+        return;
     }
 
-    return true;
+    if (iequals(key, "UpdateMode"))
+    {
+        mark_config_key(p, "UpdateMode");
+        if (blocked_by_cli(p, "UpdateMode")) return;
+        if (const auto v = parse_update_mode(value, true))
+            p.updateMode = *v;
+        else
+            print_error("Warning (line %d): Invalid value for UpdateMode\n", e.line);
+        return;
+    }
+
+    if (iequals(key, "FrameMode"))
+    {
+        mark_config_key(p, "FrameMode");
+        if (blocked_by_cli(p, "FrameMode")) return;
+        if (const auto v = parse_frame_mode(value, true))
+            p.frameMode = *v;
+        else
+            print_error("Warning (line %d): Invalid value for FrameMode\n", e.line);
+        return;
+    }
+
+    if (iequals(key, "TrackMode"))
+    {
+        mark_config_key(p, "TrackMode");
+        if (blocked_by_cli(p, "TrackMode")) return;
+        if (const auto v = parse_track_mode(value, true))
+            p.trackMode = *v;
+        else
+            print_error("Warning (line %d): Invalid value for TrackMode\n", e.line);
+        return;
+    }
+
+    print_warning("Warning (line %d): unknown config key '%s', ignored.\n", e.line, key.c_str());
+}
+
+const char* source_of(const Params& p, std::string_view key)
+{
+    if (std::find(p.cliSpecifiedKeys.begin(), p.cliSpecifiedKeys.end(), key) != p.cliSpecifiedKeys.end())
+        return "cli";
+    if (std::find(p.configSpecifiedKeys.begin(), p.configSpecifiedKeys.end(), key) != p.configSpecifiedKeys.end())
+        return "config";
+    return "default";
+}
+
+const char* output_mode_name(OutputMode mode)
+{
+    switch (mode)
+    {
+    case OutputMode::Tscn:       return "Tscn";
+    case OutputMode::TscnByAnim: return "TscnByAnim";
+    case OutputMode::AnimTres:   return "AnimTres";
+    case OutputMode::Auto:       return "Auto";
+    }
+    return "Auto";
+}
+
+const char* interpolation_mode_name(InterpolationMode mode)
+{
+    switch (mode)
+    {
+    case InterpolationMode::Nearest: return "Nearest";
+    case InterpolationMode::Linear:  return "Linear";
+    case InterpolationMode::Cubic:   return "Cubic";
+    }
+    return "Linear";
+}
+
+const char* update_mode_name(UpdateMode mode)
+{
+    switch (mode)
+    {
+    case UpdateMode::Continuous: return "Continuous";
+    case UpdateMode::Discrete:   return "Discrete";
+    case UpdateMode::Capture:    return "Capture";
+    }
+    return "Continuous";
+}
+
+const char* frame_mode_name(FrameMode mode)
+{
+    switch (mode)
+    {
+    case FrameMode::Inherit:  return "Inherit";
+    case FrameMode::Keyframe: return "Keyframe";
+    }
+    return "Inherit";
+}
+
+const char* track_mode_name(TrackMode mode)
+{
+    switch (mode)
+    {
+    case TrackMode::Separate:  return "Separate";
+    case TrackMode::Transform: return "Transform";
+    }
+    return "Separate";
 }
 
 }  // namespace
@@ -351,192 +720,96 @@ bool read_config_file(TextCursor& cur, std::vector<ConfigEntry>& out, int max_en
 void parse_config(Params& p, const std::string& config_file_path)
 {
     const std::string content = read_text_file(config_file_path, ErrorCode_CannotOpenConfigFile);
-    TextCursor cur{content, 0};
 
-    // 先扫描一遍疑似漏分号的行
-    warn_missing_semicolons(cur);
+    p.configFileDir = get_file_path(config_file_path);
+    if (p.configFileDir.empty())
+        p.configFileDir = ".";
 
-    std::vector<ConfigEntry> entries;
-    entries.reserve(MAX_PARAMS);
-    if (!read_config_file(cur, entries, MAX_PARAMS - 1))
-    {
-        // 原实现：exit(ErrorCode_CannotReadConfigFile)，不做清理
-        std::exit(ErrorCode_CannotReadConfigFile);
-    }
-
-    // 打印解析到的键值对（原实现是无条件 printf，保留）
+    const std::vector<ConfigEntry> entries = parse_config_text(content);
     for (const ConfigEntry& e : entries)
+        apply_config_entry(p, e);
+}
+
+void print_effective_config(const Params& p)
+{
+    if (p.configFiles.empty())
+        std::printf("[config] file = (none)\n");
+    else
     {
-        if (e.key == "EndOfFile") break;
-        std::printf("%s=%s\n", e.key.c_str(), e.value.c_str());
+        for (std::size_t i = 0; i < p.configFiles.size(); ++i)
+            std::printf("[config] file = %s%s\n", p.configFiles[i].c_str(),
+                        (i == 0 && p.configAutoDiscovered) ? " (auto)" : "");
     }
 
-    // ---- 应用配置项。命令行已指定的项一律跳过（这就是"命令行优先"的实现方式）----
-    for (const ConfigEntry& e : entries)
-    {
-        if (e.key == "EndOfFile") break;
-        const std::string& key   = e.key;
-        const std::string& value = e.value;
+    std::printf("[config] InputFile = %s (%s)\n", p.inputFileWholePath.c_str(), source_of(p, "InputFile"));
+    std::printf("[config] AnimGodotPath = %s (%s)\n", p.animOutputGodotPath.c_str(), source_of(p, "AnimGodotPath"));
+    std::printf("[config] ResGodotPath = %s (%s)\n", p.resourceGodotPath.c_str(), source_of(p, "ResGodotPath"));
+    std::printf("[config] OutputDir = %s (%s)\n",
+                p.outputFileSpecified ? p.outputFileWholePath.c_str() : "", source_of(p, "OutputDir"));
+    std::printf("[config] OutputMode = %s (%s)\n", output_mode_name(p.output_mode()), source_of(p, "OutputMode"));
+    std::printf("[config] InterpolationMode = %s (%s)\n",
+                interpolation_mode_name(p.interpolation_mode()), source_of(p, "InterpolationMode"));
+    std::printf("[config] UpdateMode = %s (%s)\n", update_mode_name(p.update_mode()), source_of(p, "UpdateMode"));
+    std::printf("[config] FrameMode = %s (%s)\n", frame_mode_name(p.frame_mode()), source_of(p, "FrameMode"));
+    std::printf("[config] TrackMode = %s (%s)\n", track_mode_name(p.track_mode()), source_of(p, "TrackMode"));
+    std::printf("[config] BlendModeEnabled = %s (%s)\n", p.blend_mode() ? "true" : "false",
+                source_of(p, "BlendModeEnabled"));
+    std::printf("[config] VisibleTrackEnabled = %s (%s)\n", p.visible_track() ? "true" : "false",
+                source_of(p, "VisibleTrackEnabled"));
+    std::printf("[config] TextureTrackEnabled = %s (%s)\n", p.texture_track() ? "true" : "false",
+                source_of(p, "TextureTrackEnabled"));
+    std::printf("[config] AlphaTrackEnabled = %s (%s)\n", p.alpha_track() ? "true" : "false",
+                source_of(p, "AlphaTrackEnabled"));
+    std::printf("[config] RootNodeType = %s (%s)\n", p.root_node_type().c_str(), source_of(p, "RootNodeType"));
+    std::printf("[config] RootNodeName = %s (%s)\n", p.root_node_name().c_str(), source_of(p, "RootNodeName"));
+    std::printf("[config] AnimName = %s (%s)\n", p.anim_name().c_str(), source_of(p, "AnimName"));
 
-        if (key == "OutputMode" && !p.outputMode)
-        {
-            // 注意：这一项在原实现里**没有**置 Specified，所以后面出现的同名项仍会生效；
-            // 非法值只报错、不改值。
-            if (const auto v = parse_output_mode(value, true))
-                p.outputMode = *v;
-            else
-                print_error("Warning: Invalid value for OutputMode\n");
-        }
-
-        if (key == "BlendModeEnabled" && !p.blendMode)
-        {
-            if (const auto v = parse_bool_flag(value))
-                p.blendMode = *v;
-            else
-            {
-                print_error("Warning: Invalid value for BlendModeEnabled\n");
-                p.blendMode = false;  // 原实现：非法值保持当前值（默认 false）并置 Specified
-            }
-        }
-
-        if (key == "VisibleTrackEnabled" && !p.visibleTrackEnabled)
-        {
-            if (const auto v = parse_bool_flag(value))
-                p.visibleTrackEnabled = *v;
-            else
-            {
-                print_error("Warning: Invalid value for VisibleEnabled\n");
-                p.visibleTrackEnabled = true;
-            }
-        }
-
-        if (key == "TextureTrackEnabled" && !p.textureTrackEnabled)
-        {
-            if (const auto v = parse_bool_flag(value))
-                p.textureTrackEnabled = *v;
-            else
-            {
-                print_error("Warning: Invalid value for TextureEnabled\n");
-                p.textureTrackEnabled = true;
-            }
-        }
-
-        if (key == "AlphaTrackEnabled" && !p.alphaTrackEnabled)
-        {
-            if (const auto v = parse_bool_flag(value))
-                p.alphaTrackEnabled = *v;
-            else
-            {
-                print_error("Warning: Invalid value for AlphaEnabled\n");
-                p.alphaTrackEnabled = true;
-            }
-        }
-
-        // 以下三项：空值只警告并跳过（注意原实现用的是 continue，后续同名项仍可生效）
-        if (key == "RootNodeType" && !p.rootNodeType)
-        {
-            if (value.empty())
-                print_warning("Warning: RootNodeType is empty, using default type 'Node2D'.\n");
-            else
-                p.rootNodeType = value;
-        }
-
-        if (key == "RootNodeName" && !p.rootNodeName)
-        {
-            if (value.empty())
-                print_warning("Warning: RootNodeName is empty, will use resource name.\n");
-            else
-                p.rootNodeName = value;
-        }
-
-        if (key == "AnimName" && !p.animName)
-        {
-            if (value.empty())
-                print_warning("Warning: AnimName is empty, using default name.\n");
-            else
-                p.animName = value;
-        }
-
-        // UpdateModeDic.<轨名>：后写覆盖，没有 Specified 守卫
-        if (key.starts_with("UpdateModeDic."))
-        {
-            const std::string_view track_name = std::string_view(key).substr(14);
-            const auto mode = parse_update_mode(value, true);
-            if (!mode)
-            {
-                print_error("Warning: Invalid value '%s' for UpdateModeDic entry '%s'\n",
-                            value.c_str(), std::string(track_name).c_str());
-                continue;
-            }
-
-            bool found = false;
-            for (auto& [name, existing] : p.updateModeDic)
-            {
-                if (name == track_name)
-                {
-                    print_warning("Warning: Duplicate UpdateModeDic entry for '%s', overwriting previous value.\n",
-                                  std::string(track_name).c_str());
-                    existing = *mode;  // 原实现只覆盖值，不换键名（键名相同所以无差别）
-                    found = true;
-                    break;
-                }
-            }
-            if (!found && p.updateModeDic.size() < static_cast<std::size_t>(MAX_TRACKS_NUM))
-                p.updateModeDic.emplace_back(std::string(track_name), *mode);
-
-            p.updateModeDicSpecified = true;
-        }
-
-        if (key == "InterpolationMode" && !p.interpolationMode)
-        {
-            if (const auto v = parse_interpolation_mode(value, true))
-                p.interpolationMode = *v;
-            else
-            {
-                print_error("Warning: Invalid value for InterpolationMode\n");
-                p.interpolationMode = InterpolationMode::Linear;
-            }
-        }
-
-        if (key == "UpdateMode" && !p.updateMode)
-        {
-            if (const auto v = parse_update_mode(value, true))
-                p.updateMode = *v;
-            else
-            {
-                print_error("Warning: Invalid value for UpdateMode\n");
-                p.updateMode = UpdateMode::Continuous;
-            }
-        }
-
-        if (key == "FrameMode" && !p.frameMode)
-        {
-            if (const auto v = parse_frame_mode(value, true))
-                p.frameMode = *v;
-            else
-            {
-                print_error("Warning: Invalid value for FrameMode\n");
-                p.frameMode = FrameMode::Inherit;
-            }
-        }
-
-        if (key == "TrackMode" && !p.trackMode)
-        {
-            if (const auto v = parse_track_mode(value, true))
-                p.trackMode = *v;
-            else
-            {
-                print_error("Warning: Invalid value for TrackMode\n");
-                p.trackMode = TrackMode::Separate;
-            }
-        }
-    }
-
-    std::printf("Parsed UpdateModeDic updateModeDicCount: %d\n", static_cast<int>(p.updateModeDic.size()));
     for (const auto& [name, mode] : p.updateModeDic)
     {
-        std::printf("UpdateModeDic[%s] = %d\n", name.c_str(), static_cast<int>(mode));
+        const std::string full_key = "UpdateModeDic." + name;
+        std::printf("[config] %s = %s (%s)\n", full_key.c_str(), update_mode_name(mode),
+                    source_of(p, full_key));
     }
+}
+
+void print_config_template()
+{
+    std::fputs(
+        "# R2Ga configuration template\n"
+        "# Command-line options override values in this file.\n"
+        "# A trailing ';' is optional. Keys are case-insensitive.\n"
+        "# Relative paths are resolved against the directory containing this file.\n"
+        "\n"
+        "# ---- input / output paths ----\n"
+        "# InputFile = C:/pvz/MainGame/Zombie/Zombie_walk.reanim\n"
+        "# AnimGodotPath = res://anim/\n"
+        "# ResGodotPath = res://art/\n"
+        "# OutputDir = res://anim/\n"
+        "\n"
+        "# ---- modes ----\n"
+        "OutputMode = Auto\n"
+        "InterpolationMode = Linear\n"
+        "UpdateMode = Continuous\n"
+        "FrameMode = Inherit\n"
+        "TrackMode = Separate\n"
+        "\n"
+        "# ---- track switches ----\n"
+        "BlendModeEnabled = false\n"
+        "VisibleTrackEnabled = true\n"
+        "TextureTrackEnabled = true\n"
+        "AlphaTrackEnabled = true\n"
+        "\n"
+        "# ---- node / animation names ----\n"
+        "# RootNodeType = Node2D\n"
+        "# RootNodeName = MyZombie\n"
+        "# AnimName = MyAnim\n"
+        "\n"
+        "# ---- per-track update modes ----\n"
+        "# UpdateModeDic = {\n"
+        "#     head = Discrete,\n"
+        "#     body = Continuous,\n"
+        "# };\n",
+        stdout);
 }
 
 }  // namespace r2ga

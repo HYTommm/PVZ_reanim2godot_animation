@@ -28,6 +28,137 @@ static void print_error(const char* format, ...)
     va_end(args);
 }
 
+// ---------------------------------------------------------------------------
+// 字符串与路径辅助
+// ---------------------------------------------------------------------------
+
+static void Trim(char* s)
+{
+    char* p = s;
+    while (*p != '\0' && isspace((unsigned char)*p))
+        p++;
+    if (p != s)
+        memmove(s, p, strlen(p) + 1);
+
+    size_t n = strlen(s);
+    while (n > 0 && isspace((unsigned char)s[n - 1]))
+        s[--n] = '\0';
+}
+
+static int StrCaseCmp(const char* a, const char* b)
+{
+    while (*a != '\0' && *b != '\0')
+    {
+        int ca = tolower((unsigned char)*a);
+        int cb = tolower((unsigned char)*b);
+        if (ca != cb)
+            return ca - cb;
+        a++;
+        b++;
+    }
+    return tolower((unsigned char)*a) - tolower((unsigned char)*b);
+}
+
+static int StrCaseStartsWith(const char* s, const char* prefix)
+{
+    while (*prefix != '\0')
+    {
+        if (*s == '\0')
+            return 0;
+        if (tolower((unsigned char)*s) != tolower((unsigned char)*prefix))
+            return 0;
+        s++;
+        prefix++;
+    }
+    return 1;
+}
+
+static int IsAbsolutePath(const char* p)
+{
+    if (p == NULL || p[0] == '\0')
+        return 0;
+    if (p[0] == '/' || p[0] == '\\')
+        return 1;
+    if (isalpha((unsigned char)p[0]) && p[1] == ':')
+        return 1;
+    if (StrCaseStartsWith(p, "res://"))
+        return 1;
+    return 0;
+}
+
+/// <summary> 配置中的相对路径以配置文件所在目录为基准 </summary>
+static void ResolveConfigPath(const R2GAStartParam* param, const char* value, char* out, size_t out_size)
+{
+    if (value[0] == '\0' || IsAbsolutePath(value))
+    {
+        snprintf(out, out_size, "%s", value);
+        return;
+    }
+
+    size_t dir_len = strlen(param->configFileDir);
+    if (dir_len == 0)
+    {
+        snprintf(out, out_size, "%s", value);
+        return;
+    }
+
+    const char last = param->configFileDir[dir_len - 1];
+    const char* sep = (last == '/' || last == '\\') ? "" : "\\";
+    snprintf(out, out_size, "%s%s%s", param->configFileDir, sep, value);
+}
+
+static int FileExists(const char* path)
+{
+    FILE* f = fopen(path, "rb");
+    if (f == NULL)
+        return 0;
+    fclose(f);
+    return 1;
+}
+
+static void AddKey(char keys[][NAME_LENGTH], int* count, const char* key)
+{
+    for (int i = 0; i < *count; i++)
+    {
+        if (StrCaseCmp(keys[i], key) == 0)
+            return;
+    }
+    if (*count >= MAX_PARAMS)
+        return;
+    strncpy(keys[*count], key, NAME_LENGTH - 1);
+    keys[*count][NAME_LENGTH - 1] = '\0';
+    (*count)++;
+}
+
+static int HasKey(char keys[][NAME_LENGTH], int count, const char* key)
+{
+    for (int i = 0; i < count; i++)
+    {
+        if (StrCaseCmp(keys[i], key) == 0)
+            return 1;
+    }
+    return 0;
+}
+
+static void MarkCliKey(R2GAStartParam* param, const char* key)
+{
+    AddKey(param->cliSpecifiedKeys, &param->cliSpecifiedKeyCount, key);
+}
+
+static void MarkConfigKey(R2GAStartParam* param, const char* key)
+{
+    AddKey(param->configSpecifiedKeys, &param->configSpecifiedKeyCount, key);
+}
+
+static int IsCliSpecified(const R2GAStartParam* param, const char* key)
+{
+    return HasKey((char (*)[NAME_LENGTH])param->cliSpecifiedKeys, param->cliSpecifiedKeyCount, key);
+}
+
+// ---------------------------------------------------------------------------
+// 初始化
+// ---------------------------------------------------------------------------
+
 Result StartParamInit(R2GAStartParam* param)
 {
     // 初始化参数
@@ -35,17 +166,30 @@ Result StartParamInit(R2GAStartParam* param)
     // 帮助信息
     param->help = false;
 
+    // 配置相关的开关
+    param->noConfig = false;
+    param->printConfig = false;
+    param->initConfig = false;
+
     // 输入文件
     param->inputFileSpecified = false;
+    param->inputFileWholePath[0] = '\0';
+    param->inputFilePath[0] = '\0';
+    param->inputFileName[0] = '\0';
 
     // 输出文件
     param->outputFileSpecified = false;
+    param->outputFileWholePath[0] = '\0';
+    param->outputFilePath[0] = '\0';
+    param->outputFileName[0] = '\0';
 
     // Godot动画存放路径
     param->animOutputGodotPathSpecified = false;
+    param->animOutputGodotPath[0] = '\0';
 
     // Godot资源存放路径
     param->resourceGodotPathSpecified = false;
+    param->resourceGodotPath[0] = '\0';
 
     // 输出模式
     param->outputModeSpecified = false;
@@ -69,6 +213,12 @@ Result StartParamInit(R2GAStartParam* param)
 
     // 配置文件路径
     param->configFileSpecified = false;
+    param->configFileWholePath[0] = '\0';
+    param->configFileCount = 0;
+    param->configFileDir[0] = '\0';
+    param->configAutoDiscovered = false;
+    param->cliSpecifiedKeyCount = 0;
+    param->configSpecifiedKeyCount = 0;
 
     // 混合模式是否启用
     param->blendModeTrackEnabledSpecified = false;
@@ -93,15 +243,19 @@ Result StartParamInit(R2GAStartParam* param)
 
     // 根节点名称
     param->rootNodeNameSpecified = false;
+    param->rootNodeName[0] = '\0';
 
     // 动画名称
     param->animNameSpecified = false;
+    param->animName[0] = '\0';
 
     // 动画白名单
     param->animWhitelistSpecified = false;
+    param->animWhitelistNum = 0;
 
     // 动画黑名单
     param->animBlacklistSpecified = false;
+    param->animBlacklistNum = 0;
 
     // 更新模式字典
     param->updateModeDicSpecified = false;
@@ -110,44 +264,96 @@ Result StartParamInit(R2GAStartParam* param)
     return Result_Success;
 }
 
+// ---------------------------------------------------------------------------
+// 命令行解析
+// ---------------------------------------------------------------------------
+
+static void AddConfigFile(R2GAStartParam* param, const char* path)
+{
+    if (param->configFileCount >= MAX_CONFIG_FILES)
+    {
+        print_warning("Warning: too many config files, '%s' ignored.\n", path);
+        return;
+    }
+
+    strncpy(param->configFiles[param->configFileCount], path, PATH_LENGTH - 1);
+    param->configFiles[param->configFileCount][PATH_LENGTH - 1] = '\0';
+    param->configFileCount++;
+
+    strncpy(param->configFileWholePath, path, PATH_LENGTH - 1);
+    param->configFileWholePath[PATH_LENGTH - 1] = '\0';
+    param->configFileSpecified = true;
+}
+
+static void SetPositionalArg(R2GAStartParam* param, int index, const char* value)
+{
+    switch (index)
+    {
+    case 0:
+        strncpy(param->inputFileWholePath, value, PATH_LENGTH - 1);
+        param->inputFileWholePath[PATH_LENGTH - 1] = '\0';
+        param->inputFileSpecified = true;
+        MarkCliKey(param, "InputFile");
+        break;
+    case 1:
+        strncpy(param->animOutputGodotPath, value, PATH_LENGTH - 1);
+        param->animOutputGodotPath[PATH_LENGTH - 1] = '\0';
+        param->animOutputGodotPathSpecified = true;
+        MarkCliKey(param, "AnimGodotPath");
+        break;
+    case 2:
+        strncpy(param->resourceGodotPath, value, PATH_LENGTH - 1);
+        param->resourceGodotPath[PATH_LENGTH - 1] = '\0';
+        param->resourceGodotPathSpecified = true;
+        MarkCliKey(param, "ResGodotPath");
+        break;
+    default:
+        break;
+    }
+}
+
 Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
 {
-    if (argc <= 4)
+    int positional_count = 0;
+    int option_count = 0;
+    int i = 1;
+
+    // 位置参数必须写在最前面；数量可以不足 3，其余由配置文件补齐
+    while (i < argc && positional_count < 3 && argv[i][0] != '-')
     {
-        if (argc == 2 && (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0))
-        {
-            param->help = true;
-            return Result_Success;
-        }
-        return Result_Failed;
+        SetPositionalArg(param, positional_count, argv[i]);
+        positional_count++;
+        i++;
     }
-    char* inputFileWholePath = argv[1];
-    char* animOutputGodotPath = argv[2];
-    char* resourceGodotPath = argv[3];
 
-    strncpy(param->inputFileWholePath, inputFileWholePath, PATH_LENGTH - 1);
-    param->inputFileWholePath[PATH_LENGTH - 1] = '\0';
-    strncpy(param->animOutputGodotPath, animOutputGodotPath, PATH_LENGTH - 1);
-    param->animOutputGodotPath[PATH_LENGTH - 1] = '\0';
-
-    FileGetFilePath(inputFileWholePath, param->inputFilePath);
-    FileGetFileNameWithoutExt(inputFileWholePath, param->inputFileName);
-
-    //param->animOutputGodotPath = animOutputGodotPath;
-    //param->resourceGodotPath = resourceGodotPath;
-    strncpy(param->animOutputGodotPath, animOutputGodotPath, PATH_LENGTH - 1);
-    param->animOutputGodotPath[PATH_LENGTH - 1] = '\0';
-    strncpy(param->resourceGodotPath, resourceGodotPath, PATH_LENGTH - 1);
-    param->resourceGodotPath[PATH_LENGTH - 1] = '\0';
-
-    for (int i = 4; i < argc; i++)
+    for (; i < argc; i++)
     {
         char* arg = argv[i];
+        option_count++;
+
         // 处理"-h", "--help"参数--显示帮助信息
         if (strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0)
         {
             param->help = true;
             return Result_Success;
+        }
+        // 处理"--no-config"参数--禁用配置文件自动发现
+        if (strcmp(arg, "--no-config") == 0)
+        {
+            param->noConfig = true;
+            continue;
+        }
+        // 处理"--print-config"参数--打印最终生效配置
+        if (strcmp(arg, "--print-config") == 0)
+        {
+            param->printConfig = true;
+            continue;
+        }
+        // 处理"--init-config"参数--输出配置模板
+        if (strcmp(arg, "--init-config") == 0)
+        {
+            param->initConfig = true;
+            continue;
         }
         // 处理"-of", "--output-file"参数--指定输出文件
         if (strcmp(arg, "-of") == 0 || strcmp(arg, "--output-file") == 0)
@@ -159,8 +365,7 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
             strncpy(param->outputFileWholePath, argv[i + 1], PATH_LENGTH - 1);
             param->outputFileWholePath[PATH_LENGTH - 1] = '\0';
             param->outputFileSpecified = true;
-            FileGetFilePath(param->outputFileWholePath, param->outputFilePath);
-            FileGetFileNameWithoutExt(param->outputFileWholePath, param->outputFileName);
+            MarkCliKey(param, "OutputDir");
             i++;
             continue;
         }
@@ -193,21 +398,19 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
                 return Result_Failed;
             }
             param->outputModeSpecified = true;
+            MarkCliKey(param, "OutputMode");
 
             i++;
             continue;
         }
-        // 处理"-f"参数--指定配置文件
+        // 处理"-cf", "--config-file"参数--指定配置文件（可重复，按顺序叠加）
         if (strcmp(arg, "-cf") == 0 || strcmp(arg, "--config-file") == 0)
         {
             if (i + 1 >= argc)
             {
                 return Result_Failed;
             }
-            //param->configFileWholePath = argv[i + 1];
-            strncpy(param->configFileWholePath, argv[i + 1], PATH_LENGTH - 1);
-            param->configFileWholePath[PATH_LENGTH - 1] = '\0';
-            param->configFileSpecified = true;
+            AddConfigFile(param, argv[i + 1]);
             i++;
             continue;
         }
@@ -216,6 +419,7 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
         {
             param->blendModeTrackEnabledSpecified = true;
             param->blendModeTrackEnabled = true;
+            MarkCliKey(param, "BlendModeEnabled");
             continue;
         }
         // 处理"-nbm", "--no-blend-mode"参数--禁用混合模式
@@ -223,6 +427,7 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
         {
             param->blendModeTrackEnabledSpecified = true;
             param->blendModeTrackEnabled = false;
+            MarkCliKey(param, "BlendModeEnabled");
             continue;
         }
         // 处理"-rnt", "--root-node-type"参数--指定根节点类型
@@ -235,6 +440,7 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
             strncpy(param->rootnodeType, argv[i + 1], NAME_LENGTH - 1);
             param->rootnodeType[NAME_LENGTH - 1] = '\0';
             param->rootnodeTypeSpecified = true;
+            MarkCliKey(param, "RootNodeType");
             i++;
             continue;
         }
@@ -245,6 +451,7 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
             strncpy(param->rootNodeName, argv[i + 1], NAME_LENGTH - 1);
             param->rootNodeName[NAME_LENGTH - 1] = '\0';
             param->rootNodeNameSpecified = true;
+            MarkCliKey(param, "RootNodeName");
             i++;
             continue;
         }
@@ -258,6 +465,7 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
             strncpy(param->animName, argv[i + 1], NAME_LENGTH - 1);
             param->animName[NAME_LENGTH - 1] = '\0';
             param->animNameSpecified = true;
+            MarkCliKey(param, "AnimName");
             i++;
             continue;
         }
@@ -270,7 +478,6 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
             }
             char* interpolationMode = argv[i + 1];
 
-            //param->interpolationMode = interpolationMode;
             if (strcmp(interpolationMode, INTERPOLATION_MODE_NEAREST_STR) == 0)
             {
                 param->interpolationMode = INTERPOLATION_MODE_NEAREST;
@@ -289,6 +496,7 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
             }
 
             param->interpolationModeSpecified = true;
+            MarkCliKey(param, "InterpolationMode");
             i++;
             continue;
         }
@@ -303,6 +511,7 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
             else if (strcmp(updateMode, UPDATE_MODE_CAPTURE_STR) == 0)    param->updateMode = UPDATE_MODE_CAPTURE;
             else    return Result_Failed;
             param->updateModeSpecified = true;
+            MarkCliKey(param, "UpdateMode");
             i++;
             continue;
         }
@@ -316,6 +525,7 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
             else if (strcmp(frameMode, FRAME_MODE_KEYFRAME_STR) == 0)    param->frameMode = FRAME_MODE_KEYFRAME;
             else    return Result_Failed;
             param->frameModeSpecified = true;
+            MarkCliKey(param, "FrameMode");
             i++;
             continue;
         }
@@ -329,6 +539,7 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
             else if (strcmp(trackMode, TRACK_MODE_TRANSFORM_STR) == 0)    param->trackMode = TRACK_MODE_TRANSFORM;
             else    return Result_Failed;
             param->trackModeSpecified = true;
+            MarkCliKey(param, "TrackMode");
             i++;
             continue;
         }
@@ -336,611 +547,930 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
         println(format("Unknown interpolation mode: {} ", argv[i]));
     }
 
+    // 保留旧行为：恰好三个位置参数且不带任何选项时，判定为参数错误
+    if (positional_count == 3 && option_count == 0)
+        return Result_Failed;
+
     return Result_Success;
 }
 
-Result ReadConfigFile(FILE* file, R2GAConfigParam configParams[], int maxConfigParams)
+// ---------------------------------------------------------------------------
+// 配置文件解析
+//
+// 语法（分号可选）：
+//     # 注释
+//     key = value
+//     key = value;
+//     k1 k2 = value      ; 多个键共享同一个值
+//     key = { .sub1 = v1, sub2 = v2 }   ; 展平为 key.sub1 / key.sub2
+//
+// 值一直取到行尾或分号，首尾空白会被去掉；可以用单/双引号包住含空格的值。
+// 行内 # 之后的内容视为注释（引号内除外）。键名大小写不敏感。
+// ---------------------------------------------------------------------------
+
+/// <summary> 解析一个配置值：去引号、去行内注释、去掉行尾可选的分号 </summary>
+static void ParseConfigValue(const char* raw, char* out, size_t out_size, int line, const char* key)
 {
-    int param_count = 0;        // 已解析参数计数器
-    int line_number = 1;        // 当前行号
-    int ch;                    // 当前字符
+    char buf[PATH_LENGTH * 2];
+    snprintf(buf, sizeof(buf), "%s", raw);
+    Trim(buf);
 
-    // 临时存储当前命令的token
-    char tokens[MAX_TOKENS][NAME_LENGTH];
-    int token_count = 0;
-
-    // 当前token的写入位置
-    int token_pos = 0;
-
-    // 初始化第一个token
-    tokens[0][0] = '\0';
-
-    while ((ch = fgetc(file)) != EOF && param_count < maxConfigParams)
+    if (buf[0] == '"' || buf[0] == '\'')
     {
-        // 跳过空白字符（同时追踪行号）
-        if (ch == '\n')
+        const char quote = buf[0];
+        char* close = strchr(buf + 1, quote);
+        if (close != NULL)
         {
-            line_number++; continue;
+            *close = '\0';
+            snprintf(out, out_size, "%s", buf + 1);
+            return;
         }
-        if (isspace(ch))
-            continue;
-        // 支持以 '#' 开头的注释，跳过注释直到行尾（Python 风格）
-        if (ch == '#')
+        print_warning("Warning (line %d): unterminated quote in value for '%s'.\n", line, key);
+        snprintf(out, out_size, "%s", buf + 1);
+        Trim(out);
+        return;
+    }
+
+    // 行内注释
+    char* hash = strchr(buf, '#');
+    if (hash != NULL)
+    {
+        *hash = '\0';
+        Trim(buf);
+    }
+
+    // 行尾可选分号
+    size_t n = strlen(buf);
+    if (n > 0 && buf[n - 1] == ';')
+    {
+        buf[n - 1] = '\0';
+        Trim(buf);
+    }
+
+    snprintf(out, out_size, "%s", buf);
+}
+
+static void AddConfigEntry(R2GAConfigParam* params, int max_params, int* count,
+                           const char* key, const char* value, int line)
+{
+    if (*count >= max_params)
+    {
+        print_warning("Warning (line %d): too many config entries, '%s' ignored.\n", line, key);
+        return;
+    }
+
+    strncpy(params[*count].key, key, NAME_LENGTH - 1);
+    params[*count].key[NAME_LENGTH - 1] = '\0';
+    strncpy(params[*count].value, value, PATH_LENGTH - 1);
+    params[*count].value[PATH_LENGTH - 1] = '\0';
+    params[*count].line = line;
+    (*count)++;
+}
+
+/// <summary>
+/// 读取字典块（首个 '{' 之后的内容已在 first_chunk 中），直到匹配的 '}'。
+/// 块内条目用逗号或换行分隔；值可以含空格，可以加引号。
+/// </summary>
+static Result ReadDictBlock(FILE* file, const char* first_chunk, const char* prefix,
+                            int* line_number, R2GAConfigParam* params, int max_params, int* count)
+{
+    char block[16384];
+    size_t block_len = 0;
+
+    const char* p = first_chunk;
+    int in_quote = 0;
+    char quote = '\0';
+    char ch = '\0';
+    int closed = 0;
+
+    while (1)
+    {
+        if (*p != '\0')
         {
-            // 忽略直到换行或 EOF
-            while ((ch = fgetc(file)) != EOF && ch != '\n');
-            if (ch == '\n') line_number++;
-            continue;
-        }
-        if (ch == '=')
-        {
-            // 遇到等号，说明当前token解析结束
-            tokens[token_count][token_pos] = '\0';
-            token_count++;
-            token_pos = 0;
-            // 检查token是否超过最大数量
-            if (token_count >= MAX_TOKENS)
-            {
-                print_error("Error: Too many tokens in one command\n");
-                return Result_Failed;
-            }
-
-            // 检查下一个非空白字符是否为 '{'，进入字典块解析模式
-            int peek_ch;
-            while ((peek_ch = fgetc(file)) != EOF && isspace(peek_ch))
-            {
-                if (peek_ch == '\n') line_number++;
-            }
-            if (peek_ch == '{')
-            {
-                // 字典块语法: key = { subkey1 = val1, subkey2 = val2 };
-                // 存储为多组 "key.subkey=val" 的键值对
-                char* prefix = tokens[0];
-                char entry_key[NAME_LENGTH];
-                char entry_value[NAME_LENGTH];
-                int ek_pos, ev_pos;
-                int expect_comma = 0;
-                char full_key[NAME_LENGTH];
-
-                while ((peek_ch = fgetc(file)) != EOF)
-                {
-                    if (peek_ch == '\n')
-                    {
-                        line_number++; continue;
-                    }
-                    if (isspace(peek_ch)) continue;
-                    if (peek_ch == '}') break;
-                    if (peek_ch == ',')
-                    {
-                        expect_comma = 0;
-                        continue;
-                    }
-
-                    // 检测遗漏逗号（条目粘连）
-                    if (expect_comma)
-                    {
-                        print_warning("Warning (line %d): Missing comma between entries in dict block.\n", line_number);
-                        expect_comma = 0;
-                    }
-
-                    // 读取条目键名（跳过前导点号）
-                    ek_pos = 0;
-                    if (peek_ch == '.')
-                    {
-                        peek_ch = fgetc(file);
-                        if (peek_ch == '\n') line_number++;
-                    }
-                    entry_key[ek_pos++] = (char)peek_ch;
-                    while ((peek_ch = fgetc(file)) != EOF && !isspace(peek_ch) && peek_ch != '=')
-                    {
-                        if (ek_pos < NAME_LENGTH - 1)
-                            entry_key[ek_pos++] = (char)peek_ch;
-                    }
-                    entry_key[ek_pos] = '\0';
-
-                    // 跳过空白和等号，定位到值
-                    while (peek_ch != EOF && (isspace(peek_ch) || peek_ch == '='))
-                    {
-                        if (peek_ch == '\n') line_number++;
-                        peek_ch = fgetc(file);
-                    }
-
-                    // 读取条目值
-                    ev_pos = 0;
-                    entry_value[ev_pos++] = (char)peek_ch;
-                    while ((peek_ch = fgetc(file)) != EOF && !isspace(peek_ch) && peek_ch != ',' && peek_ch != '}')
-                    {
-                        if (ev_pos < NAME_LENGTH - 1)
-                            entry_value[ev_pos++] = (char)peek_ch;
-                    }
-                    entry_value[ev_pos] = '\0';
-                    if (peek_ch == '\n') line_number++;
-
-                    // 构造完整键名 "前缀.键"
-                    snprintf(full_key, NAME_LENGTH, "%s.%s", prefix, entry_key);
-
-                    // 检查字典键重复（后写覆盖前）
-                    for (int di = 0; di < param_count; di++)
-                    {
-                        if (strcmp(configParams[di].key, full_key) == 0)
-                        {
-                            print_warning("Warning (line %d): Duplicate key '%s' in dict block, later value will overwrite the earlier one.\n", line_number, full_key);
-                            break;
-                        }
-                    }
-
-                    if (param_count < maxConfigParams)
-                    {
-                        strncpy(configParams[param_count].key, full_key, NAME_LENGTH - 1);
-                        configParams[param_count].key[NAME_LENGTH - 1] = '\0';
-                        strncpy(configParams[param_count].value, entry_value, NAME_LENGTH - 1);
-                        configParams[param_count].value[NAME_LENGTH - 1] = '\0';
-                        param_count++;
-                    }
-
-                    // 值末尾有逗号则已正常分隔，否则标记期望逗号
-                    if (peek_ch == '}') break;
-                    if (peek_ch != ',')
-                    {
-                        expect_comma = 1;
-                    }
-                }
-
-                // 检测花括号未闭合
-                if (peek_ch != '}')
-                {
-                    print_warning("Warning (line %d): Unmatched '{' in dict block, missing closing '}' before end of file.\n", line_number);
-                }
-
-                // 跳过块结尾的分号
-                while ((peek_ch = fgetc(file)) != EOF && peek_ch != ';')
-                {
-                    if (peek_ch == '\n') line_number++;
-                }
-
-                // 重置状态
-                token_count = 0;
-                token_pos = 0;
-                tokens[0][0] = '\0';
-                continue;
-            }
-            else if (peek_ch != EOF)
-            {
-                ungetc(peek_ch, file);
-            }
-        }
-        else if (ch == ';')
-        {
-            // 遇到分号，说明当前命令解析结束
-            tokens[token_count][token_pos] = '\0';
-            token_count++;
-            token_pos = 0;
-
-            if (token_count < 2)
-            {
-                print_error("Error: Not enough tokens in one command\n");
-                return Result_Failed;
-            }
-
-            char* value = tokens[token_count - 1];
-
-            // 前面的token都是键
-            for (int i = 0; i < token_count - 1; i++)
-            {
-                if (param_count < maxConfigParams)
-                {
-                    strncpy(configParams[param_count].key, tokens[i], NAME_LENGTH - 1);
-                    configParams[param_count].key[NAME_LENGTH - 1] = '\0';
-                    strncpy(configParams[param_count].value, value, NAME_LENGTH - 1);
-                    configParams[param_count].value[NAME_LENGTH - 1] = '\0';
-                    param_count++;
-                }
-            }
-
-            // 重置状态
-            token_count = 0;
-            token_pos = 0;
-            tokens[0][0] = '\0';
+            ch = *p;
+            p++;
         }
         else
         {
-            // 其他字符，写入当前token
-            tokens[token_count][token_pos] = ch;   // 写入字符
-            token_pos++;
-            tokens[token_count][token_pos] = '\0';  // 结束字符串
-            // 检查token长度
-            if (token_pos >= NAME_LENGTH)
-            {
-                print_error("Error: Token too long\n");
-                return Result_Failed;
-            }
+            int c = fgetc(file);
+            if (c == EOF)
+                break;
+            ch = (char)c;
+        }
+
+        if (ch == '\n')
+            (*line_number)++;
+
+        if (in_quote)
+        {
+            if (ch == quote)
+                in_quote = 0;
+        }
+        else if (ch == '"' || ch == '\'')
+        {
+            in_quote = 1;
+            quote = ch;
+        }
+        else if (ch == '}')
+        {
+            closed = 1;
+            break;
+        }
+
+        if (block_len < sizeof(block) - 1)
+            block[block_len++] = ch;
+        else
+        {
+            print_warning("Warning (line %d): config dict block too large, truncated.\n", *line_number);
+            break;
+        }
+    }
+    block[block_len] = '\0';
+
+    if (!closed)
+        print_warning("Warning (line %d): unmatched '{' in dict block.\n", *line_number);
+
+    // 跳过块结尾的可选分号；遇到其他非空白字符时退回输入流
+    while (1)
+    {
+        int c = fgetc(file);
+        if (c == EOF)
+            break;
+        ch = (char)c;
+        if (ch == '\n')
+            (*line_number)++;
+        if (ch == ';')
+            break;
+        if (!isspace((unsigned char)ch))
+        {
+            ungetc(c, file);
+            break;
         }
     }
 
-    // 使用"EndOfFile"=0作为结束标记
-    if (param_count <= maxConfigParams)
+    // 解析块内条目
+    char* q = block;
+    while (*q != '\0')
     {
-        strncpy(configParams[param_count].key, "EndOfFile", NAME_LENGTH - 1);
-        configParams[param_count].key[NAME_LENGTH - 1] = '\0';
-        strncpy(configParams[param_count].value, "0", NAME_LENGTH - 1);
-        configParams[param_count].value[NAME_LENGTH - 1] = '\0';
-        param_count++;
+        while (*q != '\0' && (isspace((unsigned char)*q) || *q == ',' || *q == ';'))
+        {
+            if (*q == '\n') (*line_number)++;
+            q++;
+        }
+        if (*q == '\0')
+            break;
+        if (*q == '#')
+        {
+            while (*q != '\0' && *q != '\n') q++;
+            continue;
+        }
+
+        const int entry_line = *line_number;
+
+        // 子键（允许前导点号）
+        if (*q == '.')
+            q++;
+        char subkey[NAME_LENGTH];
+        int sk = 0;
+        while (*q != '\0' && *q != '=' && !isspace((unsigned char)*q) && *q != ',' && *q != '}')
+        {
+            if (sk < NAME_LENGTH - 1)
+                subkey[sk++] = *q;
+            q++;
+        }
+        subkey[sk] = '\0';
+
+        // 跳到 '=' 之后
+        while (*q != '\0' && (isspace((unsigned char)*q) || *q == '='))
+        {
+            if (*q == '\n') (*line_number)++;
+            q++;
+        }
+
+        // 读值，直到逗号/换行/块尾（引号内除外）
+        char raw[PATH_LENGTH * 2];
+        int ri = 0;
+        in_quote = 0;
+        quote = '\0';
+        while (*q != '\0')
+        {
+            if (in_quote)
+            {
+                if (*q == quote) in_quote = 0;
+                if (ri < (int)sizeof(raw) - 1) raw[ri++] = *q;
+                q++;
+                continue;
+            }
+            if (*q == '"' || *q == '\'')
+            {
+                in_quote = 1;
+                quote = *q;
+                if (ri < (int)sizeof(raw) - 1) raw[ri++] = *q;
+                q++;
+                continue;
+            }
+            if (*q == ',' || *q == '\n' || *q == '\r')
+                break;
+            if (*q == '#')
+            {
+                while (*q != '\0' && *q != '\n') q++;
+                break;
+            }
+            if (ri < (int)sizeof(raw) - 1) raw[ri++] = *q;
+            q++;
+        }
+        raw[ri] = '\0';
+
+        // 跳过剩余的分隔符
+        while (*q != '\0' && *q != ',' && *q != '\n') q++;
+
+        if (subkey[0] == '\0')
+        {
+            print_warning("Warning (line %d): dict block entry without a key, ignored.\n", entry_line);
+            continue;
+        }
+
+        char value[PATH_LENGTH];
+        ParseConfigValue(raw, value, sizeof(value), entry_line, subkey);
+
+        char full_key[NAME_LENGTH];
+        snprintf(full_key, sizeof(full_key), "%s.%s", prefix, subkey);
+        AddConfigEntry(params, max_params, count, full_key, value, entry_line);
     }
 
     return Result_Success;
 }
 
-static void WarnMissingSemicolons(FILE* file)
+static Result ReadConfigFile(FILE* file, R2GAConfigParam* params, int max_params, int* out_count)
 {
-    rewind(file);
-
-    int line_num = 0;
-    char prev_line_stripped[4096] = "";
-    int prev_line_num = 0;
     char line[4096];
+    int line_number = 0;
+    int count = 0;
+    int first_line = 1;
 
-    while (fgets(line, sizeof(line), file))
+    while (fgets(line, sizeof(line), file) != NULL)
     {
-        line_num++;
+        line_number++;
 
-        // 移除行内注释
-        char* hash = strchr(line, '#');
-        if (hash) *hash = '\0';
-
-        // 去除尾部空白
-        char* end = line + strlen(line) - 1;
-        while (end >= line && isspace((unsigned char)*end)) *end-- = '\0';
-
-        // 空行或纯注释行，重置跟踪
-        if (end < line)
+        // 跳过 UTF-8 BOM
+        if (first_line)
         {
-            prev_line_stripped[0] = '\0';
-            prev_line_num = 0;
-            continue;
+            first_line = 0;
+            if ((unsigned char)line[0] == 0xEF && (unsigned char)line[1] == 0xBB && (unsigned char)line[2] == 0xBF)
+                memmove(line, line + 3, strlen(line + 3) + 1);
         }
 
-        // 定位第一个非空白字符
+        // 去掉行尾换行
+        size_t len = strlen(line);
+        while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r'))
+            line[--len] = '\0';
+
         char* start = line;
-        while (*start && isspace((unsigned char)*start)) start++;
+        while (*start != '\0' && isspace((unsigned char)*start))
+            start++;
         if (*start == '\0' || *start == '#')
+            continue;
+
+        // 找引号外的第一个 '='
+        char* eq = NULL;
+        int in_quote = 0;
+        char quote = '\0';
+        for (char* p = start; *p != '\0'; p++)
         {
-            prev_line_stripped[0] = '\0';
-            prev_line_num = 0;
+            if (in_quote)
+            {
+                if (*p == quote) in_quote = 0;
+            }
+            else if (*p == '"' || *p == '\'')
+            {
+                in_quote = 1;
+                quote = *p;
+            }
+            else if (*p == '=')
+            {
+                eq = p;
+                break;
+            }
+        }
+
+        if (eq == NULL)
+        {
+            print_warning("Warning (line %d): missing '='; line ignored.\n", line_number);
             continue;
         }
 
-        char last_char = line[strlen(line) - 1];
+        *eq = '\0';
+        char left[PATH_LENGTH * 2];
+        snprintf(left, sizeof(left), "%s", start);
+        Trim(left);
 
-        // 本行以非空白开头，检查上一行是否缺少分号
-        if (start == line && prev_line_num > 0 && prev_line_stripped[0] != '\0')
+        char* right = eq + 1;
+        Trim(right);
+
+        // 左侧按空白拆成多个键（k1 k2 = value）
+        char keys[MAX_TOKENS][NAME_LENGTH];
+        int key_count = 0;
+        char* token = strtok(left, " \t");
+        while (token != NULL && key_count < MAX_TOKENS)
         {
-            char prev_last = prev_line_stripped[strlen(prev_line_stripped) - 1];
-            if (prev_last != ';' && prev_last != '=' && prev_last != '{' && *start != '=')
-            {
-                print_warning("Warning (line %d): line starts with '%c...' but previous line (line %d) does not end with ';' or '='. A semicolon may be missing.\n",
-                    line_num, *start, prev_line_num);
-            }
+            strncpy(keys[key_count], token, NAME_LENGTH - 1);
+            keys[key_count][NAME_LENGTH - 1] = '\0';
+            key_count++;
+            token = strtok(NULL, " \t");
         }
 
-        // 检测未闭合的 '{'（多行字典块），跳过其内容
-        char* open_brace = strchr(line, '{');
-        if (open_brace)
+        if (key_count == 0)
         {
-            char* close_brace = strchr(line, '}');
-            if (!close_brace)
-            {
-                int brace_depth = 1;
-                int ch;
-                while (brace_depth > 0 && (ch = fgetc(file)) != EOF)
-                {
-                    if (ch == '\n') line_num++;
-                    if (ch == '{') brace_depth++;
-                    else if (ch == '}') brace_depth--;
-                }
-                // 消费尾部 ';'
-                while ((ch = fgetc(file)) != EOF && ch != ';')
-                {
-                    if (ch == '\n') line_num++;
-                }
-                prev_line_stripped[0] = '\0';
-                prev_line_num = 0;
-                continue;
-            }
+            print_warning("Warning (line %d): missing key before '='; line ignored.\n", line_number);
+            continue;
         }
 
-        // 保存当前行供下一轮检查
-        strncpy(prev_line_stripped, line, sizeof(prev_line_stripped) - 1);
-        prev_line_stripped[sizeof(prev_line_stripped) - 1] = '\0';
-        prev_line_num = line_num;
+        // 字典块
+        if (right[0] == '{')
+        {
+            ReadDictBlock(file, right + 1, keys[0], &line_number, params, max_params, &count);
+            continue;
+        }
+
+        char value[PATH_LENGTH];
+        ParseConfigValue(right, value, sizeof(value), line_number, keys[0]);
+
+        for (int k = 0; k < key_count; k++)
+            AddConfigEntry(params, max_params, &count, keys[k], value, line_number);
     }
 
-    rewind(file);
+    *out_count = count;
+    return Result_Success;
+}
+
+// ---------------------------------------------------------------------------
+// 配置应用
+// ---------------------------------------------------------------------------
+
+static int ParseConfigBool(const char* value, int* out)
+{
+    if (StrCaseCmp(value, "1") == 0 || StrCaseCmp(value, "true") == 0)
+    {
+        *out = 1;
+        return 1;
+    }
+    if (StrCaseCmp(value, "0") == 0 || StrCaseCmp(value, "false") == 0)
+    {
+        *out = 0;
+        return 1;
+    }
+    return 0;
+}
+
+/// <summary> 配置条目是否被命令行覆盖 </summary>
+static int ApplyBlocked(const R2GAStartParam* param, const char* key)
+{
+    return IsCliSpecified(param, key);
+}
+
+static void ApplyConfigEntry(R2GAStartParam* param, const R2GAConfigParam* entry)
+{
+    const char* key = entry->key;
+    const char* value = entry->value;
+
+    // 处理"OutputMode"参数
+    if (StrCaseCmp(key, "OutputMode") == 0)
+    {
+        MarkConfigKey(param, "OutputMode");
+        if (ApplyBlocked(param, "OutputMode")) return;
+        if (StrCaseCmp(value, MODE_TSCN_STR) == 0 || StrCaseCmp(value, MODE_TSCN_STR_CAMEL) == 0)
+            param->outputMode = OutputMode_Tscn;
+        else if (StrCaseCmp(value, MODE_TSCN_BY_ANIM_STR) == 0 || StrCaseCmp(value, MODE_TSCN_BY_ANIM_STR_CAMEL) == 0)
+            param->outputMode = OutputMode_TscnByAnim;
+        else if (StrCaseCmp(value, MODE_ANIM_TRES_STR) == 0 || StrCaseCmp(value, MODE_ANIM_TRES_STR_CAMEL) == 0)
+            param->outputMode = OutputMode_AnimTres;
+        else if (StrCaseCmp(value, MODE_AUTO_STR) == 0 || StrCaseCmp(value, MODE_AUTO_STR_CAMEL) == 0)
+            param->outputMode = OutputMode_Auto;
+        else
+            print_error("Warning (line %d): Invalid value for OutputMode\n", entry->line);
+        return;
+    }
+
+    // 处理"BlendModeEnabled"参数
+    if (StrCaseCmp(key, "BlendModeEnabled") == 0)
+    {
+        MarkConfigKey(param, "BlendModeEnabled");
+        if (ApplyBlocked(param, "BlendModeEnabled")) return;
+        int v = 0;
+        if (ParseConfigBool(value, &v))
+            param->blendModeTrackEnabled = (v != 0);
+        else
+            print_error("Warning (line %d): Invalid value for BlendModeEnabled\n", entry->line);
+        param->blendModeTrackEnabledSpecified = true;
+        return;
+    }
+
+    // 处理"VisibleTrackEnabled"参数
+    if (StrCaseCmp(key, "VisibleTrackEnabled") == 0)
+    {
+        MarkConfigKey(param, "VisibleTrackEnabled");
+        if (ApplyBlocked(param, "VisibleTrackEnabled")) return;
+        int v = 0;
+        if (ParseConfigBool(value, &v))
+            param->visibleTrackEnabled = (v != 0);
+        else
+            print_error("Warning (line %d): Invalid value for VisibleEnabled\n", entry->line);
+        param->visibleTrackEnabledSpecified = true;
+        return;
+    }
+
+    // 处理"TextureTrackEnabled"参数
+    if (StrCaseCmp(key, "TextureTrackEnabled") == 0)
+    {
+        MarkConfigKey(param, "TextureTrackEnabled");
+        if (ApplyBlocked(param, "TextureTrackEnabled")) return;
+        int v = 0;
+        if (ParseConfigBool(value, &v))
+            param->textureTrackEnabled = (v != 0);
+        else
+            print_error("Warning (line %d): Invalid value for TextureEnabled\n", entry->line);
+        param->textureTrackEnabledSpecified = true;
+        return;
+    }
+
+    // 处理"AlphaTrackEnabled"参数
+    if (StrCaseCmp(key, "AlphaTrackEnabled") == 0)
+    {
+        MarkConfigKey(param, "AlphaTrackEnabled");
+        if (ApplyBlocked(param, "AlphaTrackEnabled")) return;
+        int v = 0;
+        if (ParseConfigBool(value, &v))
+            param->alphaTrackEnabled = (v != 0);
+        else
+            print_error("Warning (line %d): Invalid value for AlphaEnabled\n", entry->line);
+        param->alphaTrackEnabledSpecified = true;
+        return;
+    }
+
+    // 处理"RootNodeType"参数
+    if (StrCaseCmp(key, "RootNodeType") == 0)
+    {
+        MarkConfigKey(param, "RootNodeType");
+        if (ApplyBlocked(param, "RootNodeType")) return;
+        if (value[0] == '\0')
+        {
+            print_warning("Warning (line %d): RootNodeType is empty, using default type 'Node2D'.\n", entry->line);
+            return;
+        }
+        strncpy(param->rootnodeType, value, NAME_LENGTH - 1);
+        param->rootnodeType[NAME_LENGTH - 1] = '\0';
+        param->rootnodeTypeSpecified = true;
+        return;
+    }
+
+    // 处理"RootNodeName"参数
+    if (StrCaseCmp(key, "RootNodeName") == 0)
+    {
+        MarkConfigKey(param, "RootNodeName");
+        if (ApplyBlocked(param, "RootNodeName")) return;
+        if (value[0] == '\0')
+        {
+            print_warning("Warning (line %d): RootNodeName is empty, will use resource name.\n", entry->line);
+            return;
+        }
+        strncpy(param->rootNodeName, value, NAME_LENGTH - 1);
+        param->rootNodeName[NAME_LENGTH - 1] = '\0';
+        param->rootNodeNameSpecified = true;
+        return;
+    }
+
+    // 处理"AnimName"参数
+    if (StrCaseCmp(key, "AnimName") == 0)
+    {
+        MarkConfigKey(param, "AnimName");
+        if (ApplyBlocked(param, "AnimName")) return;
+        if (value[0] == '\0')
+        {
+            print_warning("Warning (line %d): AnimName is empty, using default name.\n", entry->line);
+            return;
+        }
+        strncpy(param->animName, value, NAME_LENGTH - 1);
+        param->animName[NAME_LENGTH - 1] = '\0';
+        param->animNameSpecified = true;
+        return;
+    }
+
+    // 路径项：InputFile / AnimGodotPath / ResGodotPath / OutputDir
+    if (StrCaseCmp(key, "InputFile") == 0)
+    {
+        MarkConfigKey(param, "InputFile");
+        if (ApplyBlocked(param, "InputFile")) return;
+        if (value[0] == '\0')
+        {
+            print_warning("Warning (line %d): InputFile is empty, ignored.\n", entry->line);
+            return;
+        }
+        ResolveConfigPath(param, value, param->inputFileWholePath, sizeof(param->inputFileWholePath));
+        param->inputFileSpecified = true;
+        return;
+    }
+    if (StrCaseCmp(key, "AnimGodotPath") == 0)
+    {
+        MarkConfigKey(param, "AnimGodotPath");
+        if (ApplyBlocked(param, "AnimGodotPath")) return;
+        if (value[0] == '\0')
+        {
+            print_warning("Warning (line %d): AnimGodotPath is empty, ignored.\n", entry->line);
+            return;
+        }
+        ResolveConfigPath(param, value, param->animOutputGodotPath, sizeof(param->animOutputGodotPath));
+        param->animOutputGodotPathSpecified = true;
+        return;
+    }
+    if (StrCaseCmp(key, "ResGodotPath") == 0)
+    {
+        MarkConfigKey(param, "ResGodotPath");
+        if (ApplyBlocked(param, "ResGodotPath")) return;
+        if (value[0] == '\0')
+        {
+            print_warning("Warning (line %d): ResGodotPath is empty, ignored.\n", entry->line);
+            return;
+        }
+        ResolveConfigPath(param, value, param->resourceGodotPath, sizeof(param->resourceGodotPath));
+        param->resourceGodotPathSpecified = true;
+        return;
+    }
+    if (StrCaseCmp(key, "OutputDir") == 0)
+    {
+        MarkConfigKey(param, "OutputDir");
+        if (ApplyBlocked(param, "OutputDir")) return;
+        if (value[0] == '\0')
+        {
+            print_warning("Warning (line %d): OutputDir is empty, ignored.\n", entry->line);
+            return;
+        }
+        ResolveConfigPath(param, value, param->outputFileWholePath, sizeof(param->outputFileWholePath));
+        param->outputFileSpecified = true;
+        return;
+    }
+
+    // 处理"UpdateModeDic.*"参数—每轨道更新模式（后写覆盖）
+    if (StrCaseStartsWith(key, "UpdateModeDic."))
+    {
+        const char* trackName = key + 14;
+        MarkConfigKey(param, key);
+
+        UpdateMode mode;
+        if (StrCaseCmp(value, UPDATE_MODE_CONTINUOUS_STR) == 0)
+            mode = UPDATE_MODE_CONTINUOUS;
+        else if (StrCaseCmp(value, UPDATE_MODE_DISCRETE_STR) == 0)
+            mode = UPDATE_MODE_DISCRETE;
+        else if (StrCaseCmp(value, UPDATE_MODE_CAPTURE_STR) == 0)
+            mode = UPDATE_MODE_CAPTURE;
+        else
+        {
+            print_error("Warning (line %d): Invalid value '%s' for UpdateModeDic entry '%s'\n",
+                        entry->line, value, trackName);
+            return;
+        }
+
+        int found = -1;
+        for (int j = 0; j < param->updateModeDicCount; j++)
+        {
+            if (strcmp(param->updateModeDicKeys[j], trackName) == 0)
+            {
+                found = j;
+                break;
+            }
+        }
+
+        if (found >= 0)
+        {
+            param->updateModeDicValues[found] = mode;
+        }
+        else if (param->updateModeDicCount < MAX_TRACKS_NUM)
+        {
+            strncpy(param->updateModeDicKeys[param->updateModeDicCount], trackName, NAME_LENGTH - 1);
+            param->updateModeDicKeys[param->updateModeDicCount][NAME_LENGTH - 1] = '\0';
+            param->updateModeDicValues[param->updateModeDicCount] = mode;
+            param->updateModeDicCount++;
+        }
+
+        param->updateModeDicSpecified = true;
+        return;
+    }
+
+    // 处理"InterpolationMode"参数
+    if (StrCaseCmp(key, "InterpolationMode") == 0)
+    {
+        MarkConfigKey(param, "InterpolationMode");
+        if (ApplyBlocked(param, "InterpolationMode")) return;
+        if (StrCaseCmp(value, INTERPOLATION_MODE_NEAREST_STR) == 0)
+            param->interpolationMode = INTERPOLATION_MODE_NEAREST;
+        else if (StrCaseCmp(value, INTERPOLATION_MODE_LINEAR_STR) == 0)
+            param->interpolationMode = INTERPOLATION_MODE_LINEAR;
+        else if (StrCaseCmp(value, INTERPOLATION_MODE_CUBIC_STR) == 0)
+            param->interpolationMode = INTERPOLATION_MODE_CUBIC;
+        else
+            print_error("Warning (line %d): Invalid value for InterpolationMode\n", entry->line);
+        param->interpolationModeSpecified = true;
+        return;
+    }
+
+    // 处理"UpdateMode"参数
+    if (StrCaseCmp(key, "UpdateMode") == 0)
+    {
+        MarkConfigKey(param, "UpdateMode");
+        if (ApplyBlocked(param, "UpdateMode")) return;
+        if (StrCaseCmp(value, UPDATE_MODE_CONTINUOUS_STR) == 0)
+            param->updateMode = UPDATE_MODE_CONTINUOUS;
+        else if (StrCaseCmp(value, UPDATE_MODE_DISCRETE_STR) == 0)
+            param->updateMode = UPDATE_MODE_DISCRETE;
+        else if (StrCaseCmp(value, UPDATE_MODE_CAPTURE_STR) == 0)
+            param->updateMode = UPDATE_MODE_CAPTURE;
+        else
+            print_error("Warning (line %d): Invalid value for UpdateMode\n", entry->line);
+        param->updateModeSpecified = true;
+        return;
+    }
+
+    // 处理"FrameMode"参数
+    if (StrCaseCmp(key, "FrameMode") == 0)
+    {
+        MarkConfigKey(param, "FrameMode");
+        if (ApplyBlocked(param, "FrameMode")) return;
+        if (StrCaseCmp(value, FRAME_MODE_INHERIT_STR) == 0)
+            param->frameMode = FRAME_MODE_INHERIT;
+        else if (StrCaseCmp(value, FRAME_MODE_KEYFRAME_STR) == 0)
+            param->frameMode = FRAME_MODE_KEYFRAME;
+        else
+            print_error("Warning (line %d): Invalid value for FrameMode\n", entry->line);
+        param->frameModeSpecified = true;
+        return;
+    }
+
+    // 处理"TrackMode"参数
+    if (StrCaseCmp(key, "TrackMode") == 0)
+    {
+        MarkConfigKey(param, "TrackMode");
+        if (ApplyBlocked(param, "TrackMode")) return;
+        if (StrCaseCmp(value, TRACK_MODE_SEPARATE_STR) == 0)
+            param->trackMode = TRACK_MODE_SEPARATE;
+        else if (StrCaseCmp(value, TRACK_MODE_TRANSFORM_STR) == 0)
+            param->trackMode = TRACK_MODE_TRANSFORM;
+        else
+            print_error("Warning (line %d): Invalid value for TrackMode\n", entry->line);
+        param->trackModeSpecified = true;
+        return;
+    }
+
+    print_warning("Warning (line %d): unknown config key '%s', ignored.\n", entry->line, key);
 }
 
 Result StartParamSetFromConfig(R2GAStartParam* param, const char* configFileWholePath)
 {
-    // 读取配置文件
     FILE* file;
     FileOpen(&file, configFileWholePath, "r", ErrorCode_CannotOpenConfigFile);
 
-    // 警告：检测可能缺少分号的行
-    WarnMissingSemicolons(file);
-    //R2GAConfigParam configParams[MAX_PARAMS];
-    // malloc
-    R2GAConfigParam* configParams = (R2GAConfigParam*)malloc(MAX_PARAMS * sizeof(R2GAConfigParam));
-
-    // 解析配置文件
-    if (ReadConfigFile(file, configParams, MAX_PARAMS - 1) == Result_Failed)
+    // 相对路径以配置文件所在目录为基准
+    FileGetFilePath(configFileWholePath, param->configFileDir);
+    if (param->configFileDir[0] == '\0')
     {
+        strncpy(param->configFileDir, ".", PATH_LENGTH - 1);
+        param->configFileDir[PATH_LENGTH - 1] = '\0';
+    }
+
+    R2GAConfigParam* configParams = (R2GAConfigParam*)malloc(MAX_PARAMS * sizeof(R2GAConfigParam));
+    if (configParams == NULL)
+    {
+        FileClose(file);
         exit(ErrorCode_CannotReadConfigFile);
     }
-    // 打印Param内容
-    for (int i = 0; i < MAX_PARAMS; i++)
+
+    int count = 0;
+    if (ReadConfigFile(file, configParams, MAX_PARAMS - 1, &count) == Result_Failed)
     {
-        if (strcmp(configParams[i].key, "EndOfFile") == 0)
-            break;
-        printf("%s=%s\n", configParams[i].key, configParams[i].value);
+        free(configParams);
+        FileClose(file);
+        exit(ErrorCode_CannotReadConfigFile);
     }
-
-    // 解析参数
-    for (int i = 0; i < MAX_PARAMS; i++)
-    {
-        // 如果遇到结束标记，则停止解析
-        if (strcmp(configParams[i].key, "EndOfFile") == 0)
-        {
-            break;
-        }
-        // 处理"OutputMode"参数
-        if (strcmp(configParams[i].key, "OutputMode") == 0 && param->outputModeSpecified == false)
-        {
-            if (strcmp(configParams[i].value, MODE_TSCN_STR) == 0 || strcmp(configParams[i].value, MODE_TSCN_STR_CAMEL) == 0)
-            {
-                param->outputMode = OutputMode_Tscn;
-            }
-            else if (strcmp(configParams[i].value, MODE_TSCN_BY_ANIM_STR) == 0 || strcmp(configParams[i].value, MODE_TSCN_BY_ANIM_STR_CAMEL) == 0)
-            {
-                param->outputMode = OutputMode_TscnByAnim;
-            }
-            else if (strcmp(configParams[i].value, MODE_ANIM_TRES_STR) == 0 || strcmp(configParams[i].value, MODE_ANIM_TRES_STR_CAMEL) == 0)
-            {
-                param->outputMode = OutputMode_AnimTres;
-            }
-            else if (strcmp(configParams[i].value, MODE_AUTO_STR) == 0 || strcmp(configParams[i].value, MODE_AUTO_STR_CAMEL) == 0)
-            {
-                param->outputMode = OutputMode_Auto;
-            }
-            else
-            {
-                print_error("Warning: Invalid value for OutputMode\n");
-            }
-        }
-        // 处理"BlendModeEnabled"参数
-        if (strcmp(configParams[i].key, "BlendModeEnabled") == 0 && param->blendModeTrackEnabledSpecified == false)
-        {
-            if (strcmp(configParams[i].value, "1") == 0 || strcmp(configParams[i].value, "true") == 0)
-            {
-                param->blendModeTrackEnabled = true;
-            }
-            else if (strcmp(configParams[i].value, "0") == 0 || strcmp(configParams[i].value, "false") == 0)
-            {
-                param->blendModeTrackEnabled = false;
-            }
-            else
-            {
-                print_error("Warning: Invalid value for BlendModeEnabled\n");
-            }
-            param->blendModeTrackEnabledSpecified = true;
-        }
-        // 处理"VisibleTrackEnabled"参数
-        if (strcmp(configParams[i].key, "VisibleTrackEnabled") == 0 && param->visibleTrackEnabledSpecified == false)
-        {
-            if (strcmp(configParams[i].value, "1") == 0 || strcmp(configParams[i].value, "true") == 0)
-            {
-                param->visibleTrackEnabled = true;
-            }
-            else if (strcmp(configParams[i].value, "0") == 0 || strcmp(configParams[i].value, "false") == 0)
-            {
-                param->visibleTrackEnabled = false;
-            }
-            else
-            {
-                print_error("Warning: Invalid value for VisibleEnabled\n");
-            }
-            param->visibleTrackEnabledSpecified = true;
-        }
-        // 处理"TextureTrackEnabled"参数
-        if (strcmp(configParams[i].key, "TextureTrackEnabled") == 0 && param->textureTrackEnabledSpecified == false)
-        {
-            if (strcmp(configParams[i].value, "1") == 0 || strcmp(configParams[i].value, "true") == 0)
-            {
-                param->textureTrackEnabled = true;
-            }
-            else if (strcmp(configParams[i].value, "0") == 0 || strcmp(configParams[i].value, "false") == 0)
-            {
-                param->textureTrackEnabled = false;
-            }
-            else
-            {
-                print_error("Warning: Invalid value for TextureEnabled\n");
-            }
-            param->textureTrackEnabledSpecified = true;
-        }
-        // 处理"AlphaTrackEnabled"参数
-        if (strcmp(configParams[i].key, "AlphaTrackEnabled") == 0 && param->alphaTrackEnabledSpecified == false)
-        {
-            if (strcmp(configParams[i].value, "1") == 0 || strcmp(configParams[i].value, "true") == 0)
-            {
-                param->alphaTrackEnabled = true;
-            }
-            else if (strcmp(configParams[i].value, "0") == 0 || strcmp(configParams[i].value, "false") == 0)
-            {
-                param->alphaTrackEnabled = false;
-            }
-            else
-            {
-                print_error("Warning: Invalid value for AlphaEnabled\n");
-            }
-            param->alphaTrackEnabledSpecified = true;
-        }
-        // 处理"RootNodeType"参数
-        if (strcmp(configParams[i].key, "RootNodeType") == 0 && param->rootnodeTypeSpecified == false)
-        {
-            if (strcmp(configParams[i].value, "") == 0)
-            {
-                print_warning("Warning: RootNodeType is empty, using default type 'Node2D'.\n");
-                continue;
-            }
-            strncpy(param->rootnodeType, configParams[i].value, NAME_LENGTH - 1);
-            param->rootnodeType[NAME_LENGTH - 1] = '\0';
-            param->rootnodeTypeSpecified = true;
-        }
-        // 处理"RootNodeName"参数
-        if (strcmp(configParams[i].key, "RootNodeName") == 0 && param->rootNodeNameSpecified == false)
-        {
-            if (strcmp(configParams[i].value, "") == 0)
-            {
-                print_warning("Warning: RootNodeName is empty, will use resource name.\n");
-                continue;
-            }
-            strncpy(param->rootNodeName, configParams[i].value, NAME_LENGTH - 1);
-            param->rootNodeName[NAME_LENGTH - 1] = '\0';
-            param->rootNodeNameSpecified = true;
-        }
-        // 处理"AnimName"参数
-        if (strcmp(configParams[i].key, "AnimName") == 0 && param->animNameSpecified == false)
-        {
-            if (strcmp(configParams[i].value, "") == 0)
-            {
-                print_warning("Warning: AnimName is empty, using default name.\n");
-                continue;
-            }
-            strncpy(param->animName, configParams[i].value, NAME_LENGTH - 1);
-            param->animName[NAME_LENGTH - 1] = '\0';
-            param->animNameSpecified = true;
-        }
-
-        // 处理"UpdateModeDic.*"参数—每轨道更新模式（后写覆盖）
-        if (strncmp(configParams[i].key, "UpdateModeDic.", 14) == 0)
-        {
-            const char* trackName = configParams[i].key + 14;
-            const char* modeStr = configParams[i].value;
-
-            UpdateMode mode;
-            if (strcmp(modeStr, "Continuous") == 0 || strcmp(modeStr, "continuous") == 0)
-                mode = UPDATE_MODE_CONTINUOUS;
-            else if (strcmp(modeStr, "Discrete") == 0 || strcmp(modeStr, "discrete") == 0)
-                mode = UPDATE_MODE_DISCRETE;
-            else if (strcmp(modeStr, "Capture") == 0 || strcmp(modeStr, "capture") == 0)
-                mode = UPDATE_MODE_CAPTURE;
-            else
-            {
-                print_error("Warning: Invalid value '%s' for UpdateModeDic entry '%s'\n", modeStr, trackName);
-                continue;
-            }
-
-            // 查找是否已存在同名轨道，存在则覆盖（后写优先）
-            int found = -1;
-            for (int j = 0; j < param->updateModeDicCount; j++)
-            {
-                if (strcmp(param->updateModeDicKeys[j], trackName) == 0)
-                {
-                    found = j;
-                    break;
-                }
-            }
-
-            if (found >= 0)
-            {
-                print_warning("Warning: Duplicate UpdateModeDic entry for '%s', overwriting previous value.\n", trackName);
-                param->updateModeDicValues[found] = mode;
-            }
-            else if (param->updateModeDicCount < MAX_TRACKS_NUM)
-            {
-                strncpy(param->updateModeDicKeys[param->updateModeDicCount], trackName, NAME_LENGTH - 1);
-                param->updateModeDicKeys[param->updateModeDicCount][NAME_LENGTH - 1] = '\0';
-                param->updateModeDicValues[param->updateModeDicCount] = mode;
-                param->updateModeDicCount++;
-            }
-
-            param->updateModeDicSpecified = true;
-        }
-
-        // 处理"InterpolationMode"参数
-        if (strcmp(configParams[i].key, "InterpolationMode") == 0 && param->interpolationModeSpecified == false)
-        {
-            if (strcmp(configParams[i].value, "Nearest") == 0 || strcmp(configParams[i].value, "nearest") == 0)
-            {
-                param->interpolationMode = INTERPOLATION_MODE_NEAREST;
-            }
-            else if (strcmp(configParams[i].value, "Linear") == 0 || strcmp(configParams[i].value, "linear") == 0)
-            {
-                param->interpolationMode = INTERPOLATION_MODE_LINEAR;
-            }
-            else if (strcmp(configParams[i].value, "Cubic") == 0 || strcmp(configParams[i].value, "cubic") == 0)
-            {
-                param->interpolationMode = INTERPOLATION_MODE_CUBIC;
-            }
-            else
-            {
-                print_error("Warning: Invalid value for InterpolationMode\n");
-            }
-            param->interpolationModeSpecified = true;
-        }
-        // 处理"UpdateMode"参数
-        if (strcmp(configParams[i].key, "UpdateMode") == 0 && param->updateModeSpecified == false)
-        {
-            if (strcmp(configParams[i].value, "Continuous") == 0 || strcmp(configParams[i].value, "continuous") == 0)
-            {
-                param->updateMode = UPDATE_MODE_CONTINUOUS;
-            }
-            else if (strcmp(configParams[i].value, "Discrete") == 0 || strcmp(configParams[i].value, "discrete") == 0)
-            {
-                param->updateMode = UPDATE_MODE_DISCRETE;
-            }
-            else if (strcmp(configParams[i].value, "Capture") == 0 || strcmp(configParams[i].value, "capture") == 0)
-            {
-                param->updateMode = UPDATE_MODE_CAPTURE;
-            }
-            else
-            {
-                print_error("Warning: Invalid value for UpdateMode\n");
-            }
-            param->updateModeSpecified = true;
-        }
-        // 处理"FrameMode"参数
-        if (strcmp(configParams[i].key, "FrameMode") == 0 && param->frameModeSpecified == false)
-        {
-            if (strcmp(configParams[i].value, "Inherit") == 0 || strcmp(configParams[i].value, "inherit") == 0)
-                param->frameMode = FRAME_MODE_INHERIT;
-            else if (strcmp(configParams[i].value, "Keyframe") == 0 || strcmp(configParams[i].value, "keyframe") == 0)
-                param->frameMode = FRAME_MODE_KEYFRAME;
-            else
-                print_error("Warning: Invalid value for FrameMode\n");
-            param->frameModeSpecified = true;
-        }
-        // 处理"TrackMode"参数
-        if (strcmp(configParams[i].key, "TrackMode") == 0 && param->trackModeSpecified == false)
-        {
-            if (strcmp(configParams[i].value, "Separate") == 0 || strcmp(configParams[i].value, "separate") == 0)
-                param->trackMode = TRACK_MODE_SEPARATE;
-            else if (strcmp(configParams[i].value, "Transform") == 0 || strcmp(configParams[i].value, "transform") == 0)
-                param->trackMode = TRACK_MODE_TRANSFORM;
-            else
-                print_error("Warning: Invalid value for TrackMode\n");
-            param->trackModeSpecified = true;
-        }
-    }
-
-                // print
-    printf("Parsed UpdateModeDic updateModeDicCount: %d\n", param->updateModeDicCount);
-    for (int j = 0; j < param->updateModeDicCount; j++)
-    {
-        printf("UpdateModeDic[%s] = %d\n", param->updateModeDicKeys[j], param->updateModeDicValues[j]);
-    }
-
-    // 释放内存
-    free(configParams);
     FileClose(file);
-    // 填充参数
+
+    for (int i = 0; i < count; i++)
+        ApplyConfigEntry(param, &configParams[i]);
+
+    free(configParams);
     return Result_Success;
+}
+
+// ---------------------------------------------------------------------------
+// 配置发现与收尾
+// ---------------------------------------------------------------------------
+
+Result StartParamFindConfig(R2GAStartParam* param)
+{
+    if (param->configFileCount > 0 || param->noConfig)
+        return Result_Success;
+
+    char candidate[PATH_LENGTH];
+
+    // 1) 输入文件目录下的 r2ga.cfg
+    if (param->inputFileWholePath[0] != '\0')
+    {
+        char dir[PATH_LENGTH];
+        FileGetFilePath(param->inputFileWholePath, dir);
+        if (dir[0] != '\0')
+        {
+            if (strcmp(dir, ".") == 0)
+                snprintf(candidate, sizeof(candidate), "r2ga.cfg");
+            else
+                snprintf(candidate, sizeof(candidate), "%sr2ga.cfg", dir);
+            if (FileExists(candidate))
+            {
+                AddConfigFile(param, candidate);
+                param->configAutoDiscovered = true;
+                return Result_Success;
+            }
+        }
+    }
+
+    // 2) 当前工作目录下的 r2ga.cfg
+    if (FileExists("r2ga.cfg"))
+    {
+        AddConfigFile(param, "r2ga.cfg");
+        param->configAutoDiscovered = true;
+    }
+
+    return Result_Success;
+}
+
+void StartParamFinalize(R2GAStartParam* param)
+{
+    if (param->inputFileWholePath[0] != '\0')
+    {
+        FileGetFilePath(param->inputFileWholePath, param->inputFilePath);
+        FileGetFileNameWithoutExt(param->inputFileWholePath, param->inputFileName);
+    }
+
+    if (param->outputFileSpecified && param->outputFileWholePath[0] != '\0')
+    {
+        FileGetFilePath(param->outputFileWholePath, param->outputFilePath);
+        FileGetFileNameWithoutExt(param->outputFileWholePath, param->outputFileName);
+    }
+}
+
+Result StartParamValidate(const R2GAStartParam* param)
+{
+    if (param->inputFileWholePath[0] == '\0')
+        return Result_Failed;
+    if (param->animOutputGodotPath[0] == '\0')
+        return Result_Failed;
+    if (param->resourceGodotPath[0] == '\0')
+        return Result_Failed;
+    return Result_Success;
+}
+
+// ---------------------------------------------------------------------------
+// --print-config / --init-config
+// ---------------------------------------------------------------------------
+
+static const char* ConfigSource(const R2GAStartParam* param, const char* key)
+{
+    if (HasKey((char (*)[NAME_LENGTH])param->cliSpecifiedKeys, param->cliSpecifiedKeyCount, key))
+        return "cli";
+    if (HasKey((char (*)[NAME_LENGTH])param->configSpecifiedKeys, param->configSpecifiedKeyCount, key))
+        return "config";
+    return "default";
+}
+
+static const char* OutputModeName(OutputMode mode)
+{
+    switch (mode)
+    {
+    case OutputMode_Tscn: return "Tscn";
+    case OutputMode_TscnByAnim: return "TscnByAnim";
+    case OutputMode_AnimTres: return "AnimTres";
+    case OutputMode_Auto: return "Auto";
+    default: return "Auto";
+    }
+}
+
+static const char* InterpolationModeName(InterpolationMode mode)
+{
+    switch (mode)
+    {
+    case INTERPOLATION_MODE_NEAREST: return "Nearest";
+    case INTERPOLATION_MODE_LINEAR: return "Linear";
+    case INTERPOLATION_MODE_CUBIC: return "Cubic";
+    default: return "Linear";
+    }
+}
+
+static const char* UpdateModeName(UpdateMode mode)
+{
+    switch (mode)
+    {
+    case UPDATE_MODE_CONTINUOUS: return "Continuous";
+    case UPDATE_MODE_DISCRETE: return "Discrete";
+    case UPDATE_MODE_CAPTURE: return "Capture";
+    default: return "Continuous";
+    }
+}
+
+static const char* FrameModeName(FrameMode mode)
+{
+    switch (mode)
+    {
+    case FRAME_MODE_INHERIT: return "Inherit";
+    case FRAME_MODE_KEYFRAME: return "Keyframe";
+    default: return "Inherit";
+    }
+}
+
+static const char* TrackModeName(TrackMode mode)
+{
+    switch (mode)
+    {
+    case TRACK_MODE_SEPARATE: return "Separate";
+    case TRACK_MODE_TRANSFORM: return "Transform";
+    default: return "Separate";
+    }
+}
+
+void StartParamPrintEffectiveConfig(const R2GAStartParam* param)
+{
+    if (param->configFileCount == 0)
+        printf("[config] file = (none)\n");
+    else
+    {
+        for (int i = 0; i < param->configFileCount; i++)
+            printf("[config] file = %s%s\n", param->configFiles[i],
+                   (i == 0 && param->configAutoDiscovered) ? " (auto)" : "");
+    }
+
+    printf("[config] InputFile = %s (%s)\n", param->inputFileWholePath, ConfigSource(param, "InputFile"));
+    printf("[config] AnimGodotPath = %s (%s)\n", param->animOutputGodotPath, ConfigSource(param, "AnimGodotPath"));
+    printf("[config] ResGodotPath = %s (%s)\n", param->resourceGodotPath, ConfigSource(param, "ResGodotPath"));
+    printf("[config] OutputDir = %s (%s)\n", param->outputFileSpecified ? param->outputFileWholePath : "",
+           ConfigSource(param, "OutputDir"));
+    printf("[config] OutputMode = %s (%s)\n", OutputModeName(param->outputMode), ConfigSource(param, "OutputMode"));
+    printf("[config] InterpolationMode = %s (%s)\n", InterpolationModeName(param->interpolationMode),
+           ConfigSource(param, "InterpolationMode"));
+    printf("[config] UpdateMode = %s (%s)\n", UpdateModeName(param->updateMode), ConfigSource(param, "UpdateMode"));
+    printf("[config] FrameMode = %s (%s)\n", FrameModeName(param->frameMode), ConfigSource(param, "FrameMode"));
+    printf("[config] TrackMode = %s (%s)\n", TrackModeName(param->trackMode), ConfigSource(param, "TrackMode"));
+    printf("[config] BlendModeEnabled = %s (%s)\n", param->blendModeTrackEnabled ? "true" : "false",
+           ConfigSource(param, "BlendModeEnabled"));
+    printf("[config] VisibleTrackEnabled = %s (%s)\n", param->visibleTrackEnabled ? "true" : "false",
+           ConfigSource(param, "VisibleTrackEnabled"));
+    printf("[config] TextureTrackEnabled = %s (%s)\n", param->textureTrackEnabled ? "true" : "false",
+           ConfigSource(param, "TextureTrackEnabled"));
+    printf("[config] AlphaTrackEnabled = %s (%s)\n", param->alphaTrackEnabled ? "true" : "false",
+           ConfigSource(param, "AlphaTrackEnabled"));
+    printf("[config] RootNodeType = %s (%s)\n", param->rootnodeType, ConfigSource(param, "RootNodeType"));
+    printf("[config] RootNodeName = %s (%s)\n", param->rootNodeName, ConfigSource(param, "RootNodeName"));
+    printf("[config] AnimName = %s (%s)\n", param->animName, ConfigSource(param, "AnimName"));
+
+    for (int i = 0; i < param->updateModeDicCount; i++)
+    {
+        char full_key[NAME_LENGTH];
+        snprintf(full_key, sizeof(full_key), "UpdateModeDic.%s", param->updateModeDicKeys[i]);
+        printf("[config] %s = %s (%s)\n", full_key, UpdateModeName(param->updateModeDicValues[i]),
+               ConfigSource(param, full_key));
+    }
+}
+
+void StartParamPrintConfigTemplate(void)
+{
+    fputs(
+        "# R2Ga configuration template\n"
+        "# Command-line options override values in this file.\n"
+        "# A trailing ';' is optional. Keys are case-insensitive.\n"
+        "# Relative paths are resolved against the directory containing this file.\n"
+        "\n"
+        "# ---- input / output paths ----\n"
+        "# InputFile = C:/pvz/MainGame/Zombie/Zombie_walk.reanim\n"
+        "# AnimGodotPath = res://anim/\n"
+        "# ResGodotPath = res://art/\n"
+        "# OutputDir = res://anim/\n"
+        "\n"
+        "# ---- modes ----\n"
+        "OutputMode = Auto\n"
+        "InterpolationMode = Linear\n"
+        "UpdateMode = Continuous\n"
+        "FrameMode = Inherit\n"
+        "TrackMode = Separate\n"
+        "\n"
+        "# ---- track switches ----\n"
+        "BlendModeEnabled = false\n"
+        "VisibleTrackEnabled = true\n"
+        "TextureTrackEnabled = true\n"
+        "AlphaTrackEnabled = true\n"
+        "\n"
+        "# ---- node / animation names ----\n"
+        "# RootNodeType = Node2D\n"
+        "# RootNodeName = MyZombie\n"
+        "# AnimName = MyAnim\n"
+        "\n"
+        "# ---- per-track update modes ----\n"
+        "# UpdateModeDic = {\n"
+        "#     head = Discrete,\n"
+        "#     body = Continuous,\n"
+        "# };\n",
+        stdout);
 }

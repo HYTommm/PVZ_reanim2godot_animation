@@ -1,7 +1,9 @@
 #include "params.h"
 
+#include <algorithm>
 #include <cstdarg>
 #include <cstdio>
+#include <fstream>
 #include <print>
 #include <string_view>
 
@@ -15,6 +17,15 @@ bool any_of(std::string_view s, std::string_view a, std::string_view b)
 {
     return s == a || s == b;
 }
+
+void mark_key(std::vector<std::string>& keys, std::string_view key)
+{
+    const auto it = std::find(keys.begin(), keys.end(), key);
+    if (it == keys.end())
+        keys.emplace_back(key);
+}
+
+constexpr int MAX_CONFIG_FILES = 8;
 
 }  // namespace
 
@@ -124,34 +135,43 @@ bool resolve_blend_mode(const Params& params, std::string_view file_text)
 
 Result parse_args(Params& p, int argc, char** argv)
 {
-    // 位置参数不足时直接失败。注意这个界是 `argc <= 4`：
-    // 只给 3 个位置参数（argc == 4）也会被判定为参数错误。
-    if (argc <= 4)
+    int positional_count = 0;
+    int option_count     = 0;
+    int i                = 1;
+
+    auto set_positional = [&](int index, std::string_view value)
     {
-        if (argc == 2 && any_of(argv[1], "-h", "--help"))
+        switch (index)
         {
-            p.help = true;
-            return Result::Success;
+        case 0:
+            p.inputFileWholePath = clamp_path(value);
+            mark_key(p.cliSpecifiedKeys, "InputFile");
+            break;
+        case 1:
+            p.animOutputGodotPath = clamp_path(value);
+            mark_key(p.cliSpecifiedKeys, "AnimGodotPath");
+            break;
+        case 2:
+            p.resourceGodotPath = clamp_path(value);
+            mark_key(p.cliSpecifiedKeys, "ResGodotPath");
+            break;
+        default:
+            break;
         }
-        return Result::Failed;
+    };
+
+    // 位置参数必须写在最前面；数量可以不足 3，其余由配置文件补齐
+    while (i < argc && positional_count < 3 && argv[i][0] != '-')
+    {
+        set_positional(positional_count, argv[i]);
+        ++positional_count;
+        ++i;
     }
 
-    const std::string_view input_file  = argv[1];
-    const std::string_view anim_path   = argv[2];
-    const std::string_view res_path    = argv[3];
-
-    p.inputFileWholePath = clamp_path(input_file);
-    // 原实现把 animOutputGodotPath 连着赋了两遍（同一来源，重复但无害），这里只留一次
-    p.animOutputGodotPath = clamp_path(anim_path);
-
-    p.inputFilePath = get_file_path(input_file);
-    p.inputFileName = get_file_name_without_ext(input_file);
-
-    p.resourceGodotPath = clamp_path(res_path);
-
-    for (int i = 4; i < argc; ++i)
+    for (; i < argc; ++i)
     {
         const std::string_view arg = argv[i];
+        ++option_count;
 
         if (any_of(arg, "-h", "--help"))
         {
@@ -159,13 +179,30 @@ Result parse_args(Params& p, int argc, char** argv)
             return Result::Success;  // 原实现：立刻返回，后续参数不再解析
         }
 
+        if (arg == "--no-config")
+        {
+            p.noConfig = true;
+            continue;
+        }
+
+        if (arg == "--print-config")
+        {
+            p.printConfig = true;
+            continue;
+        }
+
+        if (arg == "--init-config")
+        {
+            p.initConfig = true;
+            continue;
+        }
+
         if (any_of(arg, "-of", "--output-file"))
         {
             if (i + 1 >= argc) return Result::Failed;
             p.outputFileWholePath = clamp_path(argv[i + 1]);
             p.outputFileSpecified = true;
-            p.outputFilePath = get_file_path(p.outputFileWholePath);
-            p.outputFileName = get_file_name_without_ext(p.outputFileWholePath);
+            mark_key(p.cliSpecifiedKeys, "OutputDir");
             ++i;
             continue;
         }
@@ -176,6 +213,7 @@ Result parse_args(Params& p, int argc, char** argv)
             const auto mode = parse_output_mode(argv[i + 1], /*allow_camel=*/false);
             if (!mode) return Result::Failed;
             p.outputMode = *mode;
+            mark_key(p.cliSpecifiedKeys, "OutputMode");
             ++i;
             continue;
         }
@@ -183,8 +221,16 @@ Result parse_args(Params& p, int argc, char** argv)
         if (any_of(arg, "-cf", "--config-file"))
         {
             if (i + 1 >= argc) return Result::Failed;
-            p.configFileWholePath = clamp_path(argv[i + 1]);
-            p.configFileSpecified = true;
+            if (static_cast<int>(p.configFiles.size()) >= MAX_CONFIG_FILES)
+            {
+                print_warning("Warning: too many config files, '%s' ignored.\n", argv[i + 1]);
+            }
+            else
+            {
+                p.configFiles.push_back(clamp_path(argv[i + 1]));
+                p.configFileWholePath = p.configFiles.back();
+                p.configFileSpecified = true;
+            }
             ++i;
             continue;
         }
@@ -192,12 +238,14 @@ Result parse_args(Params& p, int argc, char** argv)
         if (any_of(arg, "-bm", "--blend-mode"))
         {
             p.blendMode = true;
+            mark_key(p.cliSpecifiedKeys, "BlendModeEnabled");
             continue;
         }
 
         if (any_of(arg, "-nbm", "--no-blend-mode"))
         {
             p.blendMode = false;
+            mark_key(p.cliSpecifiedKeys, "BlendModeEnabled");
             continue;
         }
 
@@ -205,6 +253,7 @@ Result parse_args(Params& p, int argc, char** argv)
         {
             if (i + 1 >= argc) return Result::Failed;
             p.rootNodeType = clamp_name(argv[i + 1]);
+            mark_key(p.cliSpecifiedKeys, "RootNodeType");
             ++i;
             continue;
         }
@@ -213,6 +262,7 @@ Result parse_args(Params& p, int argc, char** argv)
         {
             if (i + 1 >= argc) return Result::Failed;
             p.rootNodeName = clamp_name(argv[i + 1]);
+            mark_key(p.cliSpecifiedKeys, "RootNodeName");
             ++i;
             continue;
         }
@@ -221,6 +271,7 @@ Result parse_args(Params& p, int argc, char** argv)
         {
             if (i + 1 >= argc) return Result::Failed;
             p.animName = clamp_name(argv[i + 1]);
+            mark_key(p.cliSpecifiedKeys, "AnimName");
             ++i;
             continue;
         }
@@ -231,6 +282,7 @@ Result parse_args(Params& p, int argc, char** argv)
             const auto mode = parse_interpolation_mode(argv[i + 1], /*allow_camel=*/false);
             if (!mode) return Result::Failed;
             p.interpolationMode = *mode;
+            mark_key(p.cliSpecifiedKeys, "InterpolationMode");
             ++i;
             continue;
         }
@@ -241,6 +293,7 @@ Result parse_args(Params& p, int argc, char** argv)
             const auto mode = parse_update_mode(argv[i + 1], /*allow_camel=*/false);
             if (!mode) return Result::Failed;
             p.updateMode = *mode;
+            mark_key(p.cliSpecifiedKeys, "UpdateMode");
             ++i;
             continue;
         }
@@ -251,6 +304,7 @@ Result parse_args(Params& p, int argc, char** argv)
             const auto mode = parse_frame_mode(argv[i + 1], /*allow_camel=*/false);
             if (!mode) return Result::Failed;
             p.frameMode = *mode;
+            mark_key(p.cliSpecifiedKeys, "FrameMode");
             ++i;
             continue;
         }
@@ -261,6 +315,7 @@ Result parse_args(Params& p, int argc, char** argv)
             const auto mode = parse_track_mode(argv[i + 1], /*allow_camel=*/false);
             if (!mode) return Result::Failed;
             p.trackMode = *mode;
+            mark_key(p.cliSpecifiedKeys, "TrackMode");
             ++i;
             continue;
         }
@@ -270,6 +325,75 @@ Result parse_args(Params& p, int argc, char** argv)
         std::println("Unknown interpolation mode: {} ", arg);
     }
 
+    // 保留旧行为：恰好三个位置参数且不带任何选项时，判定为参数错误
+    if (positional_count == 3 && option_count == 0)
+        return Result::Failed;
+
+    return Result::Success;
+}
+
+Result find_config(Params& p)
+{
+    if (!p.configFiles.empty() || p.noConfig)
+        return Result::Success;
+
+    auto file_exists = [](const std::string& path)
+    {
+        std::ifstream f(path, std::ios::binary);
+        return f.is_open();
+    };
+
+    auto add = [&](const std::string& path)
+    {
+        p.configFiles.push_back(path);
+        p.configFileWholePath = path;
+        p.configFileSpecified = true;
+        p.configAutoDiscovered = true;
+    };
+
+    if (!p.inputFileWholePath.empty())
+    {
+        const std::string dir = get_file_path(p.inputFileWholePath);
+        if (!dir.empty() && dir != ".")
+        {
+            std::string candidate = dir;
+            if (candidate.back() != '/' && candidate.back() != '\\')
+                candidate.push_back('\\');
+            candidate += "r2ga.cfg";
+            if (file_exists(candidate))
+            {
+                add(candidate);
+                return Result::Success;
+            }
+        }
+    }
+
+    if (file_exists("r2ga.cfg"))
+        add("r2ga.cfg");
+
+    return Result::Success;
+}
+
+void finalize_params(Params& p)
+{
+    if (!p.inputFileWholePath.empty())
+    {
+        p.inputFilePath = get_file_path(p.inputFileWholePath);
+        p.inputFileName = get_file_name_without_ext(p.inputFileWholePath);
+    }
+
+    if (p.outputFileSpecified && !p.outputFileWholePath.empty())
+    {
+        p.outputFilePath = get_file_path(p.outputFileWholePath);
+        p.outputFileName = get_file_name_without_ext(p.outputFileWholePath);
+    }
+}
+
+Result validate_params(const Params& p)
+{
+    if (p.inputFileWholePath.empty()) return Result::Failed;
+    if (p.animOutputGodotPath.empty()) return Result::Failed;
+    if (p.resourceGodotPath.empty()) return Result::Failed;
     return Result::Success;
 }
 

@@ -1,5 +1,5 @@
 // R2Ga —— PvZ .reanim → Godot 动画资源转换器
-// C++ 重写版。行为基准：git HEAD (40211f3)。
+// C++ 重写版。行为基准：同一提交中的 C 实现（verify.sh 逐字节比对）。
 //
 // 本文件集中放置版本号与各种长度上限，取值必须与原 C 实现一致，
 // 因为它们直接参与输出文件名、字符串截断与容量判断。
@@ -12,7 +12,7 @@
 namespace r2ga {
 
 // 写进 .tres/.tscn 注释行的版本号（ResourceFile.c 里用的是这个宏）
-inline constexpr const char* VERSION = "4.0_dev_4";
+inline constexpr const char* VERSION = "4.1-dev3";
 
 inline constexpr int MAX_PARAMS      = 100;   // 配置文件最大键值对数量
 inline constexpr int MAX_TOKENS      = 50;    // 单条配置文件命令的最大 token 数

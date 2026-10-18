@@ -79,10 +79,32 @@ int main(int argc, char** argv)
         print_help(argv[0]);
         return static_cast<int>(ErrorCode_Success);
     }
+    if (params.initConfig)
+    {
+        print_config_template();
+        return static_cast<int>(ErrorCode_Success);
+    }
 
-    // 只有在指定了配置文件且路径非空时才解析
-    if (params.configFileSpecified && !params.configFileWholePath.empty())
-        parse_config(params, params.configFileWholePath);
+    // 未显式指定 -cf 时，尝试自动发现配置文件
+    find_config(params);
+
+    // 按命令行顺序加载配置文件，后加载的覆盖先加载的
+    for (const std::string& config_path : params.configFiles)
+        parse_config(params, config_path);
+
+    finalize_params(params);
+
+    if (params.printConfig)
+    {
+        print_effective_config(params);
+        return static_cast<int>(ErrorCode_Success);
+    }
+
+    if (validate_params(params) == Result::Failed)
+    {
+        print_param_error();
+        return 1;
+    }
 
     const std::string input_text =
         read_text_file(params.inputFileWholePath, ErrorCode_CannotOpenInputFile);

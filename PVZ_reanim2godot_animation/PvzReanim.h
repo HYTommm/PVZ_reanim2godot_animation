@@ -6,10 +6,11 @@
 #define CLASS typedef struct
 #define VTABLE typedef struct
 
-#define VERSION "4.0_dev_4"
+#define VERSION "4.1-dev3"
 
 #define MAX_PARAMS 100       // 最大参数数量
 #define MAX_TOKENS 50        // 单个命令最大token数
+#define MAX_CONFIG_FILES 8   // 最多可叠加的配置文件数量
 #define NAME_LENGTH 256       // 名称最大长度
 #define PATH_LENGTH 512       // 路径最大长度
 #define EXT_LENGTH 10         // 扩展名最大长度
@@ -204,6 +205,19 @@ typedef struct R2GAStartParam
     bool help;
 
     /// <summary>
+    /// 是否禁用配置文件自动发现（--no-config）
+    /// </summary>
+    bool noConfig;
+    /// <summary>
+    /// 是否打印最终生效配置（--print-config）
+    /// </summary>
+    bool printConfig;
+    /// <summary>
+    /// 是否输出配置模板（--init-config）
+    /// </summary>
+    bool initConfig;
+
+    /// <summary>
     /// 输出文件是否被指定
     /// </summary>
     bool inputFileSpecified;
@@ -303,9 +317,36 @@ typedef struct R2GAStartParam
     /// </summary>
     bool configFileSpecified;
     /// <summary>
-    /// 配置文件路径
+    /// 配置文件路径（多个时取最后一个）
     /// </summary>
     char configFileWholePath[PATH_LENGTH];
+    /// <summary>
+    /// 待加载的配置文件路径列表（按命令行顺序）
+    /// </summary>
+    char configFiles[MAX_CONFIG_FILES][PATH_LENGTH];
+    /// <summary>
+    /// 待加载的配置文件数量
+    /// </summary>
+    int configFileCount;
+    /// <summary>
+    /// 配置文件所在目录（相对路径的基准）
+    /// </summary>
+    char configFileDir[PATH_LENGTH];
+    /// <summary>
+    /// 配置文件是否由自动发现得到
+    /// </summary>
+    bool configAutoDiscovered;
+
+    /// <summary>
+    /// 命令行显式指定的配置项（规范名，用于 --print-config 标注来源）
+    /// </summary>
+    char cliSpecifiedKeys[MAX_PARAMS][NAME_LENGTH];
+    int cliSpecifiedKeyCount;
+    /// <summary>
+    /// 配置文件中出现并生效的配置项（规范名，用于 --print-config 标注来源）
+    /// </summary>
+    char configSpecifiedKeys[MAX_PARAMS][NAME_LENGTH];
+    int configSpecifiedKeyCount;
 
     /// <summary>
     /// 是否启用混合模式是否被指定
@@ -420,5 +461,9 @@ typedef struct R2GAConfigParam
     /// <summary>
     /// 等号后面的部分
     /// </summary>
-    char value[NAME_LENGTH];
+    char value[PATH_LENGTH];
+    /// <summary>
+    /// 该条目所在的行号（用于诊断信息）
+    /// </summary>
+    int line;
 } R2GAConfigParam;

@@ -902,7 +902,8 @@ static void print_help(char* exe_name)
     printf(COL_TITLE "欢迎使用PVZ_reanim2godot_animation(R2GA) v%s" COL_RESET "\n", VERSION);
     printf(COL_CMD "用法: " COL_RESET "%s " COL_OPT "<输入文件> <动画路径> <资源路径>" COL_RESET " [选项]\n\n", exe_name);
 
-    printf(COL_HEADER "必需参数:" COL_RESET "\n");
+    printf(COL_HEADER "位置参数:" COL_RESET "\n");
+    printf("  （可省略，由配置文件的 InputFile / AnimGodotPath / ResGodotPath 提供）\n");
     printf("  " COL_OPT "<输入文件 input_file>" COL_RESET "                " "输入文件路径 (" COL_VAL ".reanim" COL_RESET "格式)\n");
     printf("  " COL_OPT "<动画路径 anim_godot_path>" COL_RESET "           " "Godot动画资源输出路径 (如: " COL_VAL "res://anim/abc/" COL_RESET ")\n");
     printf("  " COL_OPT "<资源路径 res_godot_path>" COL_RESET "            " "Godot资源文件路径 (如: " COL_VAL "res://art/abc/" COL_RESET ")\n\n");
@@ -910,12 +911,19 @@ static void print_help(char* exe_name)
     printf(COL_HEADER "可选选项:" COL_RESET "\n");
     printf("  " COL_OPT "-of, --output-file" COL_RESET " " COL_VAL "<输出文件>" COL_RESET "        " "输出文件路径 (默认: 与输入文件同名)\n");
     printf("  " COL_OPT "-om, --output-mode" COL_RESET " " COL_VAL "<输出模式>" COL_RESET "        " "设置输出模式 (可选: " COL_VAL "auto, tscn_by_anim, anim_tres" COL_RESET ", 默认: " COL_VAL "auto" COL_RESET ")\n");
-    printf("  " COL_OPT "-cf, --config-file" COL_RESET " " COL_VAL "<配置文件>" COL_RESET "        " "指定配置文件路径\n");
+    printf("  " COL_OPT "-cf, --config-file" COL_RESET " " COL_VAL "<配置文件>" COL_RESET "        " "指定配置文件 (可重复，后加载的覆盖先加载的)\n");
     printf("  " COL_OPT "-bm, --blend_mode" COL_RESET "                     " "开启混合模式 (默认关闭)\n");
     printf("  " COL_OPT "-nbm, --no-blend_mode" COL_RESET "                 " "强制关闭混合模式\n");
+    printf("  " COL_OPT "-rnt, --root-node-type" COL_RESET " " COL_VAL "<类型>" COL_RESET "          " "指定根节点类型 (默认: " COL_VAL "Node2D" COL_RESET ")\n");
+    printf("  " COL_OPT "-rnn, --root-node-name" COL_RESET " " COL_VAL "<名称>" COL_RESET "          " "指定根节点名称 (默认: 资源名)\n");
+    printf("  " COL_OPT "-an, --anim-name" COL_RESET " " COL_VAL "<名称>" COL_RESET "              " "指定动画名称 (单动画输出时)\n");
     printf("  " COL_OPT "-im, --interpolation-mode" COL_RESET " " COL_VAL "<插值模式>" COL_RESET " " "设置插值模式 (可选: " COL_VAL "nearest, linear, cubic" COL_RESET ", 默认: " COL_VAL "linear" COL_RESET ")\n");
+    printf("  " COL_OPT "-um, --update-mode" COL_RESET " " COL_VAL "<更新模式>" COL_RESET "          " "设置更新模式 (可选: " COL_VAL "continuous, discrete, capture" COL_RESET ", 默认: " COL_VAL "continuous" COL_RESET ")\n");
     printf("  " COL_OPT "-fm, --frame-mode" COL_RESET " " COL_VAL "<帧模式>" COL_RESET "              " "设置帧模式 (可选: " COL_VAL "inherit, keyframe" COL_RESET ", 默认: " COL_VAL "inherit" COL_RESET ")\n");
     printf("  " COL_OPT "-tm, --track-mode" COL_RESET " " COL_VAL "<轨道模式>" COL_RESET "             " "设置轨道模式 (可选: " COL_VAL "separate, transform" COL_RESET ", 默认: " COL_VAL "separate" COL_RESET ")\n");
+    printf("  " COL_OPT "--no-config" COL_RESET "                          " "禁用 r2ga.cfg 自动发现\n");
+    printf("  " COL_OPT "--print-config" COL_RESET "                       " "打印最终生效配置并退出\n");
+    printf("  " COL_OPT "--init-config" COL_RESET "                        " "输出配置模板并退出\n");
     printf("  " COL_OPT "-h, --help" COL_RESET "                           " "显示此帮助信息\n\n");
 
     printf(COL_HEADER "输出模式:" COL_RESET "\n");
@@ -979,14 +987,37 @@ int main(int argc, char* argv[])
         print_help(argv[0]);
         return ErrorCode_Success;
     }
-
-    if (startParam.configFileSpecified && startParam.configFileWholePath[0] != '\0')
+    else if (startParam.initConfig)
     {
-        if (StartParamSetFromConfig(&startParam, startParam.configFileWholePath) == Result_Failed)
+        StartParamPrintConfigTemplate();
+        return ErrorCode_Success;
+    }
+
+    // 未显式指定 -cf 时，尝试自动发现配置文件
+    StartParamFindConfig(&startParam);
+
+    // 按命令行顺序加载配置文件，后加载的覆盖先加载的
+    for (int i = 0; i < startParam.configFileCount; i++)
+    {
+        if (StartParamSetFromConfig(&startParam, startParam.configFiles[i]) == Result_Failed)
         {
             PrintParamError();
             return ErrorCode_CannotParseConfigFile;
         }
+    }
+
+    StartParamFinalize(&startParam);
+
+    if (startParam.printConfig)
+    {
+        StartParamPrintEffectiveConfig(&startParam);
+        return ErrorCode_Success;
+    }
+
+    if (StartParamValidate(&startParam) == Result_Failed)
+    {
+        PrintParamError();
+        return 1;
     }
 
     FileOpen(&fp_input, startParam.inputFileWholePath, "r", ErrorCode_CannotOpenInputFile);
