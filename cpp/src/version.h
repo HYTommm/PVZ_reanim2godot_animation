@@ -12,7 +12,7 @@
 namespace r2ga {
 
 // 写进 .tres/.tscn 注释行的版本号（ResourceFile.c 里用的是这个宏）
-inline constexpr const char* VERSION = "4.1-dev3";
+inline constexpr const char* VERSION = "4.1-dev4";
 
 inline constexpr int MAX_PARAMS      = 100;   // 配置文件最大键值对数量
 inline constexpr int MAX_TOKENS      = 50;    // 单条配置文件命令的最大 token 数

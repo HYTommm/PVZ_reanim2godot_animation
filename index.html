@@ -398,7 +398,7 @@
             <p class="lead">植物大战僵尸 <code>.reanim</code> 到 Godot 动画资源的转换器</p>
         </div>
         <div class="header-meta">
-            <span>版本 4.1-dev3</span>
+            <span>版本 4.1-dev4</span>
             <a href="https://github.com/HYTommm/PVZ_reanim2godot_animation">GitHub</a>
             <a href="https://github.com/HYTommm/PVZ_reanim2godot_animation/releases/latest">下载</a>
         </div>
@@ -459,7 +459,7 @@
             </p>
 
             <div class="note">
-                <p>本文档对应 v4.1-dev3。历史版本的参数或行为可能与此不同。</p>
+                <p>本文档对应 v4.1-dev4。历史版本的参数或行为可能与此不同。</p>
             </div>
         </section>
 
@@ -1089,8 +1089,8 @@ ExcludeTracks.walk = arm</code></pre>
             <h2>版本历史</h2>
 
             <div class="version">
-                <h3>v4.1-dev3</h3>
-                <p class="version-meta">2026-10</p>
+                <h3>v4.1-dev4</h3>
+                <p class="version-meta">2026-10-18</p>
                 <ul>
                     <li>配置文件语法重做：分号可选、值可含空格、支持引号、键名大小写不敏感、未知键警告</li>
                     <li>新增配置项 <code>InputFile</code> / <code>AnimGodotPath</code> / <code>ResGodotPath</code> / <code>OutputDir</code></li>
@@ -1104,8 +1104,35 @@ ExcludeTracks.walk = arm</code></pre>
             </div>
 
             <div class="version">
-                <h3>v4.0</h3>
-                <p class="version-meta">v4.0-stable</p>
+                <h3>v4.1-dev3</h3>
+                <p class="version-meta">2026-10-03</p>
+                <ul>
+                    <li>重写项目介绍页，补齐 4.0 以来的文档</li>
+                    <li>订正角度插值已知问题</li>
+                    <li>修复三处越界读（ASan）</li>
+                </ul>
+            </div>
+
+            <div class="version">
+                <h3>v4.1-dev2</h3>
+                <p class="version-meta">2026-10-03</p>
+                <ul>
+                    <li><code>rotation</code> / <code>skew</code> 自动改用角度插值</li>
+                    <li><code>-h</code> 补充 <code>transform</code> 模式警告</li>
+                </ul>
+            </div>
+
+            <div class="version">
+                <h3>v4.1-dev</h3>
+                <p class="version-meta">2026-07-14</p>
+                <ul>
+                    <li>合并 dev 分支，进入 4.1 开发周期</li>
+                </ul>
+            </div>
+
+            <div class="version">
+                <h3>v4.0-stable</h3>
+                <p class="version-meta">2026-07-13</p>
                 <ul>
                     <li>基于 Tomy 库重构</li>
                     <li>新增 <code>-rnt</code> / <code>-rnn</code> / <code>-an</code> / <code>-um</code> / <code>-fm</code> / <code>-tm</code> / <code>-of</code> / <code>-cf</code> 参数</li>
@@ -1115,8 +1142,60 @@ ExcludeTracks.walk = arm</code></pre>
             </div>
 
             <div class="version">
+                <h3>v4.0_dev_4</h3>
+                <p class="version-meta">2026-04-27</p>
+                <ul>
+                    <li>整理代码</li>
+                </ul>
+            </div>
+
+            <div class="version">
+                <h3>v4.0_dev_3</h3>
+                <p class="version-meta">2026-04-27</p>
+                <ul>
+                    <li>修复 bug</li>
+                </ul>
+            </div>
+
+            <div class="version">
+                <h3>v4.0_dev_1</h3>
+                <p class="version-meta">2025-07-05</p>
+                <ul>
+                    <li>实现配置文件读取</li>
+                    <li>更换参数格式，重写启动参数与帮助信息</li>
+                </ul>
+            </div>
+
+            <div class="version">
+                <h3>v3.3.1</h3>
+                <p class="version-meta">2025-07-15</p>
+                <ul>
+                    <li>补丁更新</li>
+                </ul>
+            </div>
+
+            <div class="version">
+                <h3>v3.3</h3>
+                <p class="version-meta">2025-07-07</p>
+                <ul>
+                    <li>新增 Godot 插件 <code>R2Ga_PVZ</code></li>
+                    <li>加入 <code>all.tres</code> 补丁</li>
+                </ul>
+            </div>
+
+            <div class="version">
+                <h3>v3.2</h3>
+                <p class="version-meta">2025-05-17</p>
+                <ul>
+                    <li>合并 dev 分支</li>
+                    <li>扩充值的字符串占位</li>
+                    <li>更新文档</li>
+                </ul>
+            </div>
+
+            <div class="version">
                 <h3>v3.1</h3>
-                <p class="version-meta">v3.1-stable</p>
+                <p class="version-meta">2025-04-01 · v3.1-stable</p>
                 <ul>
                     <li>加入透明度支持</li>
                 </ul>
@@ -1124,7 +1203,7 @@ ExcludeTracks.walk = arm</code></pre>
 
             <div class="version">
                 <h3>v3.0</h3>
-                <p class="version-meta">v3.0-stable</p>
+                <p class="version-meta">2025-03-25 · v3.0-stable</p>
                 <ul>
                     <li>自动分割动画</li>
                     <li>场景文件与动画文件自动关联</li>
@@ -1136,7 +1215,7 @@ ExcludeTracks.walk = arm</code></pre>
 
             <div class="version">
                 <h3>v2.2</h3>
-                <p class="version-meta">v2.2-stable</p>
+                <p class="version-meta">2025-01-30 · v2.2-stable</p>
                 <ul>
                     <li>区分输出模式</li>
                 </ul>
@@ -1144,7 +1223,7 @@ ExcludeTracks.walk = arm</code></pre>
 
             <div class="version">
                 <h3>v2.0</h3>
-                <p class="version-meta">v2.0-stable</p>
+                <p class="version-meta">2025-01-20 · v2.0-stable</p>
                 <ul>
                     <li>加入免拼场景功能</li>
                     <li>优化读取流程</li>

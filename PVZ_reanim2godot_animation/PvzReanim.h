@@ -6,7 +6,7 @@
 #define CLASS typedef struct
 #define VTABLE typedef struct
 
-#define VERSION "4.1-dev3"
+#define VERSION "4.1-dev4"
 
 #define MAX_PARAMS 100       // 最大参数数量
 #define MAX_TOKENS 50        // 单个命令最大token数
