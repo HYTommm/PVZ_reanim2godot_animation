@@ -32,8 +32,8 @@
         color: var(--text);
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans",
                      "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
-        font-size: 0.95rem;
-        line-height: 1.7;
+        font-size: 1rem;
+        line-height: 1.75;
     }
 
     a {
@@ -57,10 +57,14 @@
     }
 
     h2 {
-        margin: 2.75rem 0 1rem;
-        padding-bottom: 0.4rem;
+        margin: 3rem 0 1.1rem;
+        padding-bottom: 0.45rem;
         border-bottom: 1px solid var(--border);
-        font-size: 1.35rem;
+        font-size: 1.45rem;
+    }
+
+    main > section > h2:first-child {
+        margin-top: 0;
     }
 
     h3 {
@@ -95,20 +99,20 @@
     }
 
     pre {
-        margin: 0.8rem 0;
-        padding: 0.85rem 1rem;
+        margin: 0.9rem 0;
+        padding: 1rem 1.15rem;
         background: var(--bg-subtle);
         border: 1px solid var(--border);
         border-radius: 3px;
         overflow-x: auto;
-        line-height: 1.55;
+        line-height: 1.65;
     }
 
     pre code {
         background: none;
         border: 0;
         padding: 0;
-        font-size: 0.86rem;
+        font-size: 0.9rem;
         white-space: pre;
     }
 
@@ -162,9 +166,10 @@
 
     .layout {
         display: grid;
-        grid-template-columns: 210px minmax(0, 1fr);
-        gap: 3rem;
-        max-width: 1180px;
+        grid-template-columns: 230px minmax(0, 780px);
+        justify-content: center;
+        gap: 3.5rem;
+        max-width: 1100px;
         margin: 0 auto;
         padding: 2rem 1.5rem 5rem;
     }
@@ -173,8 +178,8 @@
         position: sticky;
         top: 1.5rem;
         align-self: start;
-        font-size: 0.85rem;
-        line-height: 1.5;
+        font-size: 0.9rem;
+        line-height: 1.6;
     }
 
     .sidebar-title {
@@ -188,8 +193,8 @@
 
     .sidebar nav a {
         display: block;
-        padding: 0.22rem 0;
-        color: var(--muted);
+        padding: 0.24rem 0;
+        color: #3d4650;
     }
 
     .sidebar nav a:hover {
@@ -197,12 +202,27 @@
         text-decoration: none;
     }
 
+    .sidebar nav a.active {
+        color: var(--accent);
+        font-weight: 600;
+    }
+
     .sidebar nav .sub {
         padding-left: 0.75rem;
+        color: var(--muted);
+        font-size: 0.84rem;
     }
 
     main {
         min-width: 0;
+    }
+
+    main > section {
+        display: none;
+    }
+
+    main > section.active {
+        display: block;
     }
 
     .section-intro {
@@ -218,12 +238,12 @@
     table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 0.88rem;
+        font-size: 0.9rem;
     }
 
     th, td {
         border: 1px solid var(--border);
-        padding: 0.45rem 0.65rem;
+        padding: 0.5rem 0.7rem;
         text-align: left;
         vertical-align: top;
     }
@@ -353,11 +373,20 @@
             padding: 0;
         }
 
+        main > section {
+            display: block !important;
+        }
+
         a {
             color: inherit;
         }
     }
 </style>
+<noscript>
+    <style>
+        main > section { display: block; }
+    </style>
+</noscript>
 </head>
 <body>
 
@@ -402,7 +431,7 @@
 
     <main>
 
-        <section id="overview">
+        <section id="overview" class="active">
             <h2>概览</h2>
             <p class="section-intro">
                 R2Ga 将植物大战僵尸的 <code>.reanim</code> 动画转换为 Godot 的 <code>.tres</code> /
@@ -1145,6 +1174,79 @@ ExcludeTracks.walk = arm</code></pre>
         <p>植物大战僵尸是 PopCap Games 的注册商标；Godot 是 Godot Engine 的商标。</p>
     </div>
 </footer>
+
+<script>
+(function () {
+    var sections = Array.prototype.slice.call(document.querySelectorAll('main > section'));
+    var links = Array.prototype.slice.call(document.querySelectorAll('.sidebar a'));
+
+    function setActive(sectionId) {
+        sections.forEach(function (section) {
+            section.classList.toggle('active', section.id === sectionId);
+        });
+
+        links.forEach(function (link) {
+            link.classList.remove('active');
+        });
+
+        var primary = links.find(function (link) {
+            return link.getAttribute('href') === '#' + sectionId &&
+                   !link.classList.contains('sub');
+        });
+
+        if (primary) {
+            primary.classList.add('active');
+        }
+    }
+
+    function resolveHash(hash) {
+        var target = hash ? document.getElementById(hash) : null;
+        if (target) {
+            var section = target.closest('main > section');
+            if (section) {
+                return { section: section, target: target };
+            }
+        }
+        return sections.length ? { section: sections[0], target: null } : null;
+    }
+
+    function applyHash(hash, scroll) {
+        var result = resolveHash(hash);
+        if (!result) {
+            return;
+        }
+
+        setActive(result.section.id);
+
+        if (scroll) {
+            if (result.target && result.target !== result.section) {
+                result.target.scrollIntoView();
+            } else {
+                window.scrollTo(0, 0);
+            }
+        }
+    }
+
+    links.forEach(function (link) {
+        link.addEventListener('click', function (event) {
+            var href = link.getAttribute('href') || '';
+            if (href.charAt(0) !== '#') {
+                return;
+            }
+
+            event.preventDefault();
+            history.replaceState(null, '', href);
+            applyHash(href.slice(1), true);
+        });
+    });
+
+    window.addEventListener('hashchange', function () {
+        applyHash(window.location.hash.slice(1), true);
+    });
+
+    applyHash(window.location.hash.slice(1), true);
+})();
+</script>
 
 </body>
 </html>
