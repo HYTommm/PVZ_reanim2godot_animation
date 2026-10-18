@@ -1,0 +1,195 @@
+// 启动参数（命令行 + 配置文件）。
+//
+// 原实现是一个 ~300KB 的定长数组巨构体 `R2GAStartParam`，用
+// 「值字段 + 对应的 `xxxSpecified` 布尔」表达"是否被显式指定"，
+// 以此实现"命令行优先于配置文件"。
+//
+// 这里改用 std::optional 表达同一语义，两者的对应关系：
+//   xxxSpecified == false  <->  !xxx.has_value()
+//   xxxSpecified == true   <->   xxx.has_value()
+// 读取时用 value_or(默认值)，与原实现先 StartParamInit 填默认再覆盖一致。
+
+#pragma once
+
+#include <cstdio>
+#include <format>
+#include <optional>
+#include <print>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include "types.h"
+#include "version.h"
+
+namespace r2ga {
+
+/// ExcludeTracks 的一条规则：动画模式 × 轨道模式 × 属性掩码。
+/// animPattern == "*" 表示所有动画。
+struct ExcludeRule
+{
+    std::string animPattern;
+    std::string trackPattern;
+    unsigned    properties = 0;
+    int         line       = 0;
+};
+
+struct Params
+{
+    // ------------------------------------------------------------ 帮助
+    bool help = false;
+
+    // ------------------------------------------------------ 配置开关
+    bool printConfig = false;   // --print-config：打印最终生效配置
+    bool initConfig = false;    // --init-config：输出配置模板
+
+    // -------------------------------------------------------- 输入文件
+    std::string inputFileWholePath;  // 含文件名
+    std::string inputFilePath;       // 不含文件名，保留尾部分隔符；无分隔符时为 "."
+    std::string inputFileName;       // 不含扩展名
+
+    // -------------------------------------------------------- 输出文件
+    bool outputFileSpecified = false;
+    std::string outputFileWholePath;
+    std::string outputFilePath;
+    std::string outputFileName;  // 原实现里是死字段（文件名恒取 res_file_name）
+
+    // ------------------------------------------------------- Godot 路径
+    std::string animOutputGodotPath;
+    std::string resourceGodotPath;
+
+    // ------------------------------------------------------ 模式类选项
+    std::optional<OutputMode>        outputMode;
+    std::optional<InterpolationMode> interpolationMode;
+    std::optional<UpdateMode>        updateMode;
+    std::optional<FrameMode>         frameMode;
+    std::optional<TrackMode>         trackMode;
+
+    // ---------------------------------------------------------- 配置文件
+    bool configFileSpecified = false;
+    std::string configFileWholePath;
+    /// 按命令行顺序叠加的配置文件
+    std::vector<std::string> configFiles;
+    /// 配置文件所在目录（相对路径的基准）
+    std::string configFileDir;
+    /// 命令行显式指定的配置项（规范名），用于 --print-config 标注来源
+    std::vector<std::string> cliSpecifiedKeys;
+    /// 配置文件中出现并生效的配置项（规范名）
+    std::vector<std::string> configSpecifiedKeys;
+
+    /// ExcludeTracks 规则（多个配置文件累加）
+    std::vector<ExcludeRule> excludeRules;
+
+    // ------------------------------------------------------ 轨道开关
+    /// 混合模式。既是 CLI 的 -bm/-nbm，也会被 IsBlendModeEnabled 按输入内容自动设置。
+    std::optional<bool> blendMode;
+    /// 这三项只能来自配置文件（没有对应的命令行选项）。
+    /// 原实现里它们的 `Specified` 只用于"同名配置项只采纳第一次出现"，取值默认 true。
+    std::optional<bool> visibleTrackEnabled;
+    std::optional<bool> textureTrackEnabled;
+    std::optional<bool> alphaTrackEnabled;
+
+    // -------------------------------------------------------- 节点命名
+    /// 默认 "Node2D"。
+    std::optional<std::string> rootNodeType;
+    /// 未指定则由调用方回退到资源名。
+    std::optional<std::string> rootNodeName;
+    /// 未指定则由调用方回退到输入文件名。
+    std::optional<std::string> animName;
+
+    // -------------------------------------------------- 每轨道更新模式
+    /// 原实现解析并打印它，但从未拿它影响输出。保留以维持打印行为一致。
+    std::vector<std::pair<std::string, UpdateMode>> updateModeDic;
+    bool updateModeDicSpecified = false;
+
+    // ---- 读取辅助：把 value_or 的默认值集中在这几个函数里 ----
+    OutputMode        output_mode() const { return outputMode.value_or(OutputMode::Auto); }
+    InterpolationMode interpolation_mode() const { return interpolationMode.value_or(InterpolationMode::Linear); }
+    UpdateMode        update_mode() const { return updateMode.value_or(UpdateMode::Continuous); }
+    FrameMode         frame_mode() const { return frameMode.value_or(FrameMode::Inherit); }
+    TrackMode         track_mode() const { return trackMode.value_or(TrackMode::Separate); }
+    bool              blend_mode() const { return blendMode.value_or(false); }
+    bool              visible_track() const { return visibleTrackEnabled.value_or(true); }
+    bool              texture_track() const { return textureTrackEnabled.value_or(true); }
+    bool              alpha_track() const { return alphaTrackEnabled.value_or(true); }
+    std::string       root_node_type() const { return rootNodeType.value_or("Node2D"); }
+    bool              root_node_name_is_set() const { return rootNodeName.has_value(); }
+    std::string       root_node_name() const { return rootNodeName.value_or(""); }
+    bool              anim_name_is_set() const { return animName.has_value(); }
+    std::string       anim_name() const { return animName.value_or(""); }
+};
+
+// ---------------------------------------------------------------- 取值解析
+//
+// 命令行只认小写形式，配置文件额外接受首字母大写的驼峰形式
+// （原实现里 CLI 用 MODE_*_STR，config 用 MODE_*_STR 与 MODE_*_STR_CAMEL），
+// 所以这几个函数带一个 allow_camel 开关。解析失败返回 nullopt。
+
+std::optional<OutputMode>        parse_output_mode(std::string_view s, bool allow_camel);
+std::optional<InterpolationMode> parse_interpolation_mode(std::string_view s, bool allow_camel);
+std::optional<UpdateMode>        parse_update_mode(std::string_view s, bool allow_camel);
+std::optional<FrameMode>         parse_frame_mode(std::string_view s, bool allow_camel);
+std::optional<TrackMode>         parse_track_mode(std::string_view s, bool allow_camel);
+
+/// 只接受 "1"/"true"/"0"/"false"（区分大小写，与原实现一致）。
+std::optional<bool> parse_bool_flag(std::string_view s);
+
+/// 命令行解析：
+///   - 位置参数必须写在最前面，数量可以不足 3（其余由配置文件补齐）
+///   - 恰好三个位置参数且不带任何选项时仍判定为参数错误（保留旧行为）
+///   - 遇到 `-h` 立刻成功返回，后面的参数一律不再解析
+///   - 需要值的选项在缺值时返回 Failed，但不打印任何信息
+///   - 无法识别的参数**不报错**，只打印一行 "Unknown interpolation mode: X " 然后继续
+Result parse_args(Params& p, int argc, char** argv);
+
+/// 配置应用后重新计算派生路径
+void finalize_params(Params& p);
+
+/// 校验三项必需路径是否齐全
+Result validate_params(const Params& p);
+
+/// 配置文件解析（可多次调用，后加载的覆盖先加载的）。
+/// 失败路径全部以 exit() 结束（与原实现一致）。
+void parse_config(Params& p, const std::string& config_file_path);
+
+/// --print-config
+void print_effective_config(const Params& p);
+
+/// --init-config
+void print_config_template();
+
+/// ExcludeTracks 的通配符匹配（大小写不敏感，支持 * 与 ?）
+bool wildcard_match(std::string_view pattern, std::string_view text);
+
+/// 判断一条排除规则是否命中某个动画里的某条轨道。
+bool exclude_rule_matches(const ExcludeRule& rule,
+                          std::string_view anim_name,
+                          std::string_view res_file_name,
+                          std::string_view raw_track,
+                          std::string_view final_track);
+
+/// 把属性掩码还原成 `visible|position|...` 形式，供 --print-config 使用。
+std::string exclude_properties_string(unsigned properties);
+
+/// 按输入内容决定要不要开混合模式。
+/// 原实现是一个就地改全局参数的方法（IsBlendModeEnabled）；这里做成纯函数，
+/// 由调用方决定何时、是否采用它的结果 —— 它会改变 tracks/N 的编号，
+/// 所以必须在建轨道之前算出来。
+bool resolve_blend_mode(const Params& params, std::string_view file_text);
+
+// 诊断输出（原实现的 print_warning / print_error：带 ANSI 颜色，写 stderr）。
+// 统一走 std::format + std::print；格式串用 {} 而不是 printf 的 %s/%d。
+template <class... Args>
+void print_warning(std::format_string<Args...> fmt, Args&&... args)
+{
+    std::print(stderr, "{}{}{}", COL_WARN, std::format(fmt, std::forward<Args>(args)...), COL_RESET);
+}
+
+template <class... Args>
+void print_error(std::format_string<Args...> fmt, Args&&... args)
+{
+    std::print(stderr, "{}{}{}", COL_ERR, std::format(fmt, std::forward<Args>(args)...), COL_RESET);
+}
+
+}  // namespace r2ga

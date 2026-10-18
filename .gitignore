@@ -365,3 +365,6 @@ FodyWeavers.xsd
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# R2Ga C++ 重写验证产物（逐字节比对基准与输出）
+cpp/.verify/

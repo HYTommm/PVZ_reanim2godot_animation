@@ -1,0 +1,197 @@
+# R2Ga C++ 重写版
+
+`PVZ_reanim2godot_animation`（R2Ga）的 C++ 重写。
+
+- **行为基准**：同一提交里的 C 实现。两侧由 `verify.sh` 做逐字节比对；不再固定到某个历史 commit。
+- **目标**：生成的 `.tscn`/`.tres` 与控制台输出**逐字节一致**，同时把实现换成 C++ 惯用法
+  （标准库容器、类模板 + 打印策略、真正的继承、RAII、`std::optional`/`std::format`/`std::print`）。
+- **原 C 工程完全保留**；两者在同一个 `.sln` 里，可以并排构建与比对。
+
+## 构建
+
+```
+msbuild PVZ_reanim2godot_animation.sln -t:PVZ_reanim2godot_animation_cpp -p:Configuration=Release -p:Platform=x64
+```
+
+输出：`x64\Release\PVZ_reanim2godot_animation_cpp.exe`
+
+也可以直接在 Visual Studio 里构建 `PVZ_reanim2godot_animation_cpp` 工程。
+
+### 两个必须保持的编译设置
+
+1. **`/std:c++latest`**（`LanguageStandard=stdcpplatest`）——用到 `std::expected`、`std::print`、`std::span` 等。
+2. **`/source-charset:utf-8 /execution-charset:.936`** —— 原 C 工程的源码是 UTF-8（带 BOM）
+   但没有指定执行字符集，所以中文字符串在二进制里是 **GBK 字节**。C++ 版必须复刻这一点，
+   否则控制台输出与参考基准不一致。**不要**改成 `/utf-8`。
+3. 不开 `/fp:fast`（保持 `Precise`），否则 `%f`/`%.3f` 的末位可能与基准不同。
+
+## 验收
+
+```
+bash tools/verify.sh [参考exe] [C++ exe]
+```
+
+它做四件事：
+
+1. 把参考版与 C++ 版用**同一个 exe 路径**各跑一遍（`-h` 会打印 `argv[0]`，路径必须一致）；
+2. 对 22 个样例 × 18 组选项做逐字节文件比对；
+3. 对 15 组错误路径比对 stdout 与退出码；
+4. 配置文件专项：新/旧语法、空格与引号、未知键、字典块、路径项、`ExcludeTracks`、`--print-config`、`--init-config`。
+
+参考 exe 需自行构建。**注意：现在要从工作区的 C 工程构建，而不是 `git archive HEAD`**——
+角度插值自动转换（见下）是 C 与 C++ 两侧一起改的，HEAD 那份没有，拿它当基准必然不一致：
+
+```
+msbuild PVZ_reanim2godot_animation.sln -t:PVZ_reanim2godot_animation -p:Configuration=Release -p:Platform=x64
+bash cpp/tools/verify.sh x64/Release/PVZ_reanim2godot_animation.exe x64/Release/PVZ_reanim2godot_animation_cpp.exe
+```
+
+`tools/` 下的脚本：
+
+| 脚本 | 作用 |
+|---|---|
+| `run_matrix.sh` | 跑「样例 × 选项」矩阵，产物落到唯一新目录（`MAXJOBS` 控制并行度） |
+| `diff_matrix.sh` | 逐字节比对两份矩阵输出 |
+| `run_errors.sh` | 跑错误路径，记录 stdout 与退出码 |
+| `verify.sh` | 上面三者的总驱动，并先校验两侧确实是不同的二进制 |
+| `gen_help.py` | 从 `main.c` 机械提取 `print_help`，生成 `src/help.cpp`。用法 `gen_help.py [源main.c] [输出help.cpp]`，默认值是 HEAD 的临时解包目录；由于基准现在来自工作区，生成时应显式传 `PVZ_reanim2godot_animation/main.c` |
+| `gen_vcxproj.py` | 按 `src/` 与 `tools/` 下的实际文件重新生成工程的文件清单 |
+| `rmtree.sh` | 可靠的目录删除（本机 git-bash 的 `rm -rf` 在中文/空格路径上会静默失败） |
+
+## 代码结构
+
+按关注点分开，而不是把 C 的自由函数逐个搬成成员函数：
+
+| 文件 | 职责 |
+|---|---|
+| `types.h` / `version.h` | 基础类型、枚举、上限常量、按上限截断的助手 |
+| `output.*` | 输出文件与数字格式化（唯一允许做数值格式化的地方） |
+| `keys.*` / `track.*` / `animation.*` | 模型：关键帧集合、轨道、动画与 `Model` |
+| `tag_scanner.*` | `.reanim` 的 `<tag>内容</tag>` 扫描器（纯函数） |
+| `keyframe.*` | 把 `<t>` 里的字段翻译成对 keys 的写入 |
+| `parser.*` | 两遍扫描的驱动，持有 `ParseState` |
+| `params.*` / `config.*` | 命令行与配置文件的解析 |
+| `resource.*` | `.tres` / `.tscn` 的输出（全代码唯一需要多态的地方） |
+
+## 与原实现的对应关系
+
+| 原实现 | C++ |
+|---|---|
+| `Tomy` 的 `Vec(T)` / `String` / `HashMap` | `std::vector` / `std::string` / `std::unordered_map` |
+| `Optional(T)` / `Result(T,E)` | `std::optional` / `std::expected` |
+| `unique_ptr`/`shared_ptr` 宏 | `std::unique_ptr` / `std::shared_ptr` |
+| `print`/`println`/`format` | `std::print` / `std::println` / `std::format` |
+| 手写 vtable + `VCall`/`Call` | 只有 `ResourceFile`→`Tres`/`Tscn` 是真多态，用 `virtual`；其余地方不需要，也就没用 |
+| 8 个 `XxxKeys` 子类 | `KeysCommon` + `template<class T, class W> KeysOf`（`W` 是值的打印策略） |
+| 8 个 `XxxTrack` 子类 | `TrackCommon` + `template<class K> TrackOf` |
+| `ExtResourceKeys : IntKeys` | `KeysOf<i32, ExtResourceValueWriter>`，靠策略区分而不是靠继承 |
+| `char xxx[N]` + `strncpy` | `std::string` |
+| `bool xxxSpecified` + 值字段 | `std::optional<T>` |
+| 全局 `startParam`/`FPS`/`current_frame_time_num`/`anim_nums` | 分成 `Params`（输入）、`ParseState`（解析游标）、`Model`（产物）三份，各自独立 |
+| `Text()` 把 `&anim` 当数组用的技巧 | 长度为 1 的 `std::span` |
+| `Tap()` 的 `-1/0/1` 三态 | `TapResult` 枚举，独立的 `tag_scanner` |
+| `IsBlendModeEnabled()` 就地改全局参数 | 纯函数 `resolve_blend_mode()`，由调用方决定是否采用 |
+| `SetX`/`SetY`/`SetSx`/`SetSy` 四个同构函数 | 一个 `set_xform(field)` |
+| `PreSetTrackTPos/Scale/Rot/Skew` 四个同构函数 | 一遍 `pre_set()` |
+| `Keys::times_num` 手工计数 | `times.size()`（见 `keys.h` 顶部说明） |
+| `exit(ErrorCode)` | 保留（失败路径仍然是直接退出，以保持退出码语义） |
+
+## 与 HEAD 的有意差异
+
+### rotation / skew 自动改用角度插值
+
+`rotation` 与 `skew` 是角度语义，而 Godot 的 `INTERPOLATION_LINEAR`(1) / `CUBIC`(2)
+只按数值插值，从 350° 转到 10° 会绕 −340° 的大圈。只有 `LINEAR_ANGLE`(3) /
+`CUBIC_ANGLE`(4) 走最短路径，但这两个值在 Godot 动画编辑器的轨道面板里**点不出来**。
+
+所以 `PvzTracks::init` 对这两条轨道自动做转换（`cpp/src/track.cpp` 的
+`angle_interpolation`，C 版对应 `tracks.c` 的 `AngleInterpolation`）：
+
+```
+LINEAR  → LINEAR_ANGLE      NEAREST → 不变（本就不插值）
+CUBIC   → CUBIC_ANGLE
+```
+
+`-im` 的取值没有新增，用户不需要知道 3 / 4 的存在。两点约束：
+
+1. **只作用于 `rot` / `skew`，绝不作用于 `transform` 轨道**——`Transform2D` 走
+   角度插值那条分支会被 Godot 强转 `double`，值直接废掉，比原来的问题更糟。
+2. 因此默认模式下 `tracks/N/interp` 的**取值与 HEAD 不同**（rotation/skew 由 1 变 3），
+   `verify.sh` 的参考 exe 必须换成工作区的 C 版构建，详见"验收"一节。
+
+背景与实测见仓库根目录的 `KNOWN-ISSUE-angle-interpolation.md`。
+
+### 配置文件语法重做
+
+原实现的配置语法是逐字符状态机，命令必须以 `;` 结束，值不能含空格。新实现改为行导向：
+
+- 行尾分号可选（旧写法兼容），值解析到行尾，支持单/双引号与行内 `#` 注释；
+- 键名大小写不敏感，未知键给出带行号的警告；
+- 新增 `InputFile` / `AnimGodotPath` / `ResGodotPath` / `OutputDir` 配置项，相对路径以配置文件所在目录为基准；
+- 配置文件必须通过 `-cf` 显式指定；多个 `-cf` 按顺序叠加；
+- 新增 `--print-config` 与 `--init-config`。
+
+C 与 C++ 两份解析器保持相同行为，`verify.sh` 的配置专项会同时验证两侧输出与产物。
+
+### ExcludeTracks：按动画 / 轨道 / 属性排除
+
+配置文件新增：
+
+```ini
+ExcludeTracks = leaf:visible|texture      # 所有动画
+ExcludeTracks.walk = arm                  # 仅 walk 动画
+ExcludeTracks.Zombie_* = eff_*            # 动画名通配
+```
+
+- 动画模式匹配内部名（`walk`）、`anim_walk` 或输出资源名（`Zombie_walk`）；
+- 省略属性列表表示整条轨道；属性支持 `visible/position/rotation/scale/skew/transform/texture/self_modulate`（`alpha` 别名）与 `all`；
+- 匹配大小写不敏感，支持 `*` / `?`；多个 `-cf` 规则累加；
+- 排除后按动画重新分配 `tracks/N` 编号（保持连续）；tscn 节点按所有动画的保留情况取并集；
+- 与 `-tm transform` / `separate` 不适配的属性会警告并忽略；无命中的规则也会警告；
+- `:material` 轨道随整条轨道排除一起跳过，暂不支持单独按属性排除。
+
+### blend_mode 的 `:material` 轨道恢复输出
+
+4.0 重构时 `:material` 轨道被误注释掉，只留下 Shader / ShaderMaterial 声明，
+造成每部件末尾一个空编号。现在恢复：
+
+- `-bm` 或检测到 `<bm>` 时输出 `:material` 轨道；
+- 值为 `SubResource("ShaderMaterial_normal")` / `SubResource("ShaderMaterial_add")`；
+- 编号连续，不再有每部件末尾的空洞。
+
+## 刻意保留的"怪癖"
+
+这些看起来像 bug，但都是可观测行为，改动会改变输出：
+
+- `.tres`/`.tscn` 里的 `ExtResource("N_fuck")`、`Animation_fuck`、`AnimationLibrary_fuck` 字面量；
+- `.tres` 里 `; Generated by ...` 注释出现 **2 次**，`.tscn` 里出现 **3 次**；
+- `"transitions"` 数组恒输出字面量 `1.0`（真实的 transitions 向量从未被写入）；
+- `-of/--output-file` **只影响输出目录**，文件名恒为 `<输入文件名>_<动画名>`；
+- 只给 3 个位置参数（不给任何选项）会被判为参数错误并退出 1；
+- 无法识别的参数不报错，只打印 `Unknown interpolation mode: <arg> ` 然后继续；
+- `-h`/`--help` 会立刻返回，其后的参数不再解析；
+- `tscn` 模式与 `auto` 模式行为完全相同；
+- `blend_mode` 轨道的数据会被收集，但**从不写进输出**；
+- `UpdateModeDic` 会被解析并打印，但从不影响输出；
+- 输出文件是 **CRLF** 行尾（Windows 文本模式），且 GBK 编码的中文控制台输出。
+
+## 与原实现的已知差异（都在参考实现本身是未定义行为的范围内）
+
+这些输入不在验收语料里，参考实现在这些情况下会越界读写或直接崩溃，因此无法比对：
+
+| 情况 | 原实现 | 本实现 |
+|---|---|---|
+| 单个标签内容 > 50000 字节 | 堆溢出 | 正常处理 |
+| 标签名 > 19 字符 | 栈溢出 | 正常处理 |
+| 路径/名称超过定长缓冲区 | 越界写；`sprintf_s`/`strcat_s` 溢出时 abort | 截断 |
+| `<bm>` 值不是 `normal`/`add` | `values` 比 `times` 短，打印时越界读 | 缺失的尾元素不输出 |
+| 输入含裸的 `\r` 或未闭合标签 | 扫描器行为未定义（可能死循环） | 返回 `Malformed`，有定义 |
+
+另外，原实现里 `Vec(PvzTracks)` 靠元素 `move` 回调转移 9 条轨道的所有权，
+并且大量 `String`/`Vec` 缓冲从不释放；在 C++ 版里这些由 `std::vector` +
+`std::unique_ptr` 与 RAII 自然消除，不再有泄漏与悬垂指针。
+
+> 补充（2026-10-03）：C 版的 `ElemMove` 回调已被删除，改为在
+> `Tomy/include/data_type/vector.h` 里约定「`ElemCopy == NULL` 表示该类型按位搬移、
+> 所有权随字节转移」——搬移后不再析构源槽位。C 侧与 C++ 侧因此仍然语义对齐。
+> 详见该文件 `ElemCopy` 的注释。
