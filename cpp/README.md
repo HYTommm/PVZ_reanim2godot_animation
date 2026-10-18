@@ -147,7 +147,17 @@ ExcludeTracks.Zombie_* = eff_*            # 动画名通配
 - 省略属性列表表示整条轨道；属性支持 `visible/position/rotation/scale/skew/transform/texture/self_modulate`（`alpha` 别名）与 `all`；
 - 匹配大小写不敏感，支持 `*` / `?`；多个 `-cf` 规则累加；
 - 排除后按动画重新分配 `tracks/N` 编号（保持连续）；tscn 节点按所有动画的保留情况取并集；
-- 与 `-tm transform` / `separate` 不适配的属性会警告并忽略；无命中的规则也会警告。
+- 与 `-tm transform` / `separate` 不适配的属性会警告并忽略；无命中的规则也会警告；
+- `:material` 轨道随整条轨道排除一起跳过，暂不支持单独按属性排除。
+
+### blend_mode 的 `:material` 轨道恢复输出
+
+4.0 重构时 `:material` 轨道被误注释掉，只留下 Shader / ShaderMaterial 声明，
+造成每部件末尾一个空编号。现在恢复：
+
+- `-bm` 或检测到 `<bm>` 时输出 `:material` 轨道；
+- 值为 `SubResource("ShaderMaterial_normal")` / `SubResource("ShaderMaterial_add")`；
+- 编号连续，不再有每部件末尾的空洞。
 
 ## 刻意保留的"怪癖"
 

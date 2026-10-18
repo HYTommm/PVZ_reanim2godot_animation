@@ -720,6 +720,7 @@
                 <li>被排除的轨道不输出，也不占用 <code>tracks/N</code> 编号；当所有动画都不再使用某部件时，tscn 中不再生成对应节点。</li>
                 <li><code>transform</code> 模式下写 <code>position</code> / <code>rotation</code> / <code>scale</code> / <code>skew</code> 会警告并忽略；<code>separate</code> 模式下写 <code>transform</code> 同理。</li>
                 <li>没有命中任何轨道的规则会输出警告。</li>
+                <li><code>:material</code> 轨道会随整条轨道排除一起跳过，暂不支持单独按属性排除。</li>
             </ul>
             <div class="code-block">
                 <code>
@@ -934,6 +935,7 @@
                         <li>多个 <code>-cf</code> 按顺序叠加，后加载的覆盖先加载的</li>
                         <li>新增 <code>--print-config</code> / <code>--init-config</code></li>
                         <li>新增 <code>ExcludeTracks</code>：按动画、轨道、属性排除输出，支持通配符</li>
+                        <li>恢复 blend_mode 的 <code>:material</code> 轨道输出（4.0 曾误删），编号恢复连续</li>
                         <li>rotation / skew 自动使用角度插值，<code>separate</code> 模式不再绕远路</li>
                         <li>修复三处越界读（ASan）</li>
                         <li>基于 Tomy 库重构，代码更健壮</li>
