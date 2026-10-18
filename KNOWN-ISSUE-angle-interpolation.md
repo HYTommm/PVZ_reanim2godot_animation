@@ -71,7 +71,7 @@ Godot 的 `Animation::InterpolationType`（`scene/resources/animation.h`）有**
 
 ---
 
-## 转换器的处理
+## 转换器的处理（已实现，2026-10-03）
 
 不新增 `-im` 取值，而是**自动转换**：对角度属性，
 
