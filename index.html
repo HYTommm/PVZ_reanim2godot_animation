@@ -468,11 +468,6 @@
                     <td>—</td>
                 </tr>
                 <tr>
-                    <td><code>--no-config</code></td>
-                    <td>禁用 <code>r2ga.cfg</code> 自动发现（显式 <code>-cf</code> 仍生效）</td>
-                    <td>开关</td>
-                </tr>
-                <tr>
                     <td><code>--print-config</code></td>
                     <td>打印最终生效配置及来源后退出</td>
                     <td>开关</td>
@@ -699,11 +694,9 @@
         <!-- 配置文件部分 -->
         <section id="config" class="content-section">
             <h2>配置文件</h2>
-            <p>R2Ga 支持通过 <code>-cf, --config-file</code> 选项指定配置文件，实现更精细的参数控制。
-               <code>-cf</code> 可以重复，按命令行顺序叠加，后加载的配置文件覆盖先加载的。</p>
-            <p>没有指定 <code>-cf</code> 时，程序会自动查找配置文件：先找<strong>输入文件所在目录</strong>的
-               <code>r2ga.cfg</code>，再找<strong>当前工作目录</strong>的 <code>r2ga.cfg</code>。
-               用 <code>--no-config</code> 可以关闭自动发现。</p>
+            <p>R2Ga 通过 <code>-cf, --config-file</code> 选项显式指定配置文件，实现更精细的参数控制。
+               <code>-cf</code> 可以重复，按命令行顺序叠加，后加载的配置文件覆盖先加载的。
+               未指定 <code>-cf</code> 时不会读取任何配置文件。</p>
 
             <h3>配置文件格式</h3>
             <p>配置文件采用 <code>键 = 值</code> 格式，每行一条配置项；行尾的分号是可选的（旧写法保持兼容）。
@@ -895,7 +888,7 @@
                     <ul>
                         <li>配置文件语法重做：分号可选、值可含空格、支持引号、键名大小写不敏感、未知键警告</li>
                         <li>新增配置项 <code>InputFile</code> / <code>AnimGodotPath</code> / <code>ResGodotPath</code> / <code>OutputDir</code></li>
-                        <li>新增 <code>r2ga.cfg</code> 自动发现（<code>--no-config</code> 可关闭）与多 <code>-cf</code> 叠加</li>
+                        <li>多个 <code>-cf</code> 按顺序叠加，后加载的覆盖先加载的</li>
                         <li>新增 <code>--print-config</code> / <code>--init-config</code></li>
                         <li>rotation / skew 自动使用角度插值，<code>separate</code> 模式不再绕远路</li>
                         <li>修复三处越界读（ASan）</li>

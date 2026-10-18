@@ -36,7 +36,7 @@ bash tools/verify.sh [参考exe] [C++ exe]
 1. 把参考版与 C++ 版用**同一个 exe 路径**各跑一遍（`-h` 会打印 `argv[0]`，路径必须一致）；
 2. 对 22 个样例 × 18 组选项做逐字节文件比对；
 3. 对 15 组错误路径比对 stdout 与退出码；
-4. 配置文件专项：新/旧语法、空格与引号、未知键、字典块、自动发现、路径项、`--no-config`、`--print-config`、`--init-config`。
+4. 配置文件专项：新/旧语法、空格与引号、未知键、字典块、路径项、`--print-config`、`--init-config`。
 
 参考 exe 需自行构建。**注意：现在要从工作区的 C 工程构建，而不是 `git archive HEAD`**——
 角度插值自动转换（见下）是 C 与 C++ 两侧一起改的，HEAD 那份没有，拿它当基准必然不一致：
@@ -128,8 +128,8 @@ CUBIC   → CUBIC_ANGLE
 - 行尾分号可选（旧写法兼容），值解析到行尾，支持单/双引号与行内 `#` 注释；
 - 键名大小写不敏感，未知键给出带行号的警告；
 - 新增 `InputFile` / `AnimGodotPath` / `ResGodotPath` / `OutputDir` 配置项，相对路径以配置文件所在目录为基准；
-- 未指定 `-cf` 时自动查找输入目录 / 当前目录的 `r2ga.cfg`（`--no-config` 关闭）；
-- 多个 `-cf` 按顺序叠加；新增 `--print-config` 与 `--init-config`。
+- 配置文件必须通过 `-cf` 显式指定；多个 `-cf` 按顺序叠加；
+- 新增 `--print-config` 与 `--init-config`。
 
 C 与 C++ 两份解析器保持相同行为，`verify.sh` 的配置专项会同时验证两侧输出与产物。
 

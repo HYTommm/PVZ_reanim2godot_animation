@@ -30,12 +30,11 @@ C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\x64\Release\PVZ_reanim2g
 
 ## 配置文件
 
-程序支持 `r2ga.cfg`：不指定 `-cf` 时会自动查找输入文件目录和当前目录；命令行选项优先于配置文件。
+配置通过 `-cf` 显式指定，可重复，后加载的覆盖先加载的；命令行选项优先于配置文件。
 
 ```
 --print-config   打印最终生效配置及来源
 --init-config    输出带注释的配置模板
---no-config      关闭自动发现
 ```
 
 完整语法与配置项见项目介绍页的「配置文件」一节。
