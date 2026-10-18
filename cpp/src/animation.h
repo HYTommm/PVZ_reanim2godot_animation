@@ -83,4 +83,13 @@ private:
     std::vector<PvzAnimation*>                 raw_;
 };
 
+/// 该轨道在当前参数与排除规则下是否至少还会输出一条属性轨道。
+bool track_has_output(const PvzTracks& tracks, const Params& params);
+
+/// 解析完成后按排除结果重新分配每个动画的 tracks/N 编号（保持连续）。
+void renumber_tracks(Model& model, const Params& params);
+
+/// ExcludeTracks 诊断：模式不适用的属性、未命中任何轨道的规则。
+void validate_exclude_rules(const Params& params, const Model& model);
+
 }  // namespace r2ga

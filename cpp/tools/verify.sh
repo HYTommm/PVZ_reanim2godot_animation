@@ -210,6 +210,38 @@ EOF
     # 3.4 配置模板
     run_conf init-config --init-config
 
+    # 3.5 ExcludeTracks：全局属性排除
+    cat > "$CFG_ROOT/exclude.cfg" <<'EOF'
+ExcludeTracks = LawnMower_body:visible
+EOF
+    run_conf exclude "$sample_win" res://anim/ res://art/ \
+        -om tscn_by_anim -cf "$(to_win "$CFG_ROOT/exclude.cfg")" -of out
+    if grep -rq 'LawnMower_body:visible' "$CFG_ROOT/exclude/ref"; then
+        echo "  [失败] ExcludeTracks 没有排除 visible"
+        cfg_fail=1
+    fi
+    if ! grep -rq 'LawnMower_body:position' "$CFG_ROOT/exclude/ref"; then
+        echo "  [失败] ExcludeTracks 误删了 position"
+        cfg_fail=1
+    fi
+
+    # 3.6 ExcludeTracks：按动画整条排除
+    cat > "$CFG_ROOT/exclude-anim.cfg" <<'EOF'
+ExcludeTracks.normal = *body*
+EOF
+    run_conf exclude-anim "$sample_win" res://anim/ res://art/ \
+        -om anim_tres -cf "$(to_win "$CFG_ROOT/exclude-anim.cfg")" -of out
+    normal_tres=$(find "$CFG_ROOT/exclude-anim/ref" -name '*LawnMower_normal.tres' | head -1)
+    tricked_tres=$(find "$CFG_ROOT/exclude-anim/ref" -name '*LawnMower_tricked.tres' | head -1)
+    if [ -z "$normal_tres" ] || grep -q 'body:' "$normal_tres"; then
+        echo "  [失败] normal 动画的 body 轨道没有被排除"
+        cfg_fail=1
+    fi
+    if [ -z "$tricked_tres" ] || ! grep -q 'body:' "$tricked_tres"; then
+        echo "  [失败] tricked 动画的 body 轨道被误删"
+        cfg_fail=1
+    fi
+
     if [ "$cfg_fail" -eq 0 ]; then
         echo ">>> 配置文件专项全部一致 <<<"
     else

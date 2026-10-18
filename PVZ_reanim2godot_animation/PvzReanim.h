@@ -11,8 +11,21 @@
 #define MAX_PARAMS 100       // 最大参数数量
 #define MAX_TOKENS 50        // 单个命令最大token数
 #define MAX_CONFIG_FILES 8   // 最多可叠加的配置文件数量
+#define MAX_EXCLUDE_RULES 256 // ExcludeTracks 最大规则数
 #define NAME_LENGTH 256       // 名称最大长度
 #define PATH_LENGTH 512       // 路径最大长度
+
+// ExcludeTracks 的属性掩码
+#define EXCLUDE_VISIBLE     (1u << 0)
+#define EXCLUDE_POSITION    (1u << 1)
+#define EXCLUDE_ROTATION    (1u << 2)
+#define EXCLUDE_SCALE       (1u << 3)
+#define EXCLUDE_SKEW        (1u << 4)
+#define EXCLUDE_TRANSFORM   (1u << 5)
+#define EXCLUDE_TEXTURE     (1u << 6)
+#define EXCLUDE_ALPHA       (1u << 7)
+#define EXCLUDE_ALL         ((1u << 8) - 1)
+#define EXCLUDE_XFORM_GROUP (EXCLUDE_POSITION | EXCLUDE_ROTATION | EXCLUDE_SCALE | EXCLUDE_SKEW)
 #define EXT_LENGTH 10         // 扩展名最大长度
 #define MAX_TIMES_NUM 4096   // 最大时间数量
 #define MAX_TEXTURE_NUM 1000 // 最大贴图数量
@@ -195,6 +208,18 @@ static const char* dictionary[] =
 };
 
 /// <summary>
+/// ExcludeTracks 的一条规则：动画模式 × 轨道模式 × 属性掩码
+/// animPattern 为 "*" 表示所有动画
+/// </summary>
+typedef struct R2GAExcludeRule
+{
+    char animPattern[NAME_LENGTH];
+    char trackPattern[NAME_LENGTH];
+    unsigned properties;
+    int line;
+} R2GAExcludeRule;
+
+/// <summary>
 /// R2GA启动参数
 /// </summary>
 typedef struct R2GAStartParam
@@ -339,6 +364,10 @@ typedef struct R2GAStartParam
     /// </summary>
     char configSpecifiedKeys[MAX_PARAMS][NAME_LENGTH];
     int configSpecifiedKeyCount;
+
+    /// ExcludeTracks 规则（多个配置文件累加）
+    R2GAExcludeRule excludeRules[MAX_EXCLUDE_RULES];
+    int excludeRuleCount;
 
     /// <summary>
     /// 是否启用混合模式是否被指定

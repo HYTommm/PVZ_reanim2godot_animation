@@ -1,5 +1,6 @@
 #include "resource.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <print>
 
@@ -7,6 +8,24 @@
 
 namespace r2ga {
 namespace {
+
+/// tscn 节点是否还需要：只要还有任一动画在该部件上保留至少一条属性轨道，就需要。
+bool track_needed(const std::span<PvzAnimation*>& anims, const std::string& name, const Params& params)
+{
+    for (PvzAnimation* anim : anims)
+    {
+        if (anim == nullptr)
+            continue;
+
+        const std::size_t count = std::min(anim->track_name.size(), anim->tracks.size());
+        for (std::size_t i = 0; i < count; ++i)
+        {
+            if (anim->track_name[i] == name && track_has_output(anim->tracks[i], params))
+                return true;
+        }
+    }
+    return false;
+}
 
 /// 混合模式开启时，两个 shader 的 ext_resource 声明（.tres 与 .tscn 共用）。
 void print_shader_ext_resources(OutFile& out)
@@ -174,8 +193,11 @@ void Tscn::print_add_node(const Params& params)
 
     for (int i = 0; i < p_anim_->current_tracks_num; ++i)
     {
-        out_.print("[node name=\"{}\" type=\"Sprite2D\" parent=\".\"]\n",
-                   p_anim_->track_name[static_cast<std::size_t>(i)]);
+        const std::string& name = p_anim_->track_name[static_cast<std::size_t>(i)];
+        if (!track_needed(anims_, name, params))
+            continue;
+
+        out_.print("[node name=\"{}\" type=\"Sprite2D\" parent=\".\"]\n", name);
         out_.write("centered = false\n\n");
     }
 

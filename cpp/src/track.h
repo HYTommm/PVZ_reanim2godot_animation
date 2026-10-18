@@ -71,6 +71,11 @@ public:
     /// 从不进入输出。
     std::string name;
 
+    /// reanim 里的原始 <name>（规范化之前），供 ExcludeTracks 匹配。
+    std::string raw_name;
+    /// 被 ExcludeTracks 排除的属性位（见 types.h 的 EXCLUDE_*）。
+    unsigned excludedProps = 0;
+
     std::unique_ptr<BoolTrack>        vis;
     std::unique_ptr<Vector2Track>     pos;
     std::unique_ptr<FloatTrack>       rot;

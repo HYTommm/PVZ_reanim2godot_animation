@@ -110,6 +110,10 @@ VTABLE{
 CLASS{
     PvzTracks_VTable * vptr;
     char name[NAME_LENGTH];
+    /// reanim 里的原始 <name>（规范化之前），供 ExcludeTracks 匹配
+    char rawName[NAME_LENGTH];
+    /// 被 ExcludeTracks 排除的属性位
+    unsigned excludedProps;
     float length;
     BoolTrack* vis;
     Vector2Track* pos;

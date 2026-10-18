@@ -300,6 +300,8 @@ void _PvzTracks_Create(PvzTracks* self)
     };
     self->vptr = &pvz_tracks_vtable;
     memset(self->name, 0, sizeof(self->name));
+    memset(self->rawName, 0, sizeof(self->rawName));
+    self->excludedProps = 0;
     self->length = 0;
     if ((self->vis = BoolTrack_New()) == NULL) return;
     if ((self->pos = Vector2Track_New()) == NULL) return;
@@ -344,6 +346,8 @@ void PvzTracks_Move(PvzTracks* dest, PvzTracks* src)
 {
     if (!dest || !src) return;
     memcpy(dest->name, src->name, sizeof(dest->name));
+    memcpy(dest->rawName, src->rawName, sizeof(dest->rawName));
+    dest->excludedProps = src->excludedProps;
     dest->length = src->length;
 
     dest->vis = src->vis;
@@ -366,7 +370,9 @@ void PvzTracks_Move(PvzTracks* dest, PvzTracks* src)
     src->blend_mode = NULL;
     src->transform = NULL;
     src->length = 0;
+    src->excludedProps = 0;
     memset(src->name, 0, sizeof(src->name));
+    memset(src->rawName, 0, sizeof(src->rawName));
 }
 
 #define INIT_TRACK(track, start_param)                      \

@@ -25,6 +25,16 @@
 
 namespace r2ga {
 
+/// ExcludeTracks 的一条规则：动画模式 × 轨道模式 × 属性掩码。
+/// animPattern == "*" 表示所有动画。
+struct ExcludeRule
+{
+    std::string animPattern;
+    std::string trackPattern;
+    unsigned    properties = 0;
+    int         line       = 0;
+};
+
 struct Params
 {
     // ------------------------------------------------------------ 帮助
@@ -67,6 +77,9 @@ struct Params
     std::vector<std::string> cliSpecifiedKeys;
     /// 配置文件中出现并生效的配置项（规范名）
     std::vector<std::string> configSpecifiedKeys;
+
+    /// ExcludeTracks 规则（多个配置文件累加）
+    std::vector<ExcludeRule> excludeRules;
 
     // ------------------------------------------------------ 轨道开关
     /// 混合模式。既是 CLI 的 -bm/-nbm，也会被 IsBlendModeEnabled 按输入内容自动设置。
@@ -145,6 +158,19 @@ void print_effective_config(const Params& p);
 
 /// --init-config
 void print_config_template();
+
+/// ExcludeTracks 的通配符匹配（大小写不敏感，支持 * 与 ?）
+bool wildcard_match(std::string_view pattern, std::string_view text);
+
+/// 判断一条排除规则是否命中某个动画里的某条轨道。
+bool exclude_rule_matches(const ExcludeRule& rule,
+                          std::string_view anim_name,
+                          std::string_view res_file_name,
+                          std::string_view raw_track,
+                          std::string_view final_track);
+
+/// 把属性掩码还原成 `visible|position|...` 形式，供 --print-config 使用。
+std::string exclude_properties_string(unsigned properties);
 
 /// 按输入内容决定要不要开混合模式。
 /// 原实现是一个就地改全局参数的方法（IsBlendModeEnabled）；这里做成纯函数，

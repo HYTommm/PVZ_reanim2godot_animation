@@ -126,6 +126,18 @@ void SetTrackName(PvzAnimation* anim[], const int anim_num, const char* new_cont
     const PvzAnimation* first_anim = anim[0];
     PvzAnimation* current_anim = anim[anim_num];
     PvzTracks* current_tracks = anim[anim_num]->tracks.back;
+
+    // 原始名称（匹配 ExcludeTracks 用），去掉首尾空白
+    snprintf(current_tracks->rawName, NAME_LENGTH, "%s", new_content);
+    char* raw_start = current_tracks->rawName;
+    while (*raw_start != '\0' && isspace((unsigned char)*raw_start))
+        raw_start++;
+    if (raw_start != current_tracks->rawName)
+        memmove(current_tracks->rawName, raw_start, strlen(raw_start) + 1);
+    size_t raw_len = strlen(current_tracks->rawName);
+    while (raw_len > 0 && isspace((unsigned char)current_tracks->rawName[raw_len - 1]))
+        current_tracks->rawName[--raw_len] = '\0';
+
     sprintf_s(current_tracks->name, NAME_LENGTH, new_content);
     // 注释：使用2进制位操作符来大写第一个字母
     current_tracks->name[0] &= 0b1011111;
@@ -180,6 +192,110 @@ void SetTrackName(PvzAnimation* anim[], const int anim_num, const char* new_cont
     _String_Append(&current_tracks->alpha->path, format("{}:self_modulate", current_tracks->name)->data);
     _String_Append(&current_tracks->blend_mode->path, format("{}:material", current_tracks->name)->data);
     snprintf(current_anim->track_name[current_anim->current_tracks_num], NAME_LENGTH, "%s", current_tracks->name);
+
+    // ExcludeTracks：按「动画 × 轨道 × 属性」匹配，命中项求并集
+    current_tracks->excludedProps = 0;
+    for (int r = 0; r < startParam.excludeRuleCount; r++)
+    {
+        const R2GAExcludeRule* rule = &startParam.excludeRules[r];
+        if (ExcludeRuleMatches(rule, current_anim->anim_name, current_anim->res_file_name,
+                               current_tracks->rawName, current_tracks->name))
+            current_tracks->excludedProps |= rule->properties;
+    }
+}
+
+static void ValidateExcludeRules(PvzAnimation* anims[], int anim_count, const R2GAStartParam* start_param)
+{
+    if (start_param->excludeRuleCount == 0)
+        return;
+
+    // 1) 当前轨道模式下不会生效的属性
+    const unsigned ineffective = (start_param->trackMode == TRACK_MODE_TRANSFORM)
+                                     ? EXCLUDE_XFORM_GROUP
+                                     : EXCLUDE_TRANSFORM;
+    for (int r = 0; r < start_param->excludeRuleCount; r++)
+    {
+        const R2GAExcludeRule* rule = &start_param->excludeRules[r];
+        if (rule->properties != EXCLUDE_ALL && (rule->properties & ineffective))
+        {
+            fprintf(stderr, COL_WARN
+                    "Warning: ExcludeTracks rule '%s' / '%s' uses properties that have no effect in %s track mode.\n"
+                    COL_RESET,
+                    rule->animPattern, rule->trackPattern,
+                    start_param->trackMode == TRACK_MODE_TRANSFORM ? "transform" : "separate");
+        }
+    }
+
+    // 2) 没有命中任何轨道的规则
+    for (int r = 0; r < start_param->excludeRuleCount; r++)
+    {
+        const R2GAExcludeRule* rule = &start_param->excludeRules[r];
+        int matched = 0;
+
+        for (int a = 0; a <= anim_count && !matched; a++)
+        {
+            PvzAnimation* anim = anims[a];
+            PvzTracks* tracks = (PvzTracks*)anim->tracks.data;
+            for (umax i = 0; i < anim->tracks.size; i++)
+            {
+                if (ExcludeRuleMatches(rule, anim->anim_name, anim->res_file_name,
+                                       tracks[i].rawName, tracks[i].name))
+                {
+                    matched = 1;
+                    break;
+                }
+            }
+        }
+
+        if (!matched)
+        {
+            fprintf(stderr, COL_WARN
+                    "Warning: ExcludeTracks rule '%s' / '%s' matched no tracks.\n"
+                    COL_RESET,
+                    rule->animPattern, rule->trackPattern);
+        }
+    }
+}
+
+static void RenumberTracks(PvzAnimation* anims[], int anim_count, const R2GAStartParam* start_param)
+{
+    for (int a = 0; a <= anim_count; a++)
+    {
+        PvzAnimation* anim = anims[a];
+        PvzTracks* tracks = (PvzTracks*)anim->tracks.data;
+        int next = 0;
+
+        for (umax i = 0; i < anim->tracks.size; i++)
+        {
+            PvzTracks* t = &tracks[i];
+            const unsigned excluded = t->excludedProps;
+
+            if (start_param->visibleTrackEnabled && !(excluded & EXCLUDE_VISIBLE))
+                t->vis->num = next++;
+
+            if (start_param->trackMode == TRACK_MODE_TRANSFORM)
+            {
+                if (!(excluded & EXCLUDE_TRANSFORM))
+                    t->transform->num = next++;
+            }
+            else
+            {
+                if (!(excluded & EXCLUDE_POSITION)) t->pos->num = next++;
+                if (!(excluded & EXCLUDE_ROTATION)) t->rot->num = next++;
+                if (!(excluded & EXCLUDE_SCALE))    t->scale->num = next++;
+                if (!(excluded & EXCLUDE_SKEW))     t->skew->num = next++;
+            }
+
+            if (start_param->textureTrackEnabled && !(excluded & EXCLUDE_TEXTURE))
+                t->texture->num = next++;
+            if (start_param->alphaTrackEnabled && !(excluded & EXCLUDE_ALPHA))
+                t->alpha->num = next++;
+
+            // blend_mode 从不输出，但原实现仍然为它占一个编号
+            if (start_param->blendModeTrackEnabled)
+                t->blend_mode->num = next++;
+        }
+    }
 }
 void PreSetTrackTVis([[maybe_unused]] const PvzAnimation* anim)
 {
@@ -1081,6 +1197,10 @@ int main(int argc, char* argv[])
 
     // 处理文件内容并写入输出文件
     Text(file_text, pvz_animations, &startParam);
+
+    // ExcludeTracks：先给诊断，再按排除结果重排轨道编号
+    ValidateExcludeRules(pvz_animations, anim_nums, &startParam);
+    RenumberTracks(pvz_animations, anim_nums, &startParam);
 
     for (int i = 0; i <= anim_nums; i++)
     {

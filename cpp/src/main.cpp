@@ -147,6 +147,10 @@ int main(int argc, char** argv)
     // 第二遍：生成关键帧数据
     parser.text(input_text, model.all());
 
+    // ExcludeTracks：先给诊断，再按排除结果重排轨道编号
+    validate_exclude_rules(params, model);
+    renumber_tracks(model, params);
+
     for (std::size_t i = 0; i < anim_slots; ++i)
     {
         const OutputMode mode = params.output_mode();

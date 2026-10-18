@@ -1,6 +1,7 @@
 #include "parser.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cstdlib>
 
 #include "tag_scanner.h"
@@ -165,6 +166,13 @@ void Parser::set_track_name(std::span<PvzAnimation*> anims, std::size_t anim_ind
     PvzAnimation&       current_anim = *anims[anim_index];
     PvzTracks&          current_tracks = current_anim.tracks.back();
 
+    // 原实现的原始名称（匹配 ExcludeTracks 用），去掉首尾空白
+    std::string raw_name = clamp_name(new_content);
+    while (!raw_name.empty() && std::isspace(static_cast<unsigned char>(raw_name.front())))
+        raw_name.erase(0, 1);
+    while (!raw_name.empty() && std::isspace(static_cast<unsigned char>(raw_name.back())))
+        raw_name.pop_back();
+
     // 原实现是 sprintf_s(name, NAME_LENGTH, new_content)，把输入当格式串。
     // 这里直接赋值（等价于无格式符时的结果）。
     std::string name = clamp_name(new_content);
@@ -191,6 +199,17 @@ void Parser::set_track_name(std::span<PvzAnimation*> anims, std::size_t anim_ind
         name = temp_name;
 
     current_tracks.name = name;
+    current_tracks.raw_name = raw_name;
+
+    // ExcludeTracks：按「动画 × 轨道 × 属性」匹配，命中项求并集
+    unsigned excluded = 0;
+    for (const ExcludeRule& rule : params_.excludeRules)
+    {
+        if (exclude_rule_matches(rule, current_anim.anim_name, current_anim.res_file_name,
+                                 current_tracks.raw_name, current_tracks.name))
+            excluded |= rule.properties;
+    }
+    current_tracks.excludedProps = excluded;
 
     // 各轨道的 path：`<名字>:<属性>`
     // 注意 visible/texture/alpha/material 是无条件追加的（即使对应轨道未启用），

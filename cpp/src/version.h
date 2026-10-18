@@ -28,6 +28,22 @@ inline constexpr int MAX_ANIM_NUM    = 50;    // 最大动画数量
 // 改成 float 会改变舍入。保持 double。
 inline constexpr double PI = 3.1415926;
 
+// ------------------------------------------------ 轨道属性排除位
+//
+// 配置文件 ExcludeTracks 的每条规则用这些位表示要排除哪些属性。
+// 整条轨道 = EXCLUDE_ALL。
+inline constexpr unsigned EXCLUDE_VISIBLE   = 1u << 0;
+inline constexpr unsigned EXCLUDE_POSITION  = 1u << 1;
+inline constexpr unsigned EXCLUDE_ROTATION  = 1u << 2;
+inline constexpr unsigned EXCLUDE_SCALE     = 1u << 3;
+inline constexpr unsigned EXCLUDE_SKEW      = 1u << 4;
+inline constexpr unsigned EXCLUDE_TRANSFORM = 1u << 5;
+inline constexpr unsigned EXCLUDE_TEXTURE   = 1u << 6;
+inline constexpr unsigned EXCLUDE_ALPHA     = 1u << 7;
+inline constexpr unsigned EXCLUDE_ALL       = (1u << 8) - 1;
+inline constexpr unsigned EXCLUDE_XFORM_GROUP =
+    EXCLUDE_POSITION | EXCLUDE_ROTATION | EXCLUDE_SCALE | EXCLUDE_SKEW;
+
 // ANSI 颜色（终端输出用，必须原样保留转义序列）
 inline constexpr const char* COL_TITLE  = "\033[1;96m";  // 亮青色加粗（标题）
 inline constexpr const char* COL_HEADER = "\033[1;95m";  // 亮紫色加粗（小标题）

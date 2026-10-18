@@ -147,6 +147,244 @@ static int IsCliSpecified(const R2GAStartParam* param, const char* key)
 }
 
 // ---------------------------------------------------------------------------
+// ExcludeTracks
+// ---------------------------------------------------------------------------
+
+static int WildcardMatch(const char* pattern, const char* text)
+{
+    const char* p = pattern;
+    const char* t = text;
+    const char* star = NULL;
+    const char* star_text = NULL;
+
+    while (*t != '\0')
+    {
+        if (*p == '?' || (*p != '\0' &&
+            tolower((unsigned char)*p) == tolower((unsigned char)*t)))
+        {
+            p++;
+            t++;
+        }
+        else if (*p == '*')
+        {
+            star = p++;
+            star_text = t;
+        }
+        else if (star != NULL)
+        {
+            p = star + 1;
+            t = ++star_text;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+
+    while (*p == '*')
+        p++;
+    return *p == '\0';
+}
+
+static int AnimMatches(const char* pattern, const char* anim_name, const char* res_file_name)
+{
+    if (strcmp(pattern, "*") == 0)
+        return 1;
+    if (WildcardMatch(pattern, anim_name))
+        return 1;
+
+    char with_prefix[NAME_LENGTH + 8];
+    snprintf(with_prefix, sizeof(with_prefix), "anim_%s", anim_name);
+    if (WildcardMatch(pattern, with_prefix))
+        return 1;
+
+    return WildcardMatch(pattern, res_file_name);
+}
+
+int ExcludeRuleMatches(const R2GAExcludeRule* rule, const char* anim_name, const char* res_file_name,
+                       const char* raw_track, const char* final_track)
+{
+    if (!AnimMatches(rule->animPattern, anim_name, res_file_name))
+        return 0;
+
+    return WildcardMatch(rule->trackPattern, raw_track) ||
+           WildcardMatch(rule->trackPattern, final_track);
+}
+
+static unsigned ParseExcludeProperty(const char* name)
+{
+    if (StrCaseCmp(name, "visible") == 0)     return EXCLUDE_VISIBLE;
+    if (StrCaseCmp(name, "position") == 0)    return EXCLUDE_POSITION;
+    if (StrCaseCmp(name, "rotation") == 0)    return EXCLUDE_ROTATION;
+    if (StrCaseCmp(name, "scale") == 0)       return EXCLUDE_SCALE;
+    if (StrCaseCmp(name, "skew") == 0)        return EXCLUDE_SKEW;
+    if (StrCaseCmp(name, "transform") == 0)   return EXCLUDE_TRANSFORM;
+    if (StrCaseCmp(name, "texture") == 0)     return EXCLUDE_TEXTURE;
+    if (StrCaseCmp(name, "self_modulate") == 0 ||
+        StrCaseCmp(name, "alpha") == 0)       return EXCLUDE_ALPHA;
+    if (StrCaseCmp(name, "all") == 0)         return EXCLUDE_ALL;
+    return 0;
+}
+
+static void FormatExcludeProperties(unsigned properties, char* out, size_t out_size)
+{
+    if (properties == EXCLUDE_ALL)
+    {
+        snprintf(out, out_size, "all");
+        return;
+    }
+
+    static const struct { const char* name; unsigned bit; } items[] = {
+        { "visible", EXCLUDE_VISIBLE },
+        { "position", EXCLUDE_POSITION },
+        { "rotation", EXCLUDE_ROTATION },
+        { "scale", EXCLUDE_SCALE },
+        { "skew", EXCLUDE_SKEW },
+        { "transform", EXCLUDE_TRANSFORM },
+        { "texture", EXCLUDE_TEXTURE },
+        { "self_modulate", EXCLUDE_ALPHA },
+    };
+
+    size_t used = 0;
+    out[0] = '\0';
+    for (size_t i = 0; i < sizeof(items) / sizeof(items[0]); i++)
+    {
+        if ((properties & items[i].bit) == 0)
+            continue;
+        used += (size_t)snprintf(out + used, used < out_size ? out_size - used : 0,
+                                 "%s%s", used ? "|" : "", items[i].name);
+        if (used >= out_size)
+            break;
+    }
+}
+
+static void AddExcludeRule(R2GAStartParam* param, const char* anim_pattern, char* entry, int line)
+{
+    Trim(entry);
+    if (entry[0] == '\0')
+    {
+        print_warning("Warning (line %d): empty ExcludeTracks entry, ignored.\n", line);
+        return;
+    }
+
+    char original[PATH_LENGTH * 2];
+    snprintf(original, sizeof(original), "%s", entry);
+
+    char track_pattern[NAME_LENGTH];
+    unsigned properties = EXCLUDE_ALL;
+
+    char* colon = strrchr(entry, ':');
+    if (colon != NULL)
+    {
+        *colon = '\0';
+        Trim(entry);
+        snprintf(track_pattern, sizeof(track_pattern), "%s", entry);
+
+        properties = 0;
+        char* p = colon + 1;
+        while (1)
+        {
+            char* bar = strchr(p, '|');
+            if (bar != NULL)
+                *bar = '\0';
+
+            Trim(p);
+            const unsigned bit = ParseExcludeProperty(p);
+            if (bit == 0)
+            {
+                if (p[0] != '\0')
+                    print_warning("Warning (line %d): unknown ExcludeTracks property '%s', ignored.\n", line, p);
+            }
+            else
+            {
+                properties |= bit;
+            }
+
+            if (bar == NULL)
+                break;
+            p = bar + 1;
+        }
+
+        if (properties == 0)
+        {
+            print_warning("Warning (line %d): ExcludeTracks entry '%s' has no valid properties, ignored.\n",
+                          line, original);
+            return;
+        }
+    }
+    else
+    {
+        snprintf(track_pattern, sizeof(track_pattern), "%s", entry);
+    }
+
+    if (track_pattern[0] == '\0')
+    {
+        print_warning("Warning (line %d): ExcludeTracks entry has an empty track pattern, ignored.\n", line);
+        return;
+    }
+
+    for (int i = 0; i < param->excludeRuleCount; i++)
+    {
+        if (strcmp(param->excludeRules[i].animPattern, anim_pattern) == 0 &&
+            strcmp(param->excludeRules[i].trackPattern, track_pattern) == 0 &&
+            param->excludeRules[i].properties == properties)
+            return;
+    }
+
+    if (param->excludeRuleCount >= MAX_EXCLUDE_RULES)
+    {
+        print_warning("Warning (line %d): too many ExcludeTracks rules, ignored.\n", line);
+        return;
+    }
+
+    R2GAExcludeRule* rule = &param->excludeRules[param->excludeRuleCount++];
+    snprintf(rule->animPattern, sizeof(rule->animPattern), "%s", anim_pattern);
+    snprintf(rule->trackPattern, sizeof(rule->trackPattern), "%s", track_pattern);
+    rule->properties = properties;
+    rule->line = line;
+}
+
+static void ApplyExcludeList(R2GAStartParam* param, const char* anim_pattern, const char* value, int line)
+{
+    char entry[PATH_LENGTH * 2];
+    size_t n = 0;
+    int in_quote = 0;
+    char quote = '\0';
+
+    for (const char* p = value; ; p++)
+    {
+        const char c = *p;
+
+        if (in_quote)
+        {
+            if (c == quote)
+                in_quote = 0;
+            else if (n + 1 < sizeof(entry))
+                entry[n++] = c;
+        }
+        else if (c == '"' || c == '\'')
+        {
+            in_quote = 1;
+            quote = c;
+        }
+        else if (c == ',' || c == '\0')
+        {
+            entry[n] = '\0';
+            Trim(entry);
+            if (entry[0] != '\0')
+                AddExcludeRule(param, anim_pattern, entry, line);
+            n = 0;
+            if (c == '\0')
+                break;
+        }
+        else if (n + 1 < sizeof(entry))
+        {
+            entry[n++] = c;
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // 初始化
 // ---------------------------------------------------------------------------
 
@@ -208,6 +446,7 @@ Result StartParamInit(R2GAStartParam* param)
     param->configFileDir[0] = '\0';
     param->cliSpecifiedKeyCount = 0;
     param->configSpecifiedKeyCount = 0;
+    param->excludeRuleCount = 0;
 
     // 混合模式是否启用
     param->blendModeTrackEnabledSpecified = false;
@@ -1093,6 +1332,19 @@ static void ApplyConfigEntry(R2GAStartParam* param, const R2GAConfigParam* entry
         return;
     }
 
+    // ExcludeTracks / ExcludeTracks.<动画模式> = 轨道模式[:属性列表]
+    if (StrCaseCmp(key, "ExcludeTracks") == 0 || StrCaseStartsWith(key, "ExcludeTracks."))
+    {
+        MarkConfigKey(param, key);
+
+        const char* anim_pattern = (StrCaseCmp(key, "ExcludeTracks") == 0) ? "*" : (key + 14);
+        if (anim_pattern[0] == '\0')
+            anim_pattern = "*";
+
+        ApplyExcludeList(param, anim_pattern, value, entry->line);
+        return;
+    }
+
     // 处理"UpdateModeDic.*"参数—每轨道更新模式（后写覆盖）
     if (StrCaseStartsWith(key, "UpdateModeDic."))
     {
@@ -1372,6 +1624,27 @@ void StartParamPrintEffectiveConfig(const R2GAStartParam* param)
     printf("[config] RootNodeName = %s (%s)\n", param->rootNodeName, ConfigSource(param, "RootNodeName"));
     printf("[config] AnimName = %s (%s)\n", param->animName, ConfigSource(param, "AnimName"));
 
+    for (int i = 0; i < param->excludeRuleCount; i++)
+    {
+        const R2GAExcludeRule* rule = &param->excludeRules[i];
+        char key[NAME_LENGTH + 16];
+        if (strcmp(rule->animPattern, "*") == 0)
+            snprintf(key, sizeof(key), "ExcludeTracks");
+        else
+            snprintf(key, sizeof(key), "ExcludeTracks.%s", rule->animPattern);
+
+        if (rule->properties == EXCLUDE_ALL)
+        {
+            printf("[config] %s = %s (config)\n", key, rule->trackPattern);
+        }
+        else
+        {
+            char props[NAME_LENGTH];
+            FormatExcludeProperties(rule->properties, props, sizeof(props));
+            printf("[config] %s = %s:%s (config)\n", key, rule->trackPattern, props);
+        }
+    }
+
     for (int i = 0; i < param->updateModeDicCount; i++)
     {
         char full_key[NAME_LENGTH];
@@ -1412,6 +1685,11 @@ void StartParamPrintConfigTemplate(void)
         "# RootNodeType = Node2D\n"
         "# RootNodeName = MyZombie\n"
         "# AnimName = MyAnim\n"
+        "\n"
+        "# ---- exclude tracks / properties ----\n"
+        "# ExcludeTracks = leaf\n"
+        "# ExcludeTracks = leaf:visible|texture\n"
+        "# ExcludeTracks.walk = arm\n"
         "\n"
         "# ---- per-track update modes ----\n"
         "# UpdateModeDic = {\n"

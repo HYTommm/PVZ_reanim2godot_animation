@@ -35,6 +35,8 @@ struct ConfigEntry
     int         line = 0;
 };
 
+constexpr int MAX_EXCLUDE_RULES = 256;
+
 std::string_view trim_view(std::string_view s)
 {
     while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front())))
@@ -97,6 +99,148 @@ std::string resolve_config_path(const Params& p, std::string_view value)
     const char last = p.configFileDir.back();
     const char* sep = (last == '/' || last == '\\') ? "" : "\\";
     return p.configFileDir + sep + std::string(value);
+}
+
+// ---------------------------------------------------------- ExcludeTracks
+
+bool anim_matches(std::string_view pattern, std::string_view anim_name, std::string_view res_file_name)
+{
+    if (pattern == "*")
+        return true;
+    if (wildcard_match(pattern, anim_name))
+        return true;
+    std::string with_prefix = "anim_";
+    with_prefix += anim_name;
+    if (wildcard_match(pattern, with_prefix))
+        return true;
+    return wildcard_match(pattern, res_file_name);
+}
+
+unsigned parse_property_name(std::string_view name)
+{
+    if (iequals(name, "visible"))     return EXCLUDE_VISIBLE;
+    if (iequals(name, "position"))    return EXCLUDE_POSITION;
+    if (iequals(name, "rotation"))    return EXCLUDE_ROTATION;
+    if (iequals(name, "scale"))       return EXCLUDE_SCALE;
+    if (iequals(name, "skew"))        return EXCLUDE_SKEW;
+    if (iequals(name, "transform"))   return EXCLUDE_TRANSFORM;
+    if (iequals(name, "texture"))     return EXCLUDE_TEXTURE;
+    if (iequals(name, "self_modulate") || iequals(name, "alpha")) return EXCLUDE_ALPHA;
+    if (iequals(name, "all"))         return EXCLUDE_ALL;
+    return 0;
+}
+
+/// 按逗号拆分列表；引号内的逗号不拆，引号本身去掉。
+std::vector<std::string> split_list(std::string_view s)
+{
+    std::vector<std::string> out;
+    std::string cur;
+    char quote   = '\0';
+    bool in_quote = false;
+
+    for (const char c : s)
+    {
+        if (in_quote)
+        {
+            if (c == quote) in_quote = false;
+            else cur.push_back(c);
+        }
+        else if (c == '"' || c == '\'')
+        {
+            in_quote = true;
+            quote = c;
+        }
+        else if (c == ',')
+        {
+            std::string item = cur;
+            trim_in_place(item);
+            if (!item.empty()) out.push_back(std::move(item));
+            cur.clear();
+        }
+        else
+        {
+            cur.push_back(c);
+        }
+    }
+
+    trim_in_place(cur);
+    if (!cur.empty()) out.push_back(std::move(cur));
+    return out;
+}
+
+void add_exclude_rule(Params& p, std::string anim_pattern, std::string entry, int line)
+{
+    trim_in_place(entry);
+    if (entry.empty())
+    {
+        print_warning("Warning (line {}): empty ExcludeTracks entry, ignored.\n", line);
+        return;
+    }
+
+    std::string track_pattern = entry;
+    unsigned properties = EXCLUDE_ALL;
+
+    // 用最后一个冒号分隔轨道模式与属性列表，允许轨道名里含冒号
+    const std::size_t colon = entry.rfind(':');
+    if (colon != std::string::npos)
+    {
+        track_pattern = entry.substr(0, colon);
+        trim_in_place(track_pattern);
+
+        const std::string prop_list = entry.substr(colon + 1);
+        properties = 0;
+        std::size_t start = 0;
+        while (start <= prop_list.size())
+        {
+            const std::size_t bar = prop_list.find('|', start);
+            std::string_view name = std::string_view(prop_list).substr(
+                start, bar == std::string::npos ? std::string::npos : bar - start);
+            name = trim_view(name);
+            const unsigned bit = parse_property_name(name);
+            if (bit == 0)
+            {
+                if (!name.empty())
+                    print_warning("Warning (line {}): unknown ExcludeTracks property '{}', ignored.\n",
+                                  line, std::string(name));
+            }
+            else
+            {
+                properties |= bit;
+            }
+            if (bar == std::string::npos) break;
+            start = bar + 1;
+        }
+
+        if (properties == 0)
+        {
+            print_warning("Warning (line {}): ExcludeTracks entry '{}' has no valid properties, ignored.\n",
+                          line, entry);
+            return;
+        }
+    }
+
+    if (track_pattern.empty())
+    {
+        print_warning("Warning (line {}): ExcludeTracks entry has an empty track pattern, ignored.\n", line);
+        return;
+    }
+
+    // 完全相同的规则去重
+    for (const ExcludeRule& existing : p.excludeRules)
+    {
+        if (existing.animPattern == anim_pattern &&
+            existing.trackPattern == track_pattern &&
+            existing.properties == properties)
+            return;
+    }
+
+    if (static_cast<int>(p.excludeRules.size()) >= MAX_EXCLUDE_RULES)
+    {
+        print_warning("Warning (line {}): too many ExcludeTracks rules, ignored.\n", line);
+        return;
+    }
+
+    p.excludeRules.push_back(ExcludeRule{std::move(anim_pattern), std::move(track_pattern), properties, line});
 }
 
 void mark_config_key(Params& p, std::string_view key)
@@ -575,6 +719,20 @@ void apply_config_entry(Params& p, const ConfigEntry& e)
         return;
     }
 
+    // ExcludeTracks / ExcludeTracks.<动画模式> = 轨道模式[:属性列表]
+    if (iequals(key, "ExcludeTracks") || istarts_with(key, "ExcludeTracks."))
+    {
+        mark_config_key(p, key);
+
+        std::string anim_pattern = iequals(key, "ExcludeTracks") ? "*" : key.substr(14);
+        if (anim_pattern.empty())
+            anim_pattern = "*";
+
+        for (const std::string& item : split_list(value))
+            add_exclude_rule(p, anim_pattern, item, e.line);
+        return;
+    }
+
     if (istarts_with(key, "UpdateModeDic."))
     {
         const std::string track_name = key.substr(14);
@@ -717,6 +875,82 @@ const char* track_mode_name(TrackMode mode)
 
 }  // namespace
 
+bool wildcard_match(std::string_view pattern, std::string_view text)
+{
+    std::size_t pi = 0;
+    std::size_t ti = 0;
+    std::size_t star = std::string_view::npos;
+    std::size_t star_text = 0;
+
+    while (ti < text.size())
+    {
+        if (pi < pattern.size() &&
+            (pattern[pi] == '?' ||
+             std::tolower(static_cast<unsigned char>(pattern[pi])) ==
+                 std::tolower(static_cast<unsigned char>(text[ti]))))
+        {
+            ++pi;
+            ++ti;
+        }
+        else if (pi < pattern.size() && pattern[pi] == '*')
+        {
+            star = pi++;
+            star_text = ti;
+        }
+        else if (star != std::string_view::npos)
+        {
+            pi = star + 1;
+            ti = ++star_text;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    while (pi < pattern.size() && pattern[pi] == '*')
+        ++pi;
+    return pi == pattern.size();
+}
+
+bool exclude_rule_matches(const ExcludeRule& rule,
+                          std::string_view anim_name,
+                          std::string_view res_file_name,
+                          std::string_view raw_track,
+                          std::string_view final_track)
+{
+    if (!anim_matches(rule.animPattern, anim_name, res_file_name))
+        return false;
+    return wildcard_match(rule.trackPattern, raw_track) ||
+           wildcard_match(rule.trackPattern, final_track);
+}
+
+std::string exclude_properties_string(unsigned properties)
+{
+    if (properties == EXCLUDE_ALL)
+        return "all";
+
+    std::string out;
+    auto add = [&](const char* name, unsigned bit)
+    {
+        if ((properties & bit) == 0)
+            return;
+        if (!out.empty())
+            out.push_back('|');
+        out += name;
+    };
+
+    add("visible", EXCLUDE_VISIBLE);
+    add("position", EXCLUDE_POSITION);
+    add("rotation", EXCLUDE_ROTATION);
+    add("scale", EXCLUDE_SCALE);
+    add("skew", EXCLUDE_SKEW);
+    add("transform", EXCLUDE_TRANSFORM);
+    add("texture", EXCLUDE_TEXTURE);
+    add("self_modulate", EXCLUDE_ALPHA);
+    return out;
+}
+
 void parse_config(Params& p, const std::string& config_file_path)
 {
     const std::string content = read_text_file(config_file_path, ErrorCode_CannotOpenConfigFile);
@@ -763,6 +997,18 @@ void print_effective_config(const Params& p)
     std::print("[config] RootNodeName = {} ({})\n", p.root_node_name().c_str(), source_of(p, "RootNodeName"));
     std::print("[config] AnimName = {} ({})\n", p.anim_name().c_str(), source_of(p, "AnimName"));
 
+    for (const ExcludeRule& rule : p.excludeRules)
+    {
+        const std::string key = (rule.animPattern == "*")
+                                    ? std::string("ExcludeTracks")
+                                    : ("ExcludeTracks." + rule.animPattern);
+        if (rule.properties == EXCLUDE_ALL)
+            std::print("[config] {} = {} (config)\n", key, rule.trackPattern);
+        else
+            std::print("[config] {} = {}:{} (config)\n", key, rule.trackPattern,
+                       exclude_properties_string(rule.properties));
+    }
+
     for (const auto& [name, mode] : p.updateModeDic)
     {
         const std::string full_key = "UpdateModeDic." + name;
@@ -803,6 +1049,11 @@ void print_config_template()
         "# RootNodeType = Node2D\n"
         "# RootNodeName = MyZombie\n"
         "# AnimName = MyAnim\n"
+        "\n"
+        "# ---- exclude tracks / properties ----\n"
+        "# ExcludeTracks = leaf\n"
+        "# ExcludeTracks = leaf:visible|texture\n"
+        "# ExcludeTracks.walk = arm\n"
         "\n"
         "# ---- per-track update modes ----\n"
         "# UpdateModeDic = {\n"

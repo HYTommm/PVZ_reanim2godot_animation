@@ -31,3 +31,7 @@ void StartParamPrintEffectiveConfig(const R2GAStartParam* param);
 
 /// <summary> 打印配置模板（--init-config） </summary>
 void StartParamPrintConfigTemplate(void);
+
+/// <summary> 判断一条 ExcludeTracks 规则是否命中某个动画里的某条轨道 </summary>
+int ExcludeRuleMatches(const R2GAExcludeRule* rule, const char* anim_name, const char* res_file_name,
+                       const char* raw_track, const char* final_track);
