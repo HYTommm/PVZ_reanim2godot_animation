@@ -96,6 +96,10 @@ void PvzAnimation_PrintTracksToFile(const PvzAnimation* self, FILE* p_file, cons
         if (start_param->alphaTrackEnabled && !(excluded & EXCLUDE_ALPHA))
             tracks->alpha->vptr->PrintToFile(tracks->alpha, p_file);
 
+        // material 轨道：整条轨道被排除时不输出
+        if (start_param->blendModeTrackEnabled && excluded != EXCLUDE_ALL)
+            tracks->blend_mode->vptr->PrintToFile(tracks->blend_mode, p_file);
+
         tracks++;
     }
 

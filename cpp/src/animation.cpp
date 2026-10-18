@@ -41,7 +41,9 @@ void PvzAnimation::print_tracks_to_file(OutFile& out, const Params& params) cons
         if (params.alpha_track() && !(excluded & EXCLUDE_ALPHA))
             t.alpha->print_to_file(out);
 
-        // blend_mode 轨道在这里被跳过（原实现同样跳过）
+        // material 轨道：整条轨道被排除时不输出
+        if (params.blend_mode() && excluded != EXCLUDE_ALL)
+            t.blend_mode->print_to_file(out);
     }
 
     out.flush();
@@ -104,9 +106,7 @@ void renumber_tracks(Model& model, const Params& params)
             if (params.alpha_track() && !(excluded & EXCLUDE_ALPHA))
                 t.alpha->num = next++;
 
-            // blend_mode 从不输出，但原实现仍然为它占一个编号，
-            // 从而让下一个部件的起始编号保持与原实现一致。
-            if (params.blend_mode())
+            if (params.blend_mode() && excluded != EXCLUDE_ALL)
                 t.blend_mode->num = next++;
         }
     }

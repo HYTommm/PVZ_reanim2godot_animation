@@ -1,7 +1,8 @@
 // 基础数据类型与枚举。
 //
-// 枚举的整数值直接写进输出（`tracks/N/interp = %d`、`"update": %d,`、
-// BlendMode 轨道的 values），所以底层取值必须与原实现一致，不能重排。
+// 枚举的整数值直接写进输出（`tracks/N/interp = %d`、`"update": %d,`），
+// 所以底层取值必须与原实现一致，不能重排。BlendMode 的 values 输出为
+// SubResource("ShaderMaterial_normal"/"ShaderMaterial_add")。
 
 #pragma once
 

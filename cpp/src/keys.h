@@ -105,7 +105,10 @@ namespace r2ga
     {
         static void write(OutFile& out, BlendMode v)
         {
-            out.print("{:d}", static_cast<int>(v));
+            if (v == BlendMode::Normal)
+                out.write("SubResource(\"ShaderMaterial_normal\")");
+            else
+                out.write("SubResource(\"ShaderMaterial_add\")");
         }
     };
 

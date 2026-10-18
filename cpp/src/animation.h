@@ -52,7 +52,7 @@ public:
     PvzAnimation& operator=(PvzAnimation&&) noexcept = default;
 
     /// 输出这个动画里所有参与输出的轨道。
-    /// blend_mode 轨道**从不输出**（原实现如此，收集到的数据是白收集的）。
+    /// blend_mode 开启时输出 `:material` 轨道（值为 ShaderMaterial 子资源）。
     void print_tracks_to_file(OutFile& out, const Params& params) const;
 
     /// 原实现是定长数组下标写（`arr[i] = x`），越界即 UB。

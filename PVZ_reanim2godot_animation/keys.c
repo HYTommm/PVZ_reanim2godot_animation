@@ -316,7 +316,11 @@ void BlendModeKeys_PrintToFile(BlendModeKeys* self, FILE* file)
     fprintf(file, "\"values\": [");
     for (int i = 0; i < self->times_num; i++)
     {
-        fprintf(file, "%d", *VCall(Vec(BlendMode), &self->values, at, i));
+        const BlendMode mode = *VCall(Vec(BlendMode), &self->values, at, i);
+        if (mode == BLEND_MODE_NORMAL)
+            fprintf(file, "SubResource(\"ShaderMaterial_normal\")");
+        else
+            fprintf(file, "SubResource(\"ShaderMaterial_add\")");
         if (i != self->times_num - 1)
             fprintf(file, ", ");
     }

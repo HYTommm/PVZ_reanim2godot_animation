@@ -291,8 +291,7 @@ static void RenumberTracks(PvzAnimation* anims[], int anim_count, const R2GAStar
             if (start_param->alphaTrackEnabled && !(excluded & EXCLUDE_ALPHA))
                 t->alpha->num = next++;
 
-            // blend_mode 从不输出，但原实现仍然为它占一个编号
-            if (start_param->blendModeTrackEnabled)
+            if (start_param->blendModeTrackEnabled && excluded != EXCLUDE_ALL)
                 t->blend_mode->num = next++;
         }
     }

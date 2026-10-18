@@ -242,6 +242,17 @@ EOF
         cfg_fail=1
     fi
 
+    # 3.7 blend_mode 的 :material 轨道
+    mkdir -p "$CFG_ROOT/bm"
+    cp "$sample_bash" "$CFG_ROOT/bm/with_bm.reanim"
+    sed -i '0,/<t>/s//<t><bm>normal<\/bm>/' "$CFG_ROOT/bm/with_bm.reanim"
+    run_conf blend "$(to_win "$CFG_ROOT/bm/with_bm.reanim")" res://anim/ res://art/ \
+        -om anim_tres -bm -of out
+    if ! grep -rq 'SubResource("ShaderMaterial_normal")' "$CFG_ROOT/blend/ref"; then
+        echo "  [失败] blend_mode 的 :material 轨道没有输出"
+        cfg_fail=1
+    fi
+
     if [ "$cfg_fail" -eq 0 ]; then
         echo ">>> 配置文件专项全部一致 <<<"
     else
