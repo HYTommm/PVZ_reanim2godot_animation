@@ -85,9 +85,6 @@ int main(int argc, char** argv)
         return static_cast<int>(ErrorCode_Success);
     }
 
-    // 未显式指定 -cf 时，尝试自动发现配置文件
-    find_config(params);
-
     // 按命令行顺序加载配置文件，后加载的覆盖先加载的
     for (const std::string& config_path : params.configFiles)
         parse_config(params, config_path);

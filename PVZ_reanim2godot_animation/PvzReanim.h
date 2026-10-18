@@ -205,10 +205,6 @@ typedef struct R2GAStartParam
     bool help;
 
     /// <summary>
-    /// 是否禁用配置文件自动发现（--no-config）
-    /// </summary>
-    bool noConfig;
-    /// <summary>
     /// 是否打印最终生效配置（--print-config）
     /// </summary>
     bool printConfig;
@@ -332,10 +328,6 @@ typedef struct R2GAStartParam
     /// 配置文件所在目录（相对路径的基准）
     /// </summary>
     char configFileDir[PATH_LENGTH];
-    /// <summary>
-    /// 配置文件是否由自动发现得到
-    /// </summary>
-    bool configAutoDiscovered;
 
     /// <summary>
     /// 命令行显式指定的配置项（规范名，用于 --print-config 标注来源）

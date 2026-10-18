@@ -20,9 +20,6 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv);
 /// <returns></returns>
 Result StartParamSetFromConfig(R2GAStartParam* param, const char* configFileWholePath);
 
-/// <summary> 未显式指定 -cf 时，查找输入目录 / 当前目录下的 r2ga.cfg </summary>
-Result StartParamFindConfig(R2GAStartParam* param);
-
 /// <summary> 配置应用后重新计算派生路径 </summary>
 void StartParamFinalize(R2GAStartParam* param);
 

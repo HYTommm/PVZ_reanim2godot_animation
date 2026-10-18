@@ -107,15 +107,6 @@ static void ResolveConfigPath(const R2GAStartParam* param, const char* value, ch
     snprintf(out, out_size, "%s%s%s", param->configFileDir, sep, value);
 }
 
-static int FileExists(const char* path)
-{
-    FILE* f = fopen(path, "rb");
-    if (f == NULL)
-        return 0;
-    fclose(f);
-    return 1;
-}
-
 static void AddKey(char keys[][NAME_LENGTH], int* count, const char* key)
 {
     for (int i = 0; i < *count; i++)
@@ -167,7 +158,6 @@ Result StartParamInit(R2GAStartParam* param)
     param->help = false;
 
     // 配置相关的开关
-    param->noConfig = false;
     param->printConfig = false;
     param->initConfig = false;
 
@@ -216,7 +206,6 @@ Result StartParamInit(R2GAStartParam* param)
     param->configFileWholePath[0] = '\0';
     param->configFileCount = 0;
     param->configFileDir[0] = '\0';
-    param->configAutoDiscovered = false;
     param->cliSpecifiedKeyCount = 0;
     param->configSpecifiedKeyCount = 0;
 
@@ -285,6 +274,7 @@ static void AddConfigFile(R2GAStartParam* param, const char* path)
     param->configFileSpecified = true;
 }
 
+
 static void SetPositionalArg(R2GAStartParam* param, int index, const char* value)
 {
     switch (index)
@@ -336,12 +326,6 @@ Result StartParamSetFromArgs(R2GAStartParam* param, int argc, char** argv)
         {
             param->help = true;
             return Result_Success;
-        }
-        // 处理"--no-config"参数--禁用配置文件自动发现
-        if (strcmp(arg, "--no-config") == 0)
-        {
-            param->noConfig = true;
-            continue;
         }
         // 处理"--print-config"参数--打印最终生效配置
         if (strcmp(arg, "--print-config") == 0)
@@ -1262,43 +1246,6 @@ Result StartParamSetFromConfig(R2GAStartParam* param, const char* configFileWhol
 // 配置发现与收尾
 // ---------------------------------------------------------------------------
 
-Result StartParamFindConfig(R2GAStartParam* param)
-{
-    if (param->configFileCount > 0 || param->noConfig)
-        return Result_Success;
-
-    char candidate[PATH_LENGTH];
-
-    // 1) 输入文件目录下的 r2ga.cfg
-    if (param->inputFileWholePath[0] != '\0')
-    {
-        char dir[PATH_LENGTH];
-        FileGetFilePath(param->inputFileWholePath, dir);
-        if (dir[0] != '\0')
-        {
-            if (strcmp(dir, ".") == 0)
-                snprintf(candidate, sizeof(candidate), "r2ga.cfg");
-            else
-                snprintf(candidate, sizeof(candidate), "%sr2ga.cfg", dir);
-            if (FileExists(candidate))
-            {
-                AddConfigFile(param, candidate);
-                param->configAutoDiscovered = true;
-                return Result_Success;
-            }
-        }
-    }
-
-    // 2) 当前工作目录下的 r2ga.cfg
-    if (FileExists("r2ga.cfg"))
-    {
-        AddConfigFile(param, "r2ga.cfg");
-        param->configAutoDiscovered = true;
-    }
-
-    return Result_Success;
-}
-
 void StartParamFinalize(R2GAStartParam* param)
 {
     if (param->inputFileWholePath[0] != '\0')
@@ -1399,8 +1346,7 @@ void StartParamPrintEffectiveConfig(const R2GAStartParam* param)
     else
     {
         for (int i = 0; i < param->configFileCount; i++)
-            printf("[config] file = %s%s\n", param->configFiles[i],
-                   (i == 0 && param->configAutoDiscovered) ? " (auto)" : "");
+            printf("[config] file = %s\n", param->configFiles[i]);
     }
 
     printf("[config] InputFile = %s (%s)\n", param->inputFileWholePath, ConfigSource(param, "InputFile"));

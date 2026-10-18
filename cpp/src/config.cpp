@@ -737,8 +737,7 @@ void print_effective_config(const Params& p)
     else
     {
         for (std::size_t i = 0; i < p.configFiles.size(); ++i)
-            std::printf("[config] file = %s%s\n", p.configFiles[i].c_str(),
-                        (i == 0 && p.configAutoDiscovered) ? " (auto)" : "");
+            std::printf("[config] file = %s\n", p.configFiles[i].c_str());
     }
 
     std::printf("[config] InputFile = %s (%s)\n", p.inputFileWholePath.c_str(), source_of(p, "InputFile"));

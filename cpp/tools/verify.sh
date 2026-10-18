@@ -189,14 +189,7 @@ EOF
         cfg_fail=1
     fi
 
-    # 3.2 自动发现：输入目录下的 r2ga.cfg
-    mkdir -p "$CFG_ROOT/auto"
-    cp "$sample_bash" "$CFG_ROOT/auto/"
-    printf 'RootNodeName = AutoDiscovered\n' > "$CFG_ROOT/auto/r2ga.cfg"
-    auto_input=$(to_win "$CFG_ROOT/auto/$(basename "$sample_bash")")
-    run_conf auto-discovery "$auto_input" res://anim/ res://art/ --print-config
-
-    # 3.3 路径项进配置，位置参数全部省略
+    # 3.2 路径项进配置，位置参数全部省略
     cat > "$CFG_ROOT/paths.cfg" <<EOF
 InputFile = $sample_win
 AnimGodotPath = res://anim/
@@ -206,10 +199,7 @@ EOF
     run_conf paths -cf "$(to_win "$CFG_ROOT/paths.cfg")" --print-config
     run_conf paths-convert -cf "$(to_win "$CFG_ROOT/paths.cfg")" -of out
 
-    # 3.4 --no-config 关闭自动发现
-    run_conf no-config "$auto_input" res://anim/ res://art/ --print-config --no-config
-
-    # 3.5 旧的分号语法保持兼容
+    # 3.3 旧的分号语法保持兼容
     cat > "$CFG_ROOT/old-syntax.cfg" <<'EOF'
 OutputMode = TscnByAnim;
 RootNodeName = OldSemi;
@@ -217,7 +207,7 @@ EOF
     run_conf old-syntax "$sample_win" res://anim/ res://art/ \
         -cf "$(to_win "$CFG_ROOT/old-syntax.cfg")" -of out
 
-    # 3.6 配置模板
+    # 3.4 配置模板
     run_conf init-config --init-config
 
     if [ "$cfg_fail" -eq 0 ]; then

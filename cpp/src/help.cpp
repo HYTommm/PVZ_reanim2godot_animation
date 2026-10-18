@@ -32,7 +32,6 @@ void print_help(std::string_view exe_name)
     std::print("  {}-um, --update-mode{} {}<更新模式>{}          设置更新模式 (可选: {}continuous, discrete, capture{}, 默认: {}continuous{})\n", COL_OPT, COL_RESET, COL_VAL, COL_RESET, COL_VAL, COL_RESET, COL_VAL, COL_RESET);
     std::print("  {}-fm, --frame-mode{} {}<帧模式>{}              设置帧模式 (可选: {}inherit, keyframe{}, 默认: {}inherit{})\n", COL_OPT, COL_RESET, COL_VAL, COL_RESET, COL_VAL, COL_RESET, COL_VAL, COL_RESET);
     std::print("  {}-tm, --track-mode{} {}<轨道模式>{}             设置轨道模式 (可选: {}separate, transform{}, 默认: {}separate{})\n", COL_OPT, COL_RESET, COL_VAL, COL_RESET, COL_VAL, COL_RESET, COL_VAL, COL_RESET);
-    std::print("  {}--no-config{}                          禁用 r2ga.cfg 自动发现\n", COL_OPT, COL_RESET);
     std::print("  {}--print-config{}                       打印最终生效配置并退出\n", COL_OPT, COL_RESET);
     std::print("  {}--init-config{}                        输出配置模板并退出\n", COL_OPT, COL_RESET);
     std::print("  {}-h, --help{}                           显示此帮助信息\n\n", COL_OPT, COL_RESET);

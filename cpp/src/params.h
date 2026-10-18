@@ -27,7 +27,6 @@ struct Params
     bool help = false;
 
     // ------------------------------------------------------ 配置开关
-    bool noConfig = false;      // --no-config：禁用自动发现
     bool printConfig = false;   // --print-config：打印最终生效配置
     bool initConfig = false;    // --init-config：输出配置模板
 
@@ -60,8 +59,6 @@ struct Params
     std::vector<std::string> configFiles;
     /// 配置文件所在目录（相对路径的基准）
     std::string configFileDir;
-    /// 是否由自动发现得到
-    bool configAutoDiscovered = false;
     /// 命令行显式指定的配置项（规范名），用于 --print-config 标注来源
     std::vector<std::string> cliSpecifiedKeys;
     /// 配置文件中出现并生效的配置项（规范名）
@@ -128,9 +125,6 @@ std::optional<bool> parse_bool_flag(std::string_view s);
 ///   - 需要值的选项在缺值时返回 Failed，但不打印任何信息
 ///   - 无法识别的参数**不报错**，只打印一行 "Unknown interpolation mode: X " 然后继续
 Result parse_args(Params& p, int argc, char** argv);
-
-/// 未显式指定 -cf 时查找输入目录 / 当前目录下的 r2ga.cfg
-Result find_config(Params& p);
 
 /// 配置应用后重新计算派生路径
 void finalize_params(Params& p);

@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cstdarg>
 #include <cstdio>
-#include <fstream>
 #include <print>
 #include <string_view>
 
@@ -179,12 +178,6 @@ Result parse_args(Params& p, int argc, char** argv)
             return Result::Success;  // 原实现：立刻返回，后续参数不再解析
         }
 
-        if (arg == "--no-config")
-        {
-            p.noConfig = true;
-            continue;
-        }
-
         if (arg == "--print-config")
         {
             p.printConfig = true;
@@ -328,48 +321,6 @@ Result parse_args(Params& p, int argc, char** argv)
     // 保留旧行为：恰好三个位置参数且不带任何选项时，判定为参数错误
     if (positional_count == 3 && option_count == 0)
         return Result::Failed;
-
-    return Result::Success;
-}
-
-Result find_config(Params& p)
-{
-    if (!p.configFiles.empty() || p.noConfig)
-        return Result::Success;
-
-    auto file_exists = [](const std::string& path)
-    {
-        std::ifstream f(path, std::ios::binary);
-        return f.is_open();
-    };
-
-    auto add = [&](const std::string& path)
-    {
-        p.configFiles.push_back(path);
-        p.configFileWholePath = path;
-        p.configFileSpecified = true;
-        p.configAutoDiscovered = true;
-    };
-
-    if (!p.inputFileWholePath.empty())
-    {
-        const std::string dir = get_file_path(p.inputFileWholePath);
-        if (!dir.empty() && dir != ".")
-        {
-            std::string candidate = dir;
-            if (candidate.back() != '/' && candidate.back() != '\\')
-                candidate.push_back('\\');
-            candidate += "r2ga.cfg";
-            if (file_exists(candidate))
-            {
-                add(candidate);
-                return Result::Success;
-            }
-        }
-    }
-
-    if (file_exists("r2ga.cfg"))
-        add("r2ga.cfg");
 
     return Result::Success;
 }

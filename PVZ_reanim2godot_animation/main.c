@@ -921,7 +921,6 @@ static void print_help(char* exe_name)
     printf("  " COL_OPT "-um, --update-mode" COL_RESET " " COL_VAL "<更新模式>" COL_RESET "          " "设置更新模式 (可选: " COL_VAL "continuous, discrete, capture" COL_RESET ", 默认: " COL_VAL "continuous" COL_RESET ")\n");
     printf("  " COL_OPT "-fm, --frame-mode" COL_RESET " " COL_VAL "<帧模式>" COL_RESET "              " "设置帧模式 (可选: " COL_VAL "inherit, keyframe" COL_RESET ", 默认: " COL_VAL "inherit" COL_RESET ")\n");
     printf("  " COL_OPT "-tm, --track-mode" COL_RESET " " COL_VAL "<轨道模式>" COL_RESET "             " "设置轨道模式 (可选: " COL_VAL "separate, transform" COL_RESET ", 默认: " COL_VAL "separate" COL_RESET ")\n");
-    printf("  " COL_OPT "--no-config" COL_RESET "                          " "禁用 r2ga.cfg 自动发现\n");
     printf("  " COL_OPT "--print-config" COL_RESET "                       " "打印最终生效配置并退出\n");
     printf("  " COL_OPT "--init-config" COL_RESET "                        " "输出配置模板并退出\n");
     printf("  " COL_OPT "-h, --help" COL_RESET "                           " "显示此帮助信息\n\n");
@@ -992,9 +991,6 @@ int main(int argc, char* argv[])
         StartParamPrintConfigTemplate();
         return ErrorCode_Success;
     }
-
-    // 未显式指定 -cf 时，尝试自动发现配置文件
-    StartParamFindConfig(&startParam);
 
     // 按命令行顺序加载配置文件，后加载的覆盖先加载的
     for (int i = 0; i < startParam.configFileCount; i++)
