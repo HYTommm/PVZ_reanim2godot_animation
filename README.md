@@ -37,6 +37,13 @@ C:\Users\HYTomZ\source\repos\PVZ_reanim2godot_animation\x64\Release\PVZ_reanim2g
 --init-config    输出带注释的配置模板
 ```
 
+按动画/轨道/属性排除输出：
+
+```ini
+ExcludeTracks = leaf:visible      # 所有动画的 leaf 只去掉 visible
+ExcludeTracks.walk = arm          # 仅 walk 动画整条排除 arm
+```
+
 完整语法与配置项见项目介绍页的「配置文件」一节。
 
 

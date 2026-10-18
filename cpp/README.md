@@ -36,7 +36,7 @@ bash tools/verify.sh [参考exe] [C++ exe]
 1. 把参考版与 C++ 版用**同一个 exe 路径**各跑一遍（`-h` 会打印 `argv[0]`，路径必须一致）；
 2. 对 22 个样例 × 18 组选项做逐字节文件比对；
 3. 对 15 组错误路径比对 stdout 与退出码；
-4. 配置文件专项：新/旧语法、空格与引号、未知键、字典块、路径项、`--print-config`、`--init-config`。
+4. 配置文件专项：新/旧语法、空格与引号、未知键、字典块、路径项、`ExcludeTracks`、`--print-config`、`--init-config`。
 
 参考 exe 需自行构建。**注意：现在要从工作区的 C 工程构建，而不是 `git archive HEAD`**——
 角度插值自动转换（见下）是 C 与 C++ 两侧一起改的，HEAD 那份没有，拿它当基准必然不一致：
@@ -132,6 +132,22 @@ CUBIC   → CUBIC_ANGLE
 - 新增 `--print-config` 与 `--init-config`。
 
 C 与 C++ 两份解析器保持相同行为，`verify.sh` 的配置专项会同时验证两侧输出与产物。
+
+### ExcludeTracks：按动画 / 轨道 / 属性排除
+
+配置文件新增：
+
+```ini
+ExcludeTracks = leaf:visible|texture      # 所有动画
+ExcludeTracks.walk = arm                  # 仅 walk 动画
+ExcludeTracks.Zombie_* = eff_*            # 动画名通配
+```
+
+- 动画模式匹配内部名（`walk`）、`anim_walk` 或输出资源名（`Zombie_walk`）；
+- 省略属性列表表示整条轨道；属性支持 `visible/position/rotation/scale/skew/transform/texture/self_modulate`（`alpha` 别名）与 `all`；
+- 匹配大小写不敏感，支持 `*` / `?`；多个 `-cf` 规则累加；
+- 排除后按动画重新分配 `tracks/N` 编号（保持连续）；tscn 节点按所有动画的保留情况取并集；
+- 与 `-tm transform` / `separate` 不适配的属性会警告并忽略；无命中的规则也会警告。
 
 ## 刻意保留的"怪癖"
 

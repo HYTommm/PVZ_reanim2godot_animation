@@ -710,6 +710,33 @@
                 <li>未知键会给出带行号的警告并忽略，不会中止转换。</li>
             </ul>
 
+            <h3>排除轨道（ExcludeTracks）</h3>
+            <p>格式：<code>ExcludeTracks[.动画模式] = 轨道模式[:属性列表]</code></p>
+            <ul>
+                <li>动画模式可以写内部名（<code>walk</code>）、带前缀名（<code>anim_walk</code>）或输出资源名（<code>Zombie_walk</code>），支持 <code>*</code> 与 <code>?</code>；省略动画模式表示所有动画。</li>
+                <li>没有冒号 = 排除整条轨道；有冒号 = 只排除列出的属性，其他属性照常输出。</li>
+                <li>属性：<code>visible</code>、<code>position</code>、<code>rotation</code>、<code>scale</code>、<code>skew</code>、<code>transform</code>、<code>texture</code>、<code>self_modulate</code>（别名 <code>alpha</code>）、<code>all</code>；多个属性用 <code>|</code> 分隔。</li>
+                <li>动画名与轨道名大小写不敏感，均支持通配符；多个 <code>-cf</code> 的规则累加，命中的规则取并集。</li>
+                <li>被排除的轨道不输出，也不占用 <code>tracks/N</code> 编号；当所有动画都不再使用某部件时，tscn 中不再生成对应节点。</li>
+                <li><code>transform</code> 模式下写 <code>position</code> / <code>rotation</code> / <code>scale</code> / <code>skew</code> 会警告并忽略；<code>separate</code> 模式下写 <code>transform</code> 同理。</li>
+                <li>没有命中任何轨道的规则会输出警告。</li>
+            </ul>
+            <div class="code-block">
+                <code>
+                    # 所有动画：整条排除 leaf<br>
+                    ExcludeTracks = leaf<br>
+                    <br>
+                    # 所有动画：只排除 leaf 的 visible 和 texture<br>
+                    ExcludeTracks = leaf:visible|texture<br>
+                    <br>
+                    # 仅 walk 动画：整条排除 arm；leaf 只排除 self_modulate<br>
+                    ExcludeTracks.walk = arm, leaf:self_modulate<br>
+                    <br>
+                    # 动画名与轨道名支持通配符<br>
+                    ExcludeTracks.Zombie_* = eff_*<br>
+                </code>
+            </div>
+
             <h3>配置项说明</h3>
             <table class="param-table">
                 <tr>
@@ -820,6 +847,18 @@
                     <td><code>Continuous</code>, <code>Discrete</code>, <code>Capture</code></td>
                     <td>⚠️ 仅配置文件，同名轨道后写覆盖</td>
                 </tr>
+                <tr>
+                    <td><code>ExcludeTracks</code></td>
+                    <td>排除指定轨道或属性（所有动画）</td>
+                    <td>见「排除轨道」一节</td>
+                    <td>⚠️ 仅配置文件</td>
+                </tr>
+                <tr>
+                    <td><code>ExcludeTracks.&lt;动画模式&gt;</code></td>
+                    <td>只排除指定动画中的轨道或属性</td>
+                    <td>见「排除轨道」一节</td>
+                    <td>⚠️ 仅配置文件，动画名支持通配符</td>
+                </tr>
             </table>
 
             <div class="warning-box">
@@ -864,6 +903,10 @@
                     &nbsp;&nbsp;&nbsp;&nbsp;body = Continuous,<br>
                     &nbsp;&nbsp;&nbsp;&nbsp;arm = Capture,<br>
                     }<br>
+                    <br>
+                    # 排除轨道：所有动画的 leaf 只去掉 visible；walk 动画整条排除 arm<br>
+                    ExcludeTracks = leaf:visible<br>
+                    ExcludeTracks.walk = arm<br>
                 </code>
             </div>
 
@@ -890,6 +933,7 @@
                         <li>新增配置项 <code>InputFile</code> / <code>AnimGodotPath</code> / <code>ResGodotPath</code> / <code>OutputDir</code></li>
                         <li>多个 <code>-cf</code> 按顺序叠加，后加载的覆盖先加载的</li>
                         <li>新增 <code>--print-config</code> / <code>--init-config</code></li>
+                        <li>新增 <code>ExcludeTracks</code>：按动画、轨道、属性排除输出，支持通配符</li>
                         <li>rotation / skew 自动使用角度插值，<code>separate</code> 模式不再绕远路</li>
                         <li>修复三处越界读（ASan）</li>
                         <li>基于 Tomy 库重构，代码更健壮</li>
