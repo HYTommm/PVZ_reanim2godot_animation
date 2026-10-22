@@ -11,7 +11,10 @@ func _enter_tree():
 	add_control_to_bottom_panel(R2Ga_panel, "R2Ga_PVZ")
 
 func _exit_tree():
-	remove_control_from_bottom_panel(R2Ga_panel)
+	if is_instance_valid(R2Ga_panel):
+		remove_control_from_bottom_panel(R2Ga_panel)
+		R2Ga_panel.queue_free()
+		R2Ga_panel = null
 
 func refresh_resources():
 	get_editor_interface().get_resource_filesystem().scan()

@@ -79,7 +79,13 @@ msbuild PVZ_reanim2godot_animation.sln -p:Configuration=Release -p:Platform=x64
    - **PVZ 原始动画文件**（单个文件）
    - **动画存放文件夹**（目标路径）
    - **素材存放文件夹**（含图像资源）
+   - **配置文件**（可选；命令行中显式传入的选项优先于配置文件同名项）
 
-5. 点击【运行】按钮后，插件将自动以 `auto` 模式执行转换。
+5. 按需选择输出模式、插值模式、混合模式、帧模式与轨道模式。
+
+6. 点击【运行】按钮。插件会自动创建不存在的动画输出目录，并调用转换器执行转换。
+
+> `-tm transform` 在 Godot 中做动画交叉淡入淡出时会出现姿态跳变，建议保持默认的 `separate`；
+> 详见 [`KNOWN-ISSUE-transform-mode.md`](KNOWN-ISSUE-transform-mode.md)。
 
 ---
