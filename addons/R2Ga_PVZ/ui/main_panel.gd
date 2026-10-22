@@ -74,13 +74,15 @@ func _on_select_file():
 	dialog.access = FileDialog.ACCESS_FILESYSTEM
 	dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
 	dialog.filters = ["*.reanim"]
-	# 从file_path_option获取路径
-	var full_path = file_path_option.text
-	dialog.current_path = full_path
+	var current_path = _get_selected_text(file_path_option)
+	if not current_path.is_empty():
+		dialog.current_path = current_path
 
 	dialog.file_selected.connect(func(path):
 		_add_to_history("file_path", path, file_path_option)
+		dialog.queue_free()
 	)
+	dialog.canceled.connect(dialog.queue_free)
 	add_child(dialog)
 	dialog.popup_centered()
 
@@ -94,7 +96,9 @@ func _on_select_anim_folder():
 		if not fixed_path.ends_with("/"):
 			fixed_path += "/"
 		_add_to_history("anim_path", fixed_path, anim_path_option)
+		dialog.queue_free()
 	)
+	dialog.canceled.connect(dialog.queue_free)
 	add_child(dialog)
 	dialog.popup_centered()
 
@@ -108,7 +112,9 @@ func _on_select_asset_folder():
 		if not fixed_path.ends_with("/"):
 			fixed_path += "/"
 		_add_to_history("asset_path", fixed_path, asset_path_option)
+		dialog.queue_free()
 	)
+	dialog.canceled.connect(dialog.queue_free)
 	add_child(dialog)
 	dialog.popup_centered()
 
@@ -117,19 +123,31 @@ func _on_select_config_file():
 	var dialog = FileDialog.new()
 	dialog.access = FileDialog.ACCESS_FILESYSTEM
 	dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-	dialog.filters = ["*.txt"]
-	# 从file_path_option获取路径
-	var full_path = config_file_path_option.text
-	dialog.current_path = full_path
+	dialog.filters = ["*.cfg, *.ini, *.txt", "*"]
+	var current_path = _get_selected_text(config_file_path_option)
+	if not current_path.is_empty():
+		dialog.current_path = current_path
 
 	dialog.file_selected.connect(func(path):
 		_add_to_history("config_path", path, config_file_path_option)
+		dialog.queue_free()
 	)
+	dialog.canceled.connect(dialog.queue_free)
 	add_child(dialog)
 	dialog.popup_centered()
 
+## 获取 OptionButton 当前选中项文本；没有选中项时返回空串
+func _get_selected_text(option: OptionButton) -> String:
+	var index := option.selected
+	if index < 0:
+		return ""
+	return option.get_item_text(index).strip_edges()
+
 ## 添加存档
 func _add_to_history(key: String, path: String, option: OptionButton):
+	if path.is_empty():
+		return
+
 	var cfg = ConfigFile.new()
 	cfg.load(CONFIG_PATH)
 
@@ -237,19 +255,40 @@ func _on_run_exe():
 		push_error("EXE 文件不存在：" + exe_path)
 		return
 
-	var file_arg = file_path_option.get_item_text(file_path_option.get_selected_id()).strip_edges()
-	var anim_arg = anim_path_option.get_item_text(anim_path_option.get_selected_id()).strip_edges()
-	var asset_arg = asset_path_option.get_item_text(asset_path_option.get_selected_id()).strip_edges()
+	var file_arg = _get_selected_text(file_path_option)
+	var anim_arg = _get_selected_text(anim_path_option)
+	var asset_arg = _get_selected_text(asset_path_option)
 
 	if file_arg == "" or anim_arg == "" or asset_arg == "":
 		push_error("请填写完整的参数路径")
 		return
+	if not FileAccess.file_exists(file_arg):
+		push_error("输入文件不存在：" + file_arg)
+		return
+	if not anim_arg.begins_with("res://") or not asset_arg.begins_with("res://"):
+		push_error("动画路径和素材路径必须是 res:// 路径")
+		return
+
+	## 转换器把 -of 当作目录前缀，路径结尾必须有分隔符
+	if not anim_arg.ends_with("/"):
+		anim_arg += "/"
+	if not asset_arg.ends_with("/"):
+		asset_arg += "/"
+
+	## 转换器不会自动创建输出目录，这里先创建
+	var output_dir = ProjectSettings.globalize_path(anim_arg)
+	if not DirAccess.dir_exists_absolute(output_dir):
+		var dir_error = DirAccess.make_dir_recursive_absolute(output_dir)
+		if dir_error != OK:
+			push_error("无法创建输出目录：" + output_dir + "（错误码：" + str(dir_error) + "）")
+			return
 
 	## 获取ui的可选参数
 	get_choose_para()
 
+	## 注意：这里显式传入的选项优先级高于配置文件中的同名项
 	var args = [file_arg, anim_arg, asset_arg,\
-				"-of", ProjectSettings.globalize_path(anim_arg), \
+				"-of", output_dir, \
 				"-om", output_mode_option_button.get_item_text(output_mode_id), \
 				"-im", interpolation_mode_option_button.get_item_text(interpolation_mode_id), \
 				"-fm", frame_mode_option_button.get_item_text(frame_mode_id), \
@@ -257,8 +296,9 @@ func _on_run_exe():
 				]
 
 
-	if config_file_path_option.selected >= 0 and not config_file_path_option.get_item_text(config_file_path_option.get_selected_id()).is_empty():
-		args.append_array(["-cf", config_file_path_option.get_item_text(config_file_path_option.get_selected_id()).strip_edges()])
+	var config_path = _get_selected_text(config_file_path_option)
+	if not config_path.is_empty():
+		args.append_array(["-cf", config_path])
 	if is_blend_mode:
 		args.append("-bm")
 	else:
@@ -269,12 +309,15 @@ func _on_run_exe():
 	print("运行命令：", cmd_line)
 
 	var output = []
-	var exit_code = OS.execute(exe_path, args, output)  # 参数4是数组，接收输出
+	## read_stderr = true，转换器的警告和错误也会进入 output
+	var exit_code = OS.execute(exe_path, args, output, true)
 
 	for line in output:
 		print(line)
 
-	if exit_code != 0:
+	if exit_code == -1:
+		push_error("无法启动转换器（OS.execute 返回 -1）。请检查 exe 是否被杀毒软件或系统策略拦截，或在命令行手动运行：" + cmd_line)
+	elif exit_code != 0:
 		push_error("运行失败，错误码：" + str(exit_code))
 	else:
 		print("✅ 成功运行, 已存档当前可选参数")

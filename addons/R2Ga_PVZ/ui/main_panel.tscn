@@ -214,6 +214,7 @@ text = "轨道模式："
 [node name="TrackModeOptionButton" type="OptionButton" parent="HBoxContainer/PluginIntroductionPanel2/ScrollContainer2/VBoxContainer2/track_mode"]
 unique_name_in_owner = true
 layout_mode = 2
+tooltip_text = "transform 模式在交叉淡入淡出时可能姿态跳变，建议使用 separate"
 selected = 0
 item_count = 2
 popup/item_0/text = "separate"
@@ -252,16 +253,17 @@ vertical_alignment = 1
 
 [node name="Label5" type="Label" parent="HBoxContainer/PluginIntroductionPanel/ScrollContainer/VBoxContainer"]
 layout_mode = 2
-text = "版本：v2.0.0"
+text = "版本：v2.1.0"
 vertical_alignment = 1
 
 [node name="Label4" type="Label" parent="HBoxContainer/PluginIntroductionPanel/ScrollContainer/VBoxContainer"]
 custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
 text = "插件简介：
-1、使用G2Ra 4.0将PVZ原始动画文件（reanim）转换为Godot游戏引擎所支持的动画格式。
-2、动画转换完成后，自动刷新资源目录
-3、每次运行时存档可选参数
-4、UI设计参考Todo Controller"
+1、使用 R2Ga 4.1-dev4 将 PVZ 原始动画文件（reanim）转换为 Godot 支持的动画格式。
+2、可设置输出、插值、帧与轨道模式，并支持配置文件。
+3、转换完成后自动刷新资源目录。
+4、自动创建不存在的输出目录，并记录历史路径与可选参数。
+5、UI 设计参考 Todo Controller"
 vertical_alignment = 1
 autowrap_mode = 3
